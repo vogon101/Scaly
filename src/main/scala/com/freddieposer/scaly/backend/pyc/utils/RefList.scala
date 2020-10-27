@@ -1,5 +1,6 @@
-package com.freddieposer.scaly.backend.pyc
+package com.freddieposer.scaly.backend.pyc.utils
 
+import com.freddieposer.scaly.backend.pyc.{PyNone, PyObject}
 
 import scala.collection.mutable.ListBuffer
 

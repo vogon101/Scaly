@@ -1,4 +1,4 @@
-package com.freddieposer.scaly.backend.pyc
+package com.freddieposer.scaly.backend.pyc.defs
 
 object PyOpcodeArgType extends Enumeration {
 

@@ -1,4 +1,4 @@
-package com.freddieposer.scaly
+package com.freddieposer.scaly.utils
 
 trait PrettyPrinter {
 

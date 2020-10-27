@@ -1,4 +1,4 @@
-package com.freddieposer.scaly.backend.pyc
+package com.freddieposer.scaly.backend.pyc.utils
 
 import java.util.concurrent.atomic.AtomicInteger
 

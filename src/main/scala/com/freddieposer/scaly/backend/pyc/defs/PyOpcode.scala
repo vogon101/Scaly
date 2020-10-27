@@ -1,8 +1,6 @@
-package com.freddieposer.scaly.backend.pyc
+package com.freddieposer.scaly.backend.pyc.defs
 
-import com.freddieposer.scaly.backend.pyc.PyOpcodeArgType.PyOpcodeArgType
-
-
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodeArgType.PyOpcodeArgType
 
 object PyOpcode extends Enumeration {
 
@@ -12,7 +10,7 @@ object PyOpcode extends Enumeration {
 
   type PyOpcode = Value
 
-  lazy val valueList:List[Val] = values.toList.asInstanceOf[List[Val]]
+  lazy val valueList: List[Val] = values.toList.asInstanceOf[List[Val]]
   lazy val opcodeMap: Map[Int, Val] = valueList.map(value => (value.opcode, value)).toMap
 
   val POP_TOP: Val = Val(1)
