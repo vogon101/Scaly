@@ -10,7 +10,7 @@ import scala.io.Source
 object Test {
 
   def main(args: Array[String]): Unit = {
-    val bytes = Files.readAllBytes(Paths.get("test2.pyc"))
+    val bytes = Files.readAllBytes(Paths.get("test3.pyc"))
     println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
     println(
       bytes.map((String.format("%02x", _)))

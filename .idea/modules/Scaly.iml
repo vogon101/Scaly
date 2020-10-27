@@ -11,6 +11,10 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: com.chuusai:shapeless_2.13:2.3.3:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.3:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scodec:scodec-bits_2.13:1.1.20:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scodec:scodec-core_2.13:1.11.7:jar" level="project" />
+    <orderEntry type="library" name="scala-sdk-2.13.3" level="application" />
   </component>
 </module>

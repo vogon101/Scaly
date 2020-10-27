@@ -1,8 +1,14 @@
 package com.freddieposer.scaly.backend.pyc
 
+import com.freddieposer.scaly.backend.pyc.PyOpcodeArgType.PyOpcodeArgType
+
+
+
 object PyOpcode extends Enumeration {
 
-  protected case class Val(opcode: Int) extends super.Val
+  protected case class Val(opcode: Int, argType: Option[PyOpcodeArgType] = None) extends super.Val {
+    def takesArg: Boolean = opcode >= 90
+  }
 
   type PyOpcode = Value
 
@@ -67,17 +73,17 @@ object PyOpcode extends Enumeration {
   val POP_BLOCK: Val = Val(87)
   val END_FINALLY: Val = Val(88)
   val POP_EXCEPT: Val = Val(89)
-  val STORE_NAME: Val = Val(90)
-  val DELETE_NAME: Val = Val(91)
+  val STORE_NAME: Val = Val(90, Some(PyOpcodeArgType.IDX_NAME_LIST))
+  val DELETE_NAME: Val = Val(91, Some(PyOpcodeArgType.IDX_NAME_LIST))
   val UNPACK_SEQUENCE: Val = Val(92)
   val FOR_ITER: Val = Val(93)
   val UNPACK_EX: Val = Val(94)
-  val STORE_ATTR: Val = Val(95)
-  val DELETE_ATTR: Val = Val(96)
-  val STORE_GLOBAL: Val = Val(97)
-  val DELETE_GLOBAL: Val = Val(98)
-  val LOAD_CONST: Val = Val(100)
-  val LOAD_NAME: Val = Val(101)
+  val STORE_ATTR: Val = Val(95, Some(PyOpcodeArgType.IDX_NAME_LIST))
+  val DELETE_ATTR: Val = Val(96, Some(PyOpcodeArgType.IDX_NAME_LIST))
+  val STORE_GLOBAL: Val = Val(97, Some(PyOpcodeArgType.IDX_NAME_LIST))
+  val DELETE_GLOBAL: Val = Val(98, Some(PyOpcodeArgType.IDX_NAME_LIST))
+  val LOAD_CONST: Val = Val(100, Some(PyOpcodeArgType.IDX_CONST_LIST))
+  val LOAD_NAME: Val = Val(101, Some(PyOpcodeArgType.IDX_NAME_LIST))
   val BUILD_TUPLE: Val = Val(102)
   val BUILD_LIST: Val = Val(103)
   val BUILD_SET: Val = Val(104)

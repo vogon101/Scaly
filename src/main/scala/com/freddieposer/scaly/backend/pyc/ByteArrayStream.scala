@@ -10,9 +10,11 @@ class ByteArrayStream (val bytes: Array[Byte]) {
 
   def reset(): Unit = _offset.set(0)
 
-  def take(n: Int): List[Int] = {
+  def take(n: Int): List[Int] = take_bytes(n).map(_ & 0xff)
+
+  def take_bytes(n: Int):List[Byte] = {
     if (offset + n > bytes.length) throw new Error(s"No more bytes ${offset + n}")
-    bytes.slice(offset, _offset.addAndGet(n)).toList.map(_ & 0xff)
+    bytes.slice(offset, _offset.addAndGet(n)).toList
   }
 
   def head(): Int = take(1).head

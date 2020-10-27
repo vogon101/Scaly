@@ -4,7 +4,11 @@ import java.nio.charset.StandardCharsets
 
 import com.freddieposer.scaly.PrettyPrinter
 
-sealed abstract class PyObject extends PrettyPrinter{
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+
+abstract class PyObject extends PrettyPrinter{
+
+  def shortName: String = getClass.toString
 
 }
 
@@ -44,24 +48,41 @@ object PyObject {
   val TYPE_SHORT_ASCII     =   'z'
   val TYPE_SHORT_ASCII_INTERNED = 'Z'
 
-  def read_object()(implicit data: ByteArrayStream): PyObject = {
+  def read_object()(implicit data: ByteArrayStream, refList: RefList): PyObject = {
     val hd = data.head() & 0xff
+    val flag = hd & FLAG_REF
     val typ = hd & ~FLAG_REF
-    //print(f"${data.offset - 1}%04d ${typ.toHexString} (${typ.toChar}) ")
     typ match {
+      // Do not go on reflist
       case TYPE_NONE => PyNone
       case TYPE_TRUE => PyTrue
       case TYPE_FALSE => PyFalse
-      case TYPE_REF => PyRef.read_pyref()
-      case TYPE_STRING => PyString.read_pystring()
-      case TYPE_SHORT_ASCII | TYPE_SHORT_ASCII_INTERNED => PyAscii.read_pyascii(isSmall = true)
-      case TYPE_ASCII | TYPE_ASCII_INTERNED => PyAscii.read_pyascii()
-      case TYPE_INT => PyInt.read_pyInt()
-      case TYPE_SMALL_TUPLE => PyTuple.read_pytuple(isSmall = true)
-      case TYPE_TUPLE => PyTuple.read_pytuple()
-      case TYPE_CODE => PyCodeObject.read_pycode()
-      case _ => throw new Error(s"Unknown object type ${typ.toHexString} (${typ.toChar})")
+      case TYPE_REF => readRef()
+
+      //Deal with reflist themselves
+      case TYPE_CODE => PyCodeObject.read_pycode(flag)
+      case TYPE_SMALL_TUPLE => PyTuple.readPyTuple(flag, isSmall = true)
+      case TYPE_TUPLE => PyTuple.readPyTuple(flag)
+
+      // Reflist after creation
+      case _ =>
+        val retval = typ match {
+          case TYPE_STRING => PyString.readPyString()
+          case TYPE_SHORT_ASCII | TYPE_SHORT_ASCII_INTERNED => PyAscii.readPyAscii(isSmall = true)
+          case TYPE_ASCII | TYPE_ASCII_INTERNED => PyAscii.readPyAscii()
+          case TYPE_INT => PyInt.readPyInt()
+          case _ => throw new Error(s"Unknown object type ${typ.toHexString} (${typ.toChar})")
+        }
+        refList.append(retval, flag)
     }
+  }
+
+  def readRef()(implicit data: ByteArrayStream, refList: RefList): PyObject = {
+    val r = data.bReadLong()
+    val o = refList(r)
+    //println(s"$r -> $o")
+    if (o == PyNone) throw new Error(s"Bad reference ${r}")
+    o
   }
 
 }
@@ -73,111 +94,40 @@ object PyFalse extends PyBoolean(false)
 
 object PyNone extends PyObject {
   override def toString: String = "PyNone"
-}
-
-class PyCodeObject (
-                   val nargs: Int,
-                   val nkwargs: Int,
-                   val nlocals: Int,
-                   val stackSize: Int,
-                   val flags: Int,
-                   val firstLineNumber: Int,
-                   val code: PyString,
-                   val consts: PyObject,
-                   val names: PyObject,
-                   val varnames: PyObject, //These seem to be refs? - Perhaps they could be Eithers
-                   val freeVars: PyObject,
-                   val cellVars: PyObject,
-                   val name: PyObject,
-                   val filename: PyObject,
-                   val lnotab: PyObject
-                   ) extends PyObject {
-
-  override def prettyPrint(indent: Int): String = _prettyPrint(indent)
-
-  override def toString: String = prettyPrint(0)
-
-  def _prettyPrint(indent: Int): String = {
-    val sb = new StringBuilder("\t".repeat(indent) + "Code Object:\n")
-    val strs = List(
-      s"Num Args    : $nargs",
-      s"Num Kwargs  : $nkwargs",
-      s"Num Locals  : $nlocals",
-      s"StackSize   : $stackSize",
-      s"Flags       : $flags",
-      s"Line 1 no   : $firstLineNumber",
-      s"Code:", formatCode(),
-      s"Consts:", consts.prettyPrint(1).split("\n"),
-      s"Names:", names.prettyPrint(1).split("\n"),
-      s"Varnames:", varnames.prettyPrint(1).split("\n"),
-      s"Freevars:", freeVars.prettyPrint(1).split("\n"),
-      s"CellVars", cellVars.prettyPrint(1).split("\n"),
-      s"Name:", name.prettyPrint(1).split("\n"),
-      s"Filename: $filename",
-      s"LNotab:", lnotab.prettyPrint(1).split("\n")
-    ).flatMap{
-      case x: String => List(x)
-      case xs: Array[String] => xs.toList
-      case xs: List[String] => xs
-    }
-    sb.append(
-      strs.map("\t".repeat(indent) + "  ] " +  _).mkString("\n")
-    )
-    sb.toString()
-  }
-
-  def formatCode(): List[String] = {
-    code.str.zipWithIndex.grouped(2).map{
-      case List((op, i), (arg, _)) => f"${i/2}%3d ${PyOpcode.opcodeMap(op)}%20s" + " # " + arg
-    }.toList
-  }
-
-}
-
-object PyCodeObject {
-  def read_pycode()(implicit data: ByteArrayStream): PyCodeObject = {
-    val nargs = data.bReadLong()
-    val nkwargs = data.bReadLong()
-    val nlocals = data.bReadLong()
-    val stackSize = data.bReadLong()
-    val flags = data.bReadLong()
-    val code = PyObject.read_object().asInstanceOf[PyString]
-    val consts = PyObject.read_object()//.asInstanceOf[PyTuple]
-    val names = PyObject.read_object()//.asInstanceOf[PyTuple]
-    val varnames = PyObject.read_object()//.asInstanceOf[PyTuple]
-    val freeVars = PyObject.read_object()//.asInstanceOf[PyTuple]
-    val cellVars = PyObject.read_object()
-    val name = PyObject.read_object()//.asInstanceOf[PyAscii]
-    val filename = PyObject.read_object()//.asInstanceOf[PyAscii]
-    val firstLineNumber = data.bReadLong()
-    val lnotab = PyObject.read_object()
-    new PyCodeObject(
-      nargs, nkwargs, nlocals, stackSize, flags, firstLineNumber,
-      code, consts, names, varnames, freeVars, cellVars, name, filename, lnotab
-    )
-
-  }
+  override def shortName: String = toString
 }
 
 
-class PyString (val str: List[Int]) extends PyObject {
+class PyString (val str: List[Byte]) extends PyObject {
   override def toString: String = str.map(x => f"$x%02x").grouped(4).map(_.mkString(" ")).mkString("\n")
+
+  override def shortName: String = f"PyString($as_text})"
+  def as_text:String = new String(str.grouped(2).flatMap(_.reverse).map(_.toChar).toArray)
+
+  def as_ints: List[Int] = str.map(_ & 0xff)
+
 }
 
 object PyString {
 
-  def read_pystring()(implicit data: ByteArrayStream): PyString = {
+  def readPyString()(implicit data: ByteArrayStream): PyString = {
     val length = data.bReadLong()
-    new PyString(data.take(length))
+    new PyString(data.take_bytes(length))
   }
 
 }
 
-class PyTuple (val objects: List[PyObject]) extends PyObject {
+//Mutable to allow it to be in ref-list whilst being built
+class PyTuple (private var _objectsBuffer: ListBuffer[PyObject]) extends PyObject {
 
   override def prettyPrint(indent: Int): String = _prettyPrint(indent)
 
+  override def shortName: String = f"PyTuple(n=${objects.length})"
+
   override def toString: String = prettyPrint(0)
+
+  def objects: List[PyObject] = _objectsBuffer.toList
+
 
   def _prettyPrint(indent: Int): String = {
     val inner = objects.zipWithIndex.map{ case (s, i) => i.toString + s.prettyPrint(1)}.mkString("\t\n")
@@ -191,46 +141,40 @@ class PyTuple (val objects: List[PyObject]) extends PyObject {
 
 object PyTuple {
 
-  def read_pytuple(isSmall: Boolean = false)(implicit data: ByteArrayStream): PyTuple = {
-    val length = if (isSmall) data.head().toInt else data.bReadLong()
-    new PyTuple(Range(0, length).map(_ => PyObject.read_object()).toList)
+  def readPyTuple(flag: Int, isSmall: Boolean = false)(implicit data: ByteArrayStream, refList: RefList): PyTuple = {
+    val length = if (isSmall) data.head() else data.bReadLong()
+    val itemsBuffer = new ListBuffer[PyObject]
+    val pt = new PyTuple(itemsBuffer)
+    refList.append(pt, flag)
+    for (o <- Range(0, length))
+      itemsBuffer.append(PyObject.read_object())
+    pt
   }
 
 }
 
 class PyAscii (val text: String) extends PyObject {
   override def toString: String = f"PyAscii( $text )"
+  override def shortName: String = toString
 }
 
 object PyAscii {
 
-  def read_pyascii(isSmall: Boolean = false)(implicit data: ByteArrayStream): PyAscii = {
+  def readPyAscii(isSmall: Boolean = false)(implicit data: ByteArrayStream): PyAscii = {
     val length = if (isSmall) data.head() else data.bReadLong()
     new PyAscii(new String(data.take(length).map(_.toChar).toArray))
   }
 
 }
 
-class PyRef(val ref: Int) extends PyObject {
-  override def toString: String = f"PyRef($ref)"
-}
-
-object PyRef {
-
-  def read_pyref()(implicit data: ByteArrayStream): PyRef = {
-    val r = data.bReadLong()
-    new PyRef(r)
-  }
-
-}
-
 class PyInt(val value: Int) extends PyObject {
   override def toString: String = f"PyInt($value)"
+  override def shortName: String = toString
 }
 
 object PyInt {
 
-  def read_pyInt()(implicit data: ByteArrayStream): PyInt = {
+  def readPyInt()(implicit data: ByteArrayStream): PyInt = {
     new PyInt(data.bReadLong())
   }
 

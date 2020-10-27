@@ -2,6 +2,8 @@ package com.freddieposer.scaly.backend.pyc
 
 import java.io.File
 
+import scala.collection.mutable.ArrayBuffer
+
 class PycFile(
                val magic: Int,
                val bit_field: Int,
@@ -31,13 +33,18 @@ object PycFile {
     val bits = bytes.bReadLong(false)
     val moddate = bytes.bReadLong(false)
     val filesize = bytes.bReadLong(false)
-    new PycFile(
+
+    val pyRefs = new RefList
+
+    val retval = new PycFile(
       magic,
       bits,
       moddate,
       filesize,
-      PyCodeObject.read_pycode()(bytes.skip(1))
+      PyObject.read_object()(bytes, pyRefs).asInstanceOf[PyCodeObject]
     )
+    retval.codeObject.setParents(None)
+    retval
   }
 
 }
