@@ -1,7 +1,10 @@
 package com.freddieposer.scaly.backend.pyc
 
-import com.freddieposer.scaly.backend.pyc.defs.{PyOpcode, PyOpcodeArgType}
-import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, RefList}
+import java.lang.ClassCastException
+
+import com.freddieposer.scaly.backend.pyc.defs.{PyOpcode, PyOpcodeArgType, PycTypeBytes}
+import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, MutableByteArrayStream, RefList}
+import shapeless.WitnessWith.apply2
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -16,11 +19,11 @@ class PyCodeObject(
                     val code: PyString,
                     val consts: PyTuple,
                     val names: PyTuple,
-                    val varnames: PyTuple, //These seem to be refs? - Perhaps they could be Eithers
+                    val varnames: PyTuple,
                     val freeVars: PyTuple,
                     val cellVars: PyTuple,
-                    val name: PyAscii, //PyAscii,
-                    val filename: PyAscii, //PyAscii,
+                    val name: PyAscii,
+                    val filename: PyAscii,
                     val lnotab: PyString
                   ) extends PyObject {
 
@@ -66,19 +69,47 @@ class PyCodeObject(
 
   def formatCode(): List[String] = {
     code.as_ints.zipWithIndex.grouped(2).map {
-      case List((op, i), (arg, _)) => {
+      case List((op, i), (arg, _)) =>
         val opcode = PyOpcode.opcodeMap(op)
+        f"${i/2}%3d ${PyOpcode.opcodeMap(op)}%20s # " + (if(opcode.takesArg)
         opcode.argType match {
           case Some(PyOpcodeArgType.IDX_CONST_LIST) =>
-            f"${i / 2}%3d ${PyOpcode.opcodeMap(op)}%20s # $arg%-2d - ${getConstant(arg).shortName}"
+            f"$arg%-2d - ${getConstant(arg).shortName}"
           case Some(PyOpcodeArgType.IDX_NAME_LIST) =>
-            f"${i / 2}%3d ${PyOpcode.opcodeMap(op)}%20s # $arg%-2d - ${getName(arg).shortName}"
-          case _ => f"${i / 2}%3d ${PyOpcode.opcodeMap(op)}%20s # $arg%-2d"
-        }
-      }
+            f"$arg%-2d - ${getName(arg).shortName}"
+          case _ => f"$arg%-2d"
+        } else "")
     }.toList
   }
 
+  def toBytes: ByteArrayStream = {
+
+    val bytes = new MutableByteArrayStream()
+
+    bytes.writeLongs(List(
+      nargs, nposOnlyArgs, nkwargs, nlocals, stackSize, flags
+    ))
+
+    bytes.write(
+      ByteArrayStream.join(List(
+        code.toBytes,
+        consts.toBytes,
+        names.toBytes,
+        varnames.toBytes,
+        freeVars.toBytes,
+        cellVars.toBytes,
+        filename.toBytes,
+        name.toBytes
+      ))
+    )
+
+    bytes.writeLong(firstLineNumber)
+
+    bytes.write(lnotab.toBytes)
+
+    ByteArrayStream(PycTypeBytes.TYPE_CODE) + bytes
+
+  }
 
 }
 
@@ -87,12 +118,12 @@ object PyCodeObject {
 
     val idx = refList.reserve(flag)
 
-    val nargs = data.bReadLong()
-    val nposOnlyArgs = data.bReadLong()
-    val nkwargs = data.bReadLong()
-    val nlocals = data.bReadLong()
-    val stackSize = data.bReadLong()
-    val flags = data.bReadLong()
+    val nargs = data.readLong()
+    val nposOnlyArgs = data.readLong()
+    val nkwargs = data.readLong()
+    val nlocals = data.readLong()
+    val stackSize = data.readLong()
+    val flags = data.readLong()
     val code = PyObject.read_object().asInstanceOf[PyString]
     val consts = PyObject.read_object().asInstanceOf[PyTuple]
     val names = PyObject.read_object().asInstanceOf[PyTuple]
@@ -101,7 +132,7 @@ object PyCodeObject {
     val cellVars = PyObject.read_object().asInstanceOf[PyTuple]
     val filename = PyObject.read_object().asInstanceOf[PyAscii]
     val name = PyObject.read_object().asInstanceOf[PyAscii]
-    val firstLineNumber = data.bReadLong()
+    val firstLineNumber = data.readLong()
     val lnotab = PyObject.read_object().asInstanceOf[PyString]
 
     val x = new PyCodeObject(
@@ -109,6 +140,7 @@ object PyCodeObject {
       code, consts, names, varnames, freeVars, cellVars, name, filename, lnotab
     )
     refList.insert(x, idx, flag)
+
 
   }
 }

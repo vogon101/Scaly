@@ -96,7 +96,7 @@ object PyOpcode extends Enumeration {
   val JUMP_ABSOLUTE: Val = Val(113)
   val POP_JUMP_IF_FALSE: Val = Val(114)
   val POP_JUMP_IF_TRUE: Val = Val(115)
-  val LOAD_GLOBAL: Val = Val(116)
+  val LOAD_GLOBAL: Val = Val(116, Some(PyOpcodeArgType.IDX_NAME_LIST))
   val CONTINUE_LOOP: Val = Val(119)
   val SETUP_LOOP: Val = Val(120)
   val SETUP_EXCEPT: Val = Val(121)

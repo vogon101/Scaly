@@ -1,5 +1,6 @@
 package com.freddieposer.scaly.backend.pyc
 
+import com.freddieposer.scaly.backend.pyc.defs.PycTypeBytes
 import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, RefList}
 
 import scala.collection.mutable.ListBuffer
@@ -37,6 +38,12 @@ class PyTuple(private var _objectsBuffer: ListBuffer[PyObject]) extends PyObject
     }
   }
 
+  override def toBytes: ByteArrayStream =
+    (if (objects.length < 255)
+      ByteArrayStream(PycTypeBytes.TYPE_SMALL_TUPLE.toByte, (objects.length & 0xff).toByte)
+    else
+      ByteArrayStream(PycTypeBytes.TYPE_TUPLE) + ByteArrayStream.fromLongs(objects.length)
+      ) + ByteArrayStream.join(objects.map(_.toBytes))
 }
 
 object PyTuple {
@@ -51,7 +58,7 @@ object PyTuple {
    * @return
    */
   def readPyTuple(flag: Int, isSmall: Boolean = false)(implicit data: ByteArrayStream, refList: RefList): PyTuple = {
-    val length = if (isSmall) data.head() else data.bReadLong()
+    val length = if (isSmall) data.head() else data.readLong()
     val itemsBuffer = new ListBuffer[PyObject]
     val pt = new PyTuple(itemsBuffer)
     refList.append(pt, flag)

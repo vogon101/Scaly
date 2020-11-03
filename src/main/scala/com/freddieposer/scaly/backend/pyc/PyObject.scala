@@ -1,16 +1,15 @@
 package com.freddieposer.scaly.backend.pyc
 
-import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
-
-import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, RefList}
+import com.freddieposer.scaly.backend.pyc.defs.PycTypeBytes
+import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, ImmutableByteArrayStream, RefList}
 import com.freddieposer.scaly.utils.PrettyPrinter
 
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 abstract class PyObject extends PrettyPrinter {
 
   def shortName: String = getClass.toString
+
+  def toBytes: ByteArrayStream
 
 }
 
@@ -43,7 +42,7 @@ object PyObject {
           case TYPE_SHORT_ASCII | TYPE_SHORT_ASCII_INTERNED => PyAscii.readPyAscii(isSmall = true)
           case TYPE_ASCII | TYPE_ASCII_INTERNED => PyAscii.readPyAscii()
           case TYPE_INT => PyInt.readPyInt()
-          case _ => throw new Error(s"Unknown object type ${typ.toHexString} (${typ.toChar})")
+          case _ => throw new Error(s"Unknown object type ${typ.toHexString} (${typ.toChar} / ${data.offset.toHexString})")
         }
         refList.append(retval, flag)
     }
@@ -51,7 +50,7 @@ object PyObject {
   }
 
   def readRef()(implicit data: ByteArrayStream, refList: RefList): PyObject = {
-    val r = data.bReadLong()
+    val r = data.readLong()
     val o = refList(r)
     if (o == PyNone) throw new Error(s"Bad reference ${r}")
     o
@@ -61,14 +60,20 @@ object PyObject {
 
 abstract class PyBoolean(val value: Boolean) extends PyObject
 
-object PyTrue extends PyBoolean(true)
+object PyTrue extends PyBoolean(true) {
+  override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
+}
 
-object PyFalse extends PyBoolean(false)
+object PyFalse extends PyBoolean(false){
+  override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
+}
 
 object PyNone extends PyObject {
   override def toString: String = "PyNone"
 
   override def shortName: String = toString
+
+  override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_NONE)
 }
 
 
@@ -81,12 +86,14 @@ class PyString(val str: List[Byte]) extends PyObject {
 
   def as_ints: List[Int] = str.map(_ & 0xff)
 
+  override def toBytes: ByteArrayStream =
+    ByteArrayStream(PycTypeBytes.TYPE_STRING) + ByteArrayStream.fromLongs(str.length) + ByteArrayStream(str)
 }
 
 object PyString {
 
   def readPyString()(implicit data: ByteArrayStream): PyString = {
-    val length = data.bReadLong()
+    val length = data.readLong()
     new PyString(data.take_bytes(length))
   }
 
@@ -97,12 +104,20 @@ class PyAscii(val text: String) extends PyObject {
   override def toString: String = f"PyAscii( $text )"
 
   override def shortName: String = toString
+
+  override def toBytes: ByteArrayStream =
+    (
+      if (text.length < 255)
+      ByteArrayStream(PycTypeBytes.TYPE_SHORT_ASCII) + ByteArrayStream((text.length & 0xff).toByte)
+    else
+      ByteArrayStream(PycTypeBytes.TYPE_ASCII) + ByteArrayStream.fromLongs(text.length)
+    ) + ByteArrayStream(text.toCharArray)
 }
 
 object PyAscii {
 
   def readPyAscii(isSmall: Boolean = false)(implicit data: ByteArrayStream): PyAscii = {
-    val length = if (isSmall) data.head() else data.bReadLong()
+    val length = if (isSmall) data.head() else data.readLong()
     new PyAscii(new String(data.take(length).map(_.toChar).toArray))
   }
 
@@ -112,12 +127,15 @@ class PyInt(val value: Int) extends PyObject {
   override def toString: String = f"PyInt($value)"
 
   override def shortName: String = toString
+
+  override def toBytes: ByteArrayStream =
+    ByteArrayStream(PycTypeBytes.TYPE_INT) + ByteArrayStream.fromLongs(value)
 }
 
 object PyInt {
 
   def readPyInt()(implicit data: ByteArrayStream): PyInt = {
-    new PyInt(data.bReadLong())
+    new PyInt(data.readLong())
   }
 
 }

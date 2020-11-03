@@ -1,10 +1,6 @@
 package com.freddieposer.scaly.backend.pyc
 
-import java.io.File
-
-import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, RefList}
-
-import scala.collection.mutable.ArrayBuffer
+import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, MutableByteArrayStream, RefList}
 
 class PycFile(
                val magic: Int,
@@ -25,6 +21,21 @@ class PycFile(
        |  ${codeObject.prettyPrint(1)}
        |""".stripMargin
 
+  def toBytes: ByteArrayStream = {
+    
+    val bytes = new MutableByteArrayStream()
+
+    bytes.writeLong(magic, rev=false)
+    bytes.writeLong(bit_field, rev=false)
+    bytes.writeLong(moddate, rev=false)
+    bytes.writeLong(fileSize, rev=false)
+
+    bytes.write(codeObject.toBytes)
+
+    bytes.freeze
+
+  }
+
 }
 
 object PycFile {
@@ -35,10 +46,10 @@ object PycFile {
   val MAGIC_NUMBER = 0x550d0d0a
 
   def readFromBytes(bytes: ByteArrayStream): PycFile = {
-    val magic = bytes.bReadLong(false)
-    val bits = bytes.bReadLong(false)
-    val moddate = bytes.bReadLong(false)
-    val filesize = bytes.bReadLong(false)
+    val magic = bytes.readLong(false)
+    val bits = bytes.readLong(false)
+    val moddate = bytes.readLong(false)
+    val filesize = bytes.readLong(false)
 
     assert(MAGIC_NUMBER == magic, s"Incorrect magic number in file (Expected ${MAGIC_NUMBER}, got ${magic})")
 
