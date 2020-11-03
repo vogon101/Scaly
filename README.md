@@ -2,7 +2,7 @@
 _Compiling a Scala Inspired Language to CPython Bytecode_
 
 ## Project Structure
-`com.freddieposer.scaly`
+* `com.freddieposer.scaly`
     * `AST`
     * `backend`
         * `pyc` - Code for reading and writing compiled python files
