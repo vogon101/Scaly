@@ -323,7 +323,7 @@ paramType
 
 classParamClauses
 //   : classParamClause* (NL? '(' 'implicit' classParams ')')?
-   : classParamClause?
+   : classParamClause*
    ;
 
 classParamClause
