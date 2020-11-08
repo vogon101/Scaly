@@ -12,7 +12,12 @@ class ScalyParsingVisitor extends ScalyBaseVisitor[ParseTree] {
 
   import ScalyParser._
 
+  //super\.[a-zA-Z_1-9]+\(ctx\)
+
   private implicit def ListToList[T](xs: util.List[T]): List[T] = xs.asScala.toList
+
+  private lazy val exprVisitor = new ScalyExprParsingVisitor
+  private lazy val literalVisitor = new ScalyLiteralParsingVisitor
 
   //WARNING: Yes, this does violate type safety for the sake of nicer code
   //TODO: Could use the Option(null) constructor to make this all nicer
@@ -84,10 +89,6 @@ class ScalyParsingVisitor extends ScalyBaseVisitor[ParseTree] {
     ???
   }
 
-  override def visitExpr(ctx: ExprContext): Expr = {
-    ???
-  }
-
   override def visitFunDef(ctx: FunDefContext): FunDef = {
     ???
   }
@@ -95,5 +96,12 @@ class ScalyParsingVisitor extends ScalyBaseVisitor[ParseTree] {
   override def visitPatVarDef(ctx: PatVarDefContext): PatVarDef = {
     ???
   }
+
+  override def visitExpr(ctx: ExprContext): Expr =
+    ctx.accept(exprVisitor)
+
+  override def visitLiteral(ctx: LiteralContext): Literal =
+    ctx.accept(literalVisitor)
+
 
 }

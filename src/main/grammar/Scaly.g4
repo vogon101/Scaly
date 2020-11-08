@@ -32,14 +32,29 @@
 
 grammar Scaly;
 
-literal
-   : '-'? IntegerLiteral
-   | '-'? FloatingPointLiteral
-   | BooleanLiteral
-   | CharacterLiteral
-   | StringLiteral
-   | SymbolLiteral
-   | 'null'
+compilationUnit
+   : topStatSeq
+   ;
+
+topStatSeq : topStat+;
+
+topStat
+//   : (annotation NL?)* modifier* tmplDef
+   : modifier* tmplDef
+//   | import_
+   ;
+
+// Makes visitor nicer to split up
+literal: literal_inner;
+
+literal_inner
+   : '-'? IntegerLiteral        # literal_int
+   | '-'? FloatingPointLiteral  # literal_float
+   | BooleanLiteral             # literal_bool
+   | CharacterLiteral           # literal_char
+   | StringLiteral              # literal_string
+   | SymbolLiteral              # literal_symbol
+   | 'null'                     # literal_null
    ;
 
 //qualId
@@ -130,16 +145,16 @@ expr
    ;
 
 expr1
-   : 'if' '(' expr ')' NL* expr ('else' expr)?
-   | 'while' '(' expr ')' NL* expr
-   | 'try' expr ('catch' expr)? ('finally' expr)?
-   | 'do' expr 'while' '(' expr ')'
+   : 'if' '(' expr ')' NL* expr ('else' expr)?                              # expr1_if
+   | 'while' '(' expr ')' NL* expr                                          # expr1_while
+   | 'try' expr ('catch' expr)? ('finally' expr)?                           # expr1_try
+   | 'do' expr 'while' '(' expr ')'                                         # expr1_dowhile
 //   | 'for' ('(' enumerators ')' | '{' enumerators '}') 'yield'? expr
-   | 'throw' expr
-   | 'return' expr?
-   | ((simpleExpr | simpleExpr1 '_'?) '.')? Id '=' expr
-   | simpleExpr1 argumentExprs '=' expr
-   | postfixExpr ascription?
+   | 'throw' expr                                                           # expr1_throw
+   | 'return' expr?                                                         # expr1_return
+   | ((simpleExpr | simpleExpr1 '_'?) '.')? Id '=' expr                     # expr1_assignment
+   | simpleExpr1 argumentExprs '=' expr                                     # expr1_assignment2
+   | postfixExpr ascription?                                                # expr1_postfix
 //   | postfixExpr 'match' '{' caseClauses '}'
    ;
 
@@ -168,15 +183,15 @@ simpleExpr
 // Dublicate lines to prevent left-recursive code.
 // can't use (simpleExpr|simpleExpr1) '.' Id
 simpleExpr1
-   : literal
-   | stableId
-   | '_'
-   | '(' exprs? ')'
-   | simpleExpr '.' Id
-   | simpleExpr1 '_'?  '.' Id
+   : literal                        # simpleExpr1_literal
+   | stableId                       # simpleExpr1_stableID
+   | '_'                            # simpleExpr1_underscore
+   | '(' exprs? ')'                 # simpleExpr1_brackets
+   | simpleExpr '.' Id              # simpleExpr1_member1
+   | simpleExpr1 '_'?  '.' Id       # simpleExpr1_member2
 //   | simpleExpr  typeArgs
 //   | simpleExpr1 '_'? typeArgs
-   | simpleExpr1 argumentExprs
+   | simpleExpr1 argumentExprs      # simpleExpr1_application
    ;
 
 exprs
@@ -308,7 +323,7 @@ paramType
 
 classParamClauses
 //   : classParamClause* (NL? '(' 'implicit' classParams ')')?
-   : classParamClause*
+   : classParamClause?
    ;
 
 classParamClause
@@ -539,22 +554,6 @@ constrBlock
 selfInvocation
    : 'this' argumentExprs +
    ;
-
-topStatSeq
-   : topStat+
-   ;
-
-topStat
-//   : (annotation NL?)* modifier* tmplDef
-   : modifier* tmplDef
-//   | import_
-   ;
-
-compilationUnit
-   : topStatSeq
-   ;
-
-
 
 // ===== Lexer =====
 

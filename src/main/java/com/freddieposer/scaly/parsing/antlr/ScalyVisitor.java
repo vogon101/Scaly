@@ -11,11 +11,78 @@ import org.antlr.v4.runtime.tree.ParseTreeVisitor;
  */
 public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	/**
+	 * Visit a parse tree produced by {@link ScalyParser#compilationUnit}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitCompilationUnit(ScalyParser.CompilationUnitContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ScalyParser#topStatSeq}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTopStatSeq(ScalyParser.TopStatSeqContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link ScalyParser#topStat}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTopStat(ScalyParser.TopStatContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral(ScalyParser.LiteralContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code literal_int}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLiteral_int(ScalyParser.Literal_intContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code literal_float}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLiteral_float(ScalyParser.Literal_floatContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code literal_bool}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLiteral_bool(ScalyParser.Literal_boolContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code literal_char}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLiteral_char(ScalyParser.Literal_charContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code literal_string}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLiteral_string(ScalyParser.Literal_stringContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code literal_symbol}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLiteral_symbol(ScalyParser.Literal_symbolContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code literal_null}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLiteral_null(ScalyParser.Literal_nullContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#ids}.
 	 * @param ctx the parse tree
@@ -95,11 +162,68 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitExpr(ScalyParser.ExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ScalyParser#expr1}.
+	 * Visit a parse tree produced by the {@code expr1_if}
+	 * labeled alternative in {@link ScalyParser#expr1}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitExpr1(ScalyParser.Expr1Context ctx);
+	T visitExpr1_if(ScalyParser.Expr1_ifContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_while}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_while(ScalyParser.Expr1_whileContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_try}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_try(ScalyParser.Expr1_tryContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_dowhile}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_dowhile(ScalyParser.Expr1_dowhileContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_throw}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_throw(ScalyParser.Expr1_throwContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_return}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_return(ScalyParser.Expr1_returnContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_assignment}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_assignment(ScalyParser.Expr1_assignmentContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_assignment2}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_assignment2(ScalyParser.Expr1_assignment2Context ctx);
+	/**
+	 * Visit a parse tree produced by the {@code expr1_postfix}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExpr1_postfix(ScalyParser.Expr1_postfixContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#prefixDef}.
 	 * @param ctx the parse tree
@@ -131,11 +255,54 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitSimpleExpr(ScalyParser.SimpleExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ScalyParser#simpleExpr1}.
+	 * Visit a parse tree produced by the {@code simpleExpr1_underscore}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitSimpleExpr1(ScalyParser.SimpleExpr1Context ctx);
+	T visitSimpleExpr1_underscore(ScalyParser.SimpleExpr1_underscoreContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code simpleExpr1_member1}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSimpleExpr1_member1(ScalyParser.SimpleExpr1_member1Context ctx);
+	/**
+	 * Visit a parse tree produced by the {@code simpleExpr1_member2}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSimpleExpr1_member2(ScalyParser.SimpleExpr1_member2Context ctx);
+	/**
+	 * Visit a parse tree produced by the {@code simpleExpr1_application}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSimpleExpr1_application(ScalyParser.SimpleExpr1_applicationContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code simpleExpr1_stableID}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSimpleExpr1_stableID(ScalyParser.SimpleExpr1_stableIDContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code simpleExpr1_brackets}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSimpleExpr1_brackets(ScalyParser.SimpleExpr1_bracketsContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code simpleExpr1_literal}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSimpleExpr1_literal(ScalyParser.SimpleExpr1_literalContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#exprs}.
 	 * @param ctx the parse tree
@@ -430,22 +597,4 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitSelfInvocation(ScalyParser.SelfInvocationContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link ScalyParser#topStatSeq}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitTopStatSeq(ScalyParser.TopStatSeqContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link ScalyParser#topStat}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitTopStat(ScalyParser.TopStatContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link ScalyParser#compilationUnit}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitCompilationUnit(ScalyParser.CompilationUnitContext ctx);
 }

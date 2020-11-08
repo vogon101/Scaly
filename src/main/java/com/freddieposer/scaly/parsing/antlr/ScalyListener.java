@@ -8,6 +8,36 @@ import org.antlr.v4.runtime.tree.ParseTreeListener;
  */
 public interface ScalyListener extends ParseTreeListener {
 	/**
+	 * Enter a parse tree produced by {@link ScalyParser#compilationUnit}.
+	 * @param ctx the parse tree
+	 */
+	void enterCompilationUnit(ScalyParser.CompilationUnitContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ScalyParser#compilationUnit}.
+	 * @param ctx the parse tree
+	 */
+	void exitCompilationUnit(ScalyParser.CompilationUnitContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ScalyParser#topStatSeq}.
+	 * @param ctx the parse tree
+	 */
+	void enterTopStatSeq(ScalyParser.TopStatSeqContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ScalyParser#topStatSeq}.
+	 * @param ctx the parse tree
+	 */
+	void exitTopStatSeq(ScalyParser.TopStatSeqContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link ScalyParser#topStat}.
+	 * @param ctx the parse tree
+	 */
+	void enterTopStat(ScalyParser.TopStatContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ScalyParser#topStat}.
+	 * @param ctx the parse tree
+	 */
+	void exitTopStat(ScalyParser.TopStatContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
@@ -17,6 +47,90 @@ public interface ScalyListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral(ScalyParser.LiteralContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code literal_int}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void enterLiteral_int(ScalyParser.Literal_intContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code literal_int}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void exitLiteral_int(ScalyParser.Literal_intContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code literal_float}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void enterLiteral_float(ScalyParser.Literal_floatContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code literal_float}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void exitLiteral_float(ScalyParser.Literal_floatContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code literal_bool}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void enterLiteral_bool(ScalyParser.Literal_boolContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code literal_bool}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void exitLiteral_bool(ScalyParser.Literal_boolContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code literal_char}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void enterLiteral_char(ScalyParser.Literal_charContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code literal_char}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void exitLiteral_char(ScalyParser.Literal_charContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code literal_string}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void enterLiteral_string(ScalyParser.Literal_stringContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code literal_string}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void exitLiteral_string(ScalyParser.Literal_stringContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code literal_symbol}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void enterLiteral_symbol(ScalyParser.Literal_symbolContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code literal_symbol}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void exitLiteral_symbol(ScalyParser.Literal_symbolContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code literal_null}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void enterLiteral_null(ScalyParser.Literal_nullContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code literal_null}
+	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * @param ctx the parse tree
+	 */
+	void exitLiteral_null(ScalyParser.Literal_nullContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#ids}.
 	 * @param ctx the parse tree
@@ -148,15 +262,113 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitExpr(ScalyParser.ExprContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ScalyParser#expr1}.
+	 * Enter a parse tree produced by the {@code expr1_if}
+	 * labeled alternative in {@link ScalyParser#expr1}.
 	 * @param ctx the parse tree
 	 */
-	void enterExpr1(ScalyParser.Expr1Context ctx);
+	void enterExpr1_if(ScalyParser.Expr1_ifContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ScalyParser#expr1}.
+	 * Exit a parse tree produced by the {@code expr1_if}
+	 * labeled alternative in {@link ScalyParser#expr1}.
 	 * @param ctx the parse tree
 	 */
-	void exitExpr1(ScalyParser.Expr1Context ctx);
+	void exitExpr1_if(ScalyParser.Expr1_ifContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_while}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_while(ScalyParser.Expr1_whileContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_while}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_while(ScalyParser.Expr1_whileContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_try}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_try(ScalyParser.Expr1_tryContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_try}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_try(ScalyParser.Expr1_tryContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_dowhile}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_dowhile(ScalyParser.Expr1_dowhileContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_dowhile}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_dowhile(ScalyParser.Expr1_dowhileContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_throw}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_throw(ScalyParser.Expr1_throwContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_throw}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_throw(ScalyParser.Expr1_throwContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_return}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_return(ScalyParser.Expr1_returnContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_return}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_return(ScalyParser.Expr1_returnContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_assignment}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_assignment(ScalyParser.Expr1_assignmentContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_assignment}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_assignment(ScalyParser.Expr1_assignmentContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_assignment2}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_assignment2(ScalyParser.Expr1_assignment2Context ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_assignment2}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_assignment2(ScalyParser.Expr1_assignment2Context ctx);
+	/**
+	 * Enter a parse tree produced by the {@code expr1_postfix}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterExpr1_postfix(ScalyParser.Expr1_postfixContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code expr1_postfix}
+	 * labeled alternative in {@link ScalyParser#expr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitExpr1_postfix(ScalyParser.Expr1_postfixContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#prefixDef}.
 	 * @param ctx the parse tree
@@ -208,15 +420,89 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitSimpleExpr(ScalyParser.SimpleExprContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ScalyParser#simpleExpr1}.
+	 * Enter a parse tree produced by the {@code simpleExpr1_underscore}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
 	 * @param ctx the parse tree
 	 */
-	void enterSimpleExpr1(ScalyParser.SimpleExpr1Context ctx);
+	void enterSimpleExpr1_underscore(ScalyParser.SimpleExpr1_underscoreContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ScalyParser#simpleExpr1}.
+	 * Exit a parse tree produced by the {@code simpleExpr1_underscore}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
 	 * @param ctx the parse tree
 	 */
-	void exitSimpleExpr1(ScalyParser.SimpleExpr1Context ctx);
+	void exitSimpleExpr1_underscore(ScalyParser.SimpleExpr1_underscoreContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code simpleExpr1_member1}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterSimpleExpr1_member1(ScalyParser.SimpleExpr1_member1Context ctx);
+	/**
+	 * Exit a parse tree produced by the {@code simpleExpr1_member1}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitSimpleExpr1_member1(ScalyParser.SimpleExpr1_member1Context ctx);
+	/**
+	 * Enter a parse tree produced by the {@code simpleExpr1_member2}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterSimpleExpr1_member2(ScalyParser.SimpleExpr1_member2Context ctx);
+	/**
+	 * Exit a parse tree produced by the {@code simpleExpr1_member2}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitSimpleExpr1_member2(ScalyParser.SimpleExpr1_member2Context ctx);
+	/**
+	 * Enter a parse tree produced by the {@code simpleExpr1_application}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterSimpleExpr1_application(ScalyParser.SimpleExpr1_applicationContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code simpleExpr1_application}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitSimpleExpr1_application(ScalyParser.SimpleExpr1_applicationContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code simpleExpr1_stableID}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterSimpleExpr1_stableID(ScalyParser.SimpleExpr1_stableIDContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code simpleExpr1_stableID}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitSimpleExpr1_stableID(ScalyParser.SimpleExpr1_stableIDContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code simpleExpr1_brackets}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterSimpleExpr1_brackets(ScalyParser.SimpleExpr1_bracketsContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code simpleExpr1_brackets}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitSimpleExpr1_brackets(ScalyParser.SimpleExpr1_bracketsContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code simpleExpr1_literal}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void enterSimpleExpr1_literal(ScalyParser.SimpleExpr1_literalContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code simpleExpr1_literal}
+	 * labeled alternative in {@link ScalyParser#simpleExpr1}.
+	 * @param ctx the parse tree
+	 */
+	void exitSimpleExpr1_literal(ScalyParser.SimpleExpr1_literalContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#exprs}.
 	 * @param ctx the parse tree
@@ -707,34 +993,4 @@ public interface ScalyListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitSelfInvocation(ScalyParser.SelfInvocationContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link ScalyParser#topStatSeq}.
-	 * @param ctx the parse tree
-	 */
-	void enterTopStatSeq(ScalyParser.TopStatSeqContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link ScalyParser#topStatSeq}.
-	 * @param ctx the parse tree
-	 */
-	void exitTopStatSeq(ScalyParser.TopStatSeqContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link ScalyParser#topStat}.
-	 * @param ctx the parse tree
-	 */
-	void enterTopStat(ScalyParser.TopStatContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link ScalyParser#topStat}.
-	 * @param ctx the parse tree
-	 */
-	void exitTopStat(ScalyParser.TopStatContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link ScalyParser#compilationUnit}.
-	 * @param ctx the parse tree
-	 */
-	void enterCompilationUnit(ScalyParser.CompilationUnitContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link ScalyParser#compilationUnit}.
-	 * @param ctx the parse tree
-	 */
-	void exitCompilationUnit(ScalyParser.CompilationUnitContext ctx);
 }

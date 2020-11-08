@@ -12,6 +12,8 @@ abstract class Dcl extends ParseTree
 
 abstract class Expr extends ParseTree
 
+abstract class Literal extends Expr
+
 sealed trait TopStatement extends Def
 
 class ScalyClassDef(
@@ -37,3 +39,4 @@ final case class TemplateExpr(mExpr: Expr) extends TemplateStatement
 class FunDef extends Def
 
 class PatVarDef extends Def
+
