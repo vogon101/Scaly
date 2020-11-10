@@ -1,23 +1,28 @@
 package com.freddieposer.scaly.parsing
 
-import com.freddieposer.scaly.parsing.antlr.{ScalyBaseVisitor, ScalyParser}
+import com.freddieposer.scaly.parsing.antlr.{ScalyBaseVisitor, ScalyParser, ScalyVisitor}
 import com.freddieposer.scaly.parsing.parsetree._
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 import java.util
 
 import org.antlr.v4.runtime.ParserRuleContext
+import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor
 
-class ScalyParsingVisitor extends ScalyBaseVisitor[ParseTree] {
+class ScalyParsingVisitor
+  extends AbstractParseTreeVisitor[ParseTree]
+  with ScalyVisitor[ParseTree]
+  with ScalyExprParsingVisitor
+  with ScalyLiteralParsingVisitor
+{
 
   import ScalyParser._
-
   //super\.[a-zA-Z_1-9]+\(ctx\)
 
-  private implicit def ListToList[T](xs: util.List[T]): List[T] = xs.asScala.toList
+  override val exprVisitor: ScalyVisitor[Expr] = this.asInstanceOf[ScalyVisitor[Expr]]
+  override val literalVisitor: ScalyVisitor[Literal] = this.asInstanceOf[ScalyVisitor[Literal]]
 
-  private lazy val exprVisitor = new ScalyExprParsingVisitor
-  private lazy val literalVisitor = new ScalyLiteralParsingVisitor
+  private implicit def ListToList[T](xs: util.List[T]): List[T] = xs.asScala.toList
 
   //WARNING: Yes, this does violate type safety for the sake of nicer code
   //TODO: Could use the Option(null) constructor to make this all nicer
@@ -97,11 +102,101 @@ class ScalyParsingVisitor extends ScalyBaseVisitor[ParseTree] {
     ???
   }
 
-  override def visitExpr(ctx: ExprContext): Expr =
-    ctx.accept(exprVisitor)
+  override def visitTopStatSeq(ctx: TopStatSeqContext): ParseTree = ???
 
-  override def visitLiteral(ctx: LiteralContext): Literal =
-    ctx.accept(literalVisitor)
+  override def visitIds(ctx: IdsContext): ParseTree = ???
 
+  override def visitStableId(ctx: StableIdContext): ParseTree = ???
 
+  override def visitType_(ctx: Type_Context): ParseTree = ???
+
+  override def visitFunctionArgTypes(ctx: FunctionArgTypesContext): ParseTree = ???
+
+  override def visitInfixType(ctx: InfixTypeContext): ParseTree = ???
+
+  override def visitCompoundType(ctx: CompoundTypeContext): ParseTree = ???
+
+  override def visitSimpleType(ctx: SimpleTypeContext): ParseTree = ???
+
+  override def visitTypes(ctx: TypesContext): ParseTree = ???
+
+  override def visitRefinement(ctx: RefinementContext): ParseTree = ???
+
+  override def visitRefineStat(ctx: RefineStatContext): ParseTree = ???
+
+  override def visitTypePat(ctx: TypePatContext): ParseTree = ???
+
+  override def visitAscription(ctx: AscriptionContext): ParseTree = ???
+
+  override def visitPrefixDef(ctx: PrefixDefContext): ParseTree = ???
+
+  override def visitBlock(ctx: BlockContext): ParseTree = ???
+
+  override def visitBlockStat(ctx: BlockStatContext): ParseTree = ???
+
+  override def visitPattern(ctx: PatternContext): ParseTree = ???
+
+  override def visitPattern1(ctx: Pattern1Context): ParseTree = ???
+
+  override def visitPattern2(ctx: Pattern2Context): ParseTree = ???
+
+  override def visitPattern3(ctx: Pattern3Context): ParseTree = ???
+
+  override def visitSimplePattern(ctx: SimplePatternContext): ParseTree = ???
+
+  override def visitPatterns(ctx: PatternsContext): ParseTree = ???
+
+  override def visitParamClauses(ctx: ParamClausesContext): ParseTree = ???
+
+  override def visitParamClause(ctx: ParamClauseContext): ParseTree = ???
+
+  override def visitParams(ctx: ParamsContext): ParseTree = ???
+
+  override def visitParam(ctx: ParamContext): ParseTree = ???
+
+  override def visitParamType(ctx: ParamTypeContext): ParseTree = ???
+
+  override def visitClassParamClauses(ctx: ClassParamClausesContext): ParseTree = ???
+
+  override def visitClassParamClause(ctx: ClassParamClauseContext): ParseTree = ???
+
+  override def visitClassParams(ctx: ClassParamsContext): ParseTree = ???
+
+  override def visitClassParam(ctx: ClassParamContext): ParseTree = ???
+
+  override def visitBindings(ctx: BindingsContext): ParseTree = ???
+
+  override def visitBinding(ctx: BindingContext): ParseTree = ???
+
+  override def visitModifier(ctx: ModifierContext): ParseTree = ???
+
+  override def visitLocalModifier(ctx: LocalModifierContext): ParseTree = ???
+
+  override def visitAccessModifier(ctx: AccessModifierContext): ParseTree = ???
+
+  override def visitAccessQualifier(ctx: AccessQualifierContext): ParseTree = ???
+
+  override def visitValDcl(ctx: ValDclContext): ParseTree = ???
+
+  override def visitVarDcl(ctx: VarDclContext): ParseTree = ???
+
+  override def visitFunDcl(ctx: FunDclContext): ParseTree = ???
+
+  override def visitFunSig(ctx: FunSigContext): ParseTree = ???
+
+  override def visitPatDef(ctx: PatDefContext): ParseTree = ???
+
+  override def visitVarDef(ctx: VarDefContext): ParseTree = ???
+
+  override def visitClassTemplateOpt(ctx: ClassTemplateOptContext): ParseTree = ???
+
+  override def visitClassTemplate(ctx: ClassTemplateContext): ParseTree = ???
+
+  override def visitClassParents(ctx: ClassParentsContext): ParseTree = ???
+
+  override def visitConstr(ctx: ConstrContext): ParseTree = ???
+
+  override def visitConstrBlock(ctx: ConstrBlockContext): ParseTree = ???
+
+  override def visitSelfInvocation(ctx: SelfInvocationContext): ParseTree = ???
 }

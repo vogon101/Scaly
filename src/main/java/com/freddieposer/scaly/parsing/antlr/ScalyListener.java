@@ -38,96 +38,86 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitTopStat(ScalyParser.TopStatContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ScalyParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void enterLiteral(ScalyParser.LiteralContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link ScalyParser#literal}.
-	 * @param ctx the parse tree
-	 */
-	void exitLiteral(ScalyParser.LiteralContext ctx);
-	/**
 	 * Enter a parse tree produced by the {@code literal_int}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void enterLiteral_int(ScalyParser.Literal_intContext ctx);
 	/**
 	 * Exit a parse tree produced by the {@code literal_int}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral_int(ScalyParser.Literal_intContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code literal_float}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void enterLiteral_float(ScalyParser.Literal_floatContext ctx);
 	/**
 	 * Exit a parse tree produced by the {@code literal_float}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral_float(ScalyParser.Literal_floatContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code literal_bool}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void enterLiteral_bool(ScalyParser.Literal_boolContext ctx);
 	/**
 	 * Exit a parse tree produced by the {@code literal_bool}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral_bool(ScalyParser.Literal_boolContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code literal_char}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void enterLiteral_char(ScalyParser.Literal_charContext ctx);
 	/**
 	 * Exit a parse tree produced by the {@code literal_char}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral_char(ScalyParser.Literal_charContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code literal_string}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void enterLiteral_string(ScalyParser.Literal_stringContext ctx);
 	/**
 	 * Exit a parse tree produced by the {@code literal_string}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral_string(ScalyParser.Literal_stringContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code literal_symbol}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void enterLiteral_symbol(ScalyParser.Literal_symbolContext ctx);
 	/**
 	 * Exit a parse tree produced by the {@code literal_symbol}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral_symbol(ScalyParser.Literal_symbolContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code literal_null}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void enterLiteral_null(ScalyParser.Literal_nullContext ctx);
 	/**
 	 * Exit a parse tree produced by the {@code literal_null}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 */
 	void exitLiteral_null(ScalyParser.Literal_nullContext ctx);

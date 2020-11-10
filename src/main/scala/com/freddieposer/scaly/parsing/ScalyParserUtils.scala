@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.parsing
 
-import com.freddieposer.scaly.parsing.antlr.{ScalyLexer, ScalyParser}
+import com.freddieposer.scaly.parsing.antlr.{ScalyBaseVisitor, ScalyLexer, ScalyParser}
 import com.freddieposer.scaly.parsing.parsetree.ParseTree
 import org.antlr.v4.runtime.{ANTLRInputStream, CharStreams, CommonTokenStream}
 

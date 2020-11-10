@@ -44,10 +44,7 @@ topStat
 //   | import_
    ;
 
-// Makes visitor nicer to split up
-literal: literal_inner;
-
-literal_inner
+literal
    : '-'? IntegerLiteral        # literal_int
    | '-'? FloatingPointLiteral  # literal_float
    | BooleanLiteral             # literal_bool
@@ -180,18 +177,19 @@ simpleExpr
    | blockExpr
    ;
 
+
 // Dublicate lines to prevent left-recursive code.
 // can't use (simpleExpr|simpleExpr1) '.' Id
 simpleExpr1
-   : literal                        # simpleExpr1_literal
-   | stableId                       # simpleExpr1_stableID
-   | '_'                            # simpleExpr1_underscore
-   | '(' exprs? ')'                 # simpleExpr1_brackets
-   | simpleExpr '.' Id              # simpleExpr1_member1
-   | simpleExpr1 '_'?  '.' Id       # simpleExpr1_member2
+   : literal                            # simpleExpr1_literal
+   | stableId                           # simpleExpr1_stableID
+   | '_'                                # simpleExpr1_underscore
+   | '(' exprs? ')'                     # simpleExpr1_brackets
+   | simpleExpr '.' Id                  # simpleExpr1_member1
+   | simpleExpr1 '_'?  '.' Id     # simpleExpr1_member2
 //   | simpleExpr  typeArgs
 //   | simpleExpr1 '_'? typeArgs
-   | simpleExpr1 argumentExprs      # simpleExpr1_application
+   | simpleExpr1 argumentExprs    # simpleExpr1_application
    ;
 
 exprs

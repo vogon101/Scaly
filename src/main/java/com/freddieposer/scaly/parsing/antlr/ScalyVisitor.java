@@ -29,56 +29,50 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitTopStat(ScalyParser.TopStatContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ScalyParser#literal}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitLiteral(ScalyParser.LiteralContext ctx);
-	/**
 	 * Visit a parse tree produced by the {@code literal_int}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral_int(ScalyParser.Literal_intContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code literal_float}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral_float(ScalyParser.Literal_floatContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code literal_bool}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral_bool(ScalyParser.Literal_boolContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code literal_char}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral_char(ScalyParser.Literal_charContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code literal_string}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral_string(ScalyParser.Literal_stringContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code literal_symbol}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
 	T visitLiteral_symbol(ScalyParser.Literal_symbolContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code literal_null}
-	 * labeled alternative in {@link ScalyParser#literal_inner}.
+	 * labeled alternative in {@link ScalyParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
