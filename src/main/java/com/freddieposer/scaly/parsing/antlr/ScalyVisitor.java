@@ -114,6 +114,12 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitCompoundType(ScalyParser.CompoundTypeContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link ScalyParser#annotType}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAnnotType(ScalyParser.AnnotTypeContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link ScalyParser#simpleType}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -125,18 +131,6 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitTypes(ScalyParser.TypesContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link ScalyParser#refinement}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitRefinement(ScalyParser.RefinementContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link ScalyParser#refineStat}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitRefineStat(ScalyParser.RefineStatContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#typePat}.
 	 * @param ctx the parse tree
@@ -322,11 +316,26 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitBlock(ScalyParser.BlockContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ScalyParser#blockStat}.
+	 * Visit a parse tree produced by the {@code blockStatDef}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitBlockStat(ScalyParser.BlockStatContext ctx);
+	T visitBlockStatDef(ScalyParser.BlockStatDefContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code blockStatTmplDef}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBlockStatTmplDef(ScalyParser.BlockStatTmplDefContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code blockStatExpr}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBlockStatExpr(ScalyParser.BlockStatExprContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#resultExpr}.
 	 * @param ctx the parse tree
@@ -418,11 +427,19 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitClassParams(ScalyParser.ClassParamsContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ScalyParser#classParam}.
+	 * Visit a parse tree produced by the {@code classParamVal}
+	 * labeled alternative in {@link ScalyParser#classParam}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitClassParam(ScalyParser.ClassParamContext ctx);
+	T visitClassParamVal(ScalyParser.ClassParamValContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code classParamVar}
+	 * labeled alternative in {@link ScalyParser#classParam}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitClassParamVar(ScalyParser.ClassParamVarContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#bindings}.
 	 * @param ctx the parse tree
@@ -472,11 +489,26 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitTemplateStat(ScalyParser.TemplateStatContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ScalyParser#dcl}.
+	 * Visit a parse tree produced by the {@code dclValDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitDcl(ScalyParser.DclContext ctx);
+	T visitDclValDcl(ScalyParser.DclValDclContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code dclVarDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDclVarDcl(ScalyParser.DclVarDclContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code dclDefDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDclDefDcl(ScalyParser.DclDefDclContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#valDcl}.
 	 * @param ctx the parse tree
@@ -502,11 +534,19 @@ public interface ScalyVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitFunSig(ScalyParser.FunSigContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link ScalyParser#patVarDef}.
+	 * Visit a parse tree produced by the {@code patVarDefVal}
+	 * labeled alternative in {@link ScalyParser#patVarDef}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitPatVarDef(ScalyParser.PatVarDefContext ctx);
+	T visitPatVarDefVal(ScalyParser.PatVarDefValContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code patVarDefVar}
+	 * labeled alternative in {@link ScalyParser#patVarDef}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPatVarDefVar(ScalyParser.PatVarDefVarContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link ScalyParser#def}.
 	 * @param ctx the parse tree

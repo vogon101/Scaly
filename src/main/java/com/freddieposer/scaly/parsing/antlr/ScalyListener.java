@@ -182,6 +182,16 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitCompoundType(ScalyParser.CompoundTypeContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link ScalyParser#annotType}.
+	 * @param ctx the parse tree
+	 */
+	void enterAnnotType(ScalyParser.AnnotTypeContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link ScalyParser#annotType}.
+	 * @param ctx the parse tree
+	 */
+	void exitAnnotType(ScalyParser.AnnotTypeContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link ScalyParser#simpleType}.
 	 * @param ctx the parse tree
 	 */
@@ -201,26 +211,6 @@ public interface ScalyListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitTypes(ScalyParser.TypesContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link ScalyParser#refinement}.
-	 * @param ctx the parse tree
-	 */
-	void enterRefinement(ScalyParser.RefinementContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link ScalyParser#refinement}.
-	 * @param ctx the parse tree
-	 */
-	void exitRefinement(ScalyParser.RefinementContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link ScalyParser#refineStat}.
-	 * @param ctx the parse tree
-	 */
-	void enterRefineStat(ScalyParser.RefineStatContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link ScalyParser#refineStat}.
-	 * @param ctx the parse tree
-	 */
-	void exitRefineStat(ScalyParser.RefineStatContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#typePat}.
 	 * @param ctx the parse tree
@@ -534,15 +524,41 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitBlock(ScalyParser.BlockContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ScalyParser#blockStat}.
+	 * Enter a parse tree produced by the {@code blockStatDef}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
 	 * @param ctx the parse tree
 	 */
-	void enterBlockStat(ScalyParser.BlockStatContext ctx);
+	void enterBlockStatDef(ScalyParser.BlockStatDefContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ScalyParser#blockStat}.
+	 * Exit a parse tree produced by the {@code blockStatDef}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
 	 * @param ctx the parse tree
 	 */
-	void exitBlockStat(ScalyParser.BlockStatContext ctx);
+	void exitBlockStatDef(ScalyParser.BlockStatDefContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code blockStatTmplDef}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
+	 * @param ctx the parse tree
+	 */
+	void enterBlockStatTmplDef(ScalyParser.BlockStatTmplDefContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code blockStatTmplDef}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
+	 * @param ctx the parse tree
+	 */
+	void exitBlockStatTmplDef(ScalyParser.BlockStatTmplDefContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code blockStatExpr}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
+	 * @param ctx the parse tree
+	 */
+	void enterBlockStatExpr(ScalyParser.BlockStatExprContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code blockStatExpr}
+	 * labeled alternative in {@link ScalyParser#blockStat}.
+	 * @param ctx the parse tree
+	 */
+	void exitBlockStatExpr(ScalyParser.BlockStatExprContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#resultExpr}.
 	 * @param ctx the parse tree
@@ -694,15 +710,29 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitClassParams(ScalyParser.ClassParamsContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ScalyParser#classParam}.
+	 * Enter a parse tree produced by the {@code classParamVal}
+	 * labeled alternative in {@link ScalyParser#classParam}.
 	 * @param ctx the parse tree
 	 */
-	void enterClassParam(ScalyParser.ClassParamContext ctx);
+	void enterClassParamVal(ScalyParser.ClassParamValContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ScalyParser#classParam}.
+	 * Exit a parse tree produced by the {@code classParamVal}
+	 * labeled alternative in {@link ScalyParser#classParam}.
 	 * @param ctx the parse tree
 	 */
-	void exitClassParam(ScalyParser.ClassParamContext ctx);
+	void exitClassParamVal(ScalyParser.ClassParamValContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code classParamVar}
+	 * labeled alternative in {@link ScalyParser#classParam}.
+	 * @param ctx the parse tree
+	 */
+	void enterClassParamVar(ScalyParser.ClassParamVarContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code classParamVar}
+	 * labeled alternative in {@link ScalyParser#classParam}.
+	 * @param ctx the parse tree
+	 */
+	void exitClassParamVar(ScalyParser.ClassParamVarContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#bindings}.
 	 * @param ctx the parse tree
@@ -784,15 +814,41 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitTemplateStat(ScalyParser.TemplateStatContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ScalyParser#dcl}.
+	 * Enter a parse tree produced by the {@code dclValDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
 	 * @param ctx the parse tree
 	 */
-	void enterDcl(ScalyParser.DclContext ctx);
+	void enterDclValDcl(ScalyParser.DclValDclContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ScalyParser#dcl}.
+	 * Exit a parse tree produced by the {@code dclValDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
 	 * @param ctx the parse tree
 	 */
-	void exitDcl(ScalyParser.DclContext ctx);
+	void exitDclValDcl(ScalyParser.DclValDclContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code dclVarDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
+	 * @param ctx the parse tree
+	 */
+	void enterDclVarDcl(ScalyParser.DclVarDclContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code dclVarDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
+	 * @param ctx the parse tree
+	 */
+	void exitDclVarDcl(ScalyParser.DclVarDclContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code dclDefDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
+	 * @param ctx the parse tree
+	 */
+	void enterDclDefDcl(ScalyParser.DclDefDclContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code dclDefDcl}
+	 * labeled alternative in {@link ScalyParser#dcl}.
+	 * @param ctx the parse tree
+	 */
+	void exitDclDefDcl(ScalyParser.DclDefDclContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#valDcl}.
 	 * @param ctx the parse tree
@@ -834,15 +890,29 @@ public interface ScalyListener extends ParseTreeListener {
 	 */
 	void exitFunSig(ScalyParser.FunSigContext ctx);
 	/**
-	 * Enter a parse tree produced by {@link ScalyParser#patVarDef}.
+	 * Enter a parse tree produced by the {@code patVarDefVal}
+	 * labeled alternative in {@link ScalyParser#patVarDef}.
 	 * @param ctx the parse tree
 	 */
-	void enterPatVarDef(ScalyParser.PatVarDefContext ctx);
+	void enterPatVarDefVal(ScalyParser.PatVarDefValContext ctx);
 	/**
-	 * Exit a parse tree produced by {@link ScalyParser#patVarDef}.
+	 * Exit a parse tree produced by the {@code patVarDefVal}
+	 * labeled alternative in {@link ScalyParser#patVarDef}.
 	 * @param ctx the parse tree
 	 */
-	void exitPatVarDef(ScalyParser.PatVarDefContext ctx);
+	void exitPatVarDefVal(ScalyParser.PatVarDefValContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code patVarDefVar}
+	 * labeled alternative in {@link ScalyParser#patVarDef}.
+	 * @param ctx the parse tree
+	 */
+	void enterPatVarDefVar(ScalyParser.PatVarDefVarContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code patVarDefVar}
+	 * labeled alternative in {@link ScalyParser#patVarDef}.
+	 * @param ctx the parse tree
+	 */
+	void exitPatVarDefVar(ScalyParser.PatVarDefVarContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link ScalyParser#def}.
 	 * @param ctx the parse tree

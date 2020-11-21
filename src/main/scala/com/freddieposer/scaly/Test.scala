@@ -45,7 +45,8 @@ object Test {
     val lines = Files.readAllLines(Paths.get("parsing_test.scala")).asScala.mkString("\n")
     println(lines)
 
-    ScalyParserUtils.parse(lines)
+    val cu = ScalyParserUtils.parse(lines)
+    println(cu.toStringTree.prettyPrint())
 
   }
 

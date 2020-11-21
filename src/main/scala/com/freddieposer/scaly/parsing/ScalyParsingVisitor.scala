@@ -1,34 +1,25 @@
 package com.freddieposer.scaly.parsing
 
-import com.freddieposer.scaly.parsing.antlr.{ScalyBaseVisitor, ScalyParser, ScalyVisitor}
+import com.freddieposer.scaly.parsing.antlr.{ScalyParser, ScalyVisitor}
 import com.freddieposer.scaly.parsing.parsetree._
-
-import scala.jdk.CollectionConverters.ListHasAsScala
-import java.util
-
-import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor
 
 class ScalyParsingVisitor
   extends AbstractParseTreeVisitor[ParseTree]
-  with ScalyVisitor[ParseTree]
-  with ScalyExprParsingVisitor
-  with ScalyLiteralParsingVisitor
-{
+    with ScalyVisitor[ParseTree]
+    with ScalyExprParsingVisitor
+    with ScalyLiteralParsingVisitor {
 
   import ScalyParser._
+  import PTWrappers._
   //super\.[a-zA-Z_1-9]+\(ctx\)
 
-  override val exprVisitor: ScalyVisitor[Expr] = this.asInstanceOf[ScalyVisitor[Expr]]
-  override val literalVisitor: ScalyVisitor[Literal] = this.asInstanceOf[ScalyVisitor[Literal]]
+  private val parsingUtils = new ParsingUtils[ParseTree](visit)
 
-  private implicit def ListToList[T](xs: util.List[T]): List[T] = xs.asScala.toList
+  import parsingUtils._
 
-  //WARNING: Yes, this does violate type safety for the sake of nicer code
-  //TODO: Could use the Option(null) constructor to make this all nicer
-  private def visitOpt[T](ctx: ParserRuleContext): Option[T] =
-    if (ctx == null) None
-    else Some(visit(ctx).asInstanceOf[T])
+  override protected[this] val exprVisitor: ScalyVisitor[Expr] = this.asInstanceOf[ScalyVisitor[Expr]]
+  override protected[this] val literalVisitor: ScalyVisitor[Literal] = this.asInstanceOf[ScalyVisitor[Literal]]
 
   override def visitCompilationUnit(ctx: CompilationUnitContext): CompilationUnit =
     new CompilationUnit(ctx.topStatSeq().topStat().map(visitTopStat))
@@ -41,25 +32,39 @@ class ScalyParsingVisitor
     else throw new Error
   }
 
-  override def visitObjectDef(ctx: ObjectDefContext): ScalyObjectDef = ???
+  override def visitObjectDef(ctx: ObjectDefContext): ScalyObjectDef = {
+    val id = ctx.Id().getText
+    val classTemplate = Option(ctx.classTemplateOpt().classTemplate())
+
+    classTemplate match {
+      case Some(template) => new ScalyObjectDef(
+        id, Some(template.classParents().getText), Option(template.templateBody()).map(visitTemplateBody)
+      )
+      case None => new ScalyObjectDef(
+        id, None, Option(ctx.classTemplateOpt().templateBody()).map(visitTemplateBody)
+      )
+    }
+
+
+  }
 
   override def visitClassDef(ctx: ClassDefContext): ScalyClassDef = {
 
     val id = ctx.Id().getText
-    val classTemplate = ctx.classTemplateOpt()
+    val classTemplate = Option(ctx.classTemplateOpt().classTemplate())
+    val classParams = ctx.classParamClauses().classParamClause().map(visitClassParamClause)
 
-    if (classTemplate.classTemplate() != null)
-      new ScalyClassDef(
+    classTemplate match {
+      case Some(template) => new ScalyClassDef(
         id,
-        Some(classTemplate.classTemplate().classParents().getText),
-        visitOpt(classTemplate.classTemplate().templateBody())
+        Some(template.classParents().getText),
+        Option(template.templateBody()).map(visitTemplateBody),
+        classParams
       )
-    else if (classTemplate.templateBody() != null) {
-      new ScalyClassDef(
-        id, None, visitOpt(classTemplate.templateBody())
+      case None => new ScalyClassDef(
+        id, None, Option(ctx.classTemplateOpt().templateBody()).map(visitTemplateBody), classParams
       )
     }
-    else new ScalyClassDef(id, None, None)
 
   }
 
@@ -73,56 +78,71 @@ class ScalyParsingVisitor
     if (ctx.`def`() != null) {
       TemplateDef(visitDef(ctx.`def`()), modifiers)
     } else if (ctx.dcl() != null) {
-      TemplateDcl(visitDcl(ctx.dcl()), modifiers)
+      TemplateDcl(visitAs[Dcl](ctx.dcl()), modifiers)
     } else {
       TemplateExpr(visitExpr(ctx.expr()))
     }
 
   }
 
-  override def visitDef(ctx: DefContext): Def = {
-    if (ctx.patVarDef() != null) {
-      visitPatVarDef(ctx.patVarDef())
-    } else if (ctx.funDef() != null) {
-      visitFunDef(ctx.funDef())
-    } else { //if (ctx.tmplDef() != null)
-      visitTmplDef(ctx.tmplDef())
-    }
+  override def visitDef(ctx: DefContext): Def =
+    visitOne[Def](
+      ctx.patVarDef(), ctx.funDef(), ctx.tmplDef()
+    )
+
+  override def visitDclValDcl(ctx: DclValDclContext): Dcl =
+    visitValDcl(ctx.valDcl())
+
+  override def visitDclVarDcl(ctx: DclVarDclContext): ParseTree =
+    visitVarDcl(ctx.varDcl())
+
+  override def visitDclDefDcl(ctx: DclDefDclContext): ParseTree =
+    visitFunDcl(ctx.funDcl())
+
+  override def visitFunDef(ctx: FunDefContext): FunDef =
+    FunDef(
+      //TODO: This is duplicate code AND wil not work for extra constructors!
+      FunDcl(
+        ctx.funSig().Id().getText,
+        visitParamClauses(ctx.funSig().paramClauses()),
+        Option(ctx.type_()).map(visitType_)
+      ), visitExpr(ctx.expr())
+    )
+
+
+  override def visitPatVarDefVal(ctx: PatVarDefValContext): ParseTree = ???
+
+  override def visitPatVarDefVar(ctx: PatVarDefVarContext): ParseTree = ???
+
+  override def visitTopStatSeq(ctx: TopStatSeqContext): PTSeq[TopStatement] = {
+    new PTSeq(ctx.topStat().map(visitTopStat))
   }
 
-  override def visitDcl(ctx: DclContext): Dcl = {
-    ???
-  }
 
-  override def visitFunDef(ctx: FunDefContext): FunDef = {
-    ???
-  }
+  override def visitType_(ctx: Type_Context): ScalyType =
+    if (ctx.functionArgTypes() != null)
+      ScalyFunctionType(
+        visitFunctionArgTypes(ctx.functionArgTypes()),
+        visitType_(ctx.type_())
+      )
+    else visitInfixType(ctx.infixType())
 
-  override def visitPatVarDef(ctx: PatVarDefContext): PatVarDef = {
-    ???
-  }
+  override def visitFunctionArgTypes(ctx: FunctionArgTypesContext): PTSeq[ScalyType] =
+    if (ctx.infixType() != null) List(visitInfixType(ctx.infixType()))
+    else ctx.paramType().map(visitParamType)
 
-  override def visitTopStatSeq(ctx: TopStatSeqContext): ParseTree = ???
+  override def visitInfixType(ctx: InfixTypeContext): ScalyType =
+    visitCompoundType(ctx.compoundType())
 
-  override def visitIds(ctx: IdsContext): ParseTree = ???
+  override def visitCompoundType(ctx: CompoundTypeContext): ScalyType =
+    visitAnnotType(ctx.annotType())
 
-  override def visitStableId(ctx: StableIdContext): ParseTree = ???
+  override def visitSimpleType(ctx: SimpleTypeContext): ScalyType =
+    if(ctx.stableId() != null) ScalyTypeName(visitStableId(ctx.stableId()))
+    else ScalyTupleType(visitTypes(ctx.types()))
 
-  override def visitType_(ctx: Type_Context): ParseTree = ???
-
-  override def visitFunctionArgTypes(ctx: FunctionArgTypesContext): ParseTree = ???
-
-  override def visitInfixType(ctx: InfixTypeContext): ParseTree = ???
-
-  override def visitCompoundType(ctx: CompoundTypeContext): ParseTree = ???
-
-  override def visitSimpleType(ctx: SimpleTypeContext): ParseTree = ???
-
-  override def visitTypes(ctx: TypesContext): ParseTree = ???
-
-  override def visitRefinement(ctx: RefinementContext): ParseTree = ???
-
-  override def visitRefineStat(ctx: RefineStatContext): ParseTree = ???
+  override def visitTypes(ctx: TypesContext): PTSeq[ScalyType] =
+    ctx.type_().map(visitType_)
 
   override def visitTypePat(ctx: TypePatContext): ParseTree = ???
 
@@ -130,9 +150,16 @@ class ScalyParsingVisitor
 
   override def visitPrefixDef(ctx: PrefixDefContext): ParseTree = ???
 
-  override def visitBlock(ctx: BlockContext): ParseTree = ???
+  override def visitBlockStatDef(ctx: BlockStatDefContext): ParseTree =
+    visitDef(ctx.`def`())
 
-  override def visitBlockStat(ctx: BlockStatContext): ParseTree = ???
+  override def visitBlockStatTmplDef(ctx: BlockStatTmplDefContext): ParseTree = {
+    //TODO: Modifiers!!!
+    visitTmplDef(ctx.tmplDef())
+  }
+
+  override def visitBlockStatExpr(ctx: BlockStatExprContext): Expr =
+    visitAs[Expr](ctx.expr1())
 
   override def visitPattern(ctx: PatternContext): ParseTree = ???
 
@@ -146,23 +173,50 @@ class ScalyParsingVisitor
 
   override def visitPatterns(ctx: PatternsContext): ParseTree = ???
 
-  override def visitParamClauses(ctx: ParamClausesContext): ParseTree = ???
+  override def visitParamClauses(ctx: ParamClausesContext): PTSeq[ParamClause] =
+    ctx.paramClause().map(visitParamClause)
 
-  override def visitParamClause(ctx: ParamClauseContext): ParseTree = ???
+  override def visitParamClause(ctx: ParamClauseContext): ParamClause =
+    new ParamClause(ctx.params().param().map(visitParam))
 
-  override def visitParams(ctx: ParamsContext): ParseTree = ???
+  override def visitParam(ctx: ParamContext): Param =
+    new Param(
+      ctx.Id().getText,
+      Option(ctx.paramType()).map(visitParamType),
+      Option(ctx.expr()).map(visitExpr)
+    )
 
-  override def visitParam(ctx: ParamContext): ParseTree = ???
+  //TODO
+  override def visitParamType(ctx: ParamTypeContext): ScalyType =
+    visitType_(ctx.type_())
 
-  override def visitParamType(ctx: ParamTypeContext): ParseTree = ???
+  override def visitClassParamClauses(ctx: ClassParamClausesContext): PTSeq[ClassParamClause] =
+    ctx.classParamClause().map(visitClassParamClause)
 
-  override def visitClassParamClauses(ctx: ClassParamClausesContext): ParseTree = ???
+  override def visitClassParamClause(ctx: ClassParamClauseContext): ClassParamClause =
+    new ClassParamClause(
+      visitClassParams(ctx.classParams())
+    )
 
-  override def visitClassParamClause(ctx: ClassParamClauseContext): ParseTree = ???
 
-  override def visitClassParams(ctx: ClassParamsContext): ParseTree = ???
+  override def visitClassParams(ctx: ClassParamsContext): PTSeq[ClassParam] =
+    ctx.classParam().map {
+      case c: ClassParamValContext => visitClassParamVal(c)
+      case c: ClassParamVarContext => visitClassParamVar(c)
+    }
 
-  override def visitClassParam(ctx: ClassParamContext): ParseTree = ???
+
+  override def visitClassParamVal(ctx: ClassParamValContext): ClassParam = {
+    new ClassParam(
+      ctx.modifier().map(_.getText),
+      "Val",
+      ctx.Id().getText,
+      visitParamType(ctx.paramType()),
+      Option(ctx.expr()).map(visitExpr)
+    )
+  }
+
+  override def visitClassParamVar(ctx: ClassParamVarContext): ClassParam = ???
 
   override def visitBindings(ctx: BindingsContext): ParseTree = ???
 
@@ -176,11 +230,18 @@ class ScalyParsingVisitor
 
   override def visitAccessQualifier(ctx: AccessQualifierContext): ParseTree = ???
 
-  override def visitValDcl(ctx: ValDclContext): ParseTree = ???
+  override def visitValDcl(ctx: ValDclContext): ValDcl =
+    ValDcl(ctx.ids().Id().map(_.getText), visitType_(ctx.type_()))
 
-  override def visitVarDcl(ctx: VarDclContext): ParseTree = ???
+  override def visitVarDcl(ctx: VarDclContext): VarDcl =
+    VarDcl(ctx.ids().Id().map(_.getText), visitType_(ctx.type_()))
 
-  override def visitFunDcl(ctx: FunDclContext): ParseTree = ???
+  override def visitFunDcl(ctx: FunDclContext): FunDcl =
+    FunDcl(
+      ctx.funSig().Id().getText,
+      visitParamClauses(ctx.funSig().paramClauses()),
+      Option(ctx.type_()).map(visitType_)
+    )
 
   override def visitFunSig(ctx: FunSigContext): ParseTree = ???
 
@@ -194,9 +255,24 @@ class ScalyParsingVisitor
 
   override def visitClassParents(ctx: ClassParentsContext): ParseTree = ???
 
+  override def visitAnnotType(ctx: AnnotTypeContext): ScalyType =
+    visitSimpleType(ctx.simpleType())
+
+  // Unused - should never be reached
+  // TODO: This violates type safety
+  override def visitIds(ctx: IdsContext): ParseTree = !!!
+
+  override def visitParams(ctx: ParamsContext): ParseTree = !!!
+
+  override def visitBlock(ctx: BlockContext): ParseTree = !!!
+
+  // TODO: Extra constructors
+  override def visitConstrExpr(ctx: ConstrExprContext): ParseTree = ???
+
   override def visitConstr(ctx: ConstrContext): ParseTree = ???
 
   override def visitConstrBlock(ctx: ConstrBlockContext): ParseTree = ???
 
   override def visitSelfInvocation(ctx: SelfInvocationContext): ParseTree = ???
+
 }

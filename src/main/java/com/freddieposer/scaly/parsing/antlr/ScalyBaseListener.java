@@ -208,6 +208,18 @@ public class ScalyBaseListener implements ScalyListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterAnnotType(ScalyParser.AnnotTypeContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAnnotType(ScalyParser.AnnotTypeContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterSimpleType(ScalyParser.SimpleTypeContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -227,30 +239,6 @@ public class ScalyBaseListener implements ScalyListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitTypes(ScalyParser.TypesContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void enterRefinement(ScalyParser.RefinementContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitRefinement(ScalyParser.RefinementContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void enterRefineStat(ScalyParser.RefineStatContext ctx) { }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation does nothing.</p>
-	 */
-	@Override public void exitRefineStat(ScalyParser.RefineStatContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -592,13 +580,37 @@ public class ScalyBaseListener implements ScalyListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterBlockStat(ScalyParser.BlockStatContext ctx) { }
+	@Override public void enterBlockStatDef(ScalyParser.BlockStatDefContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitBlockStat(ScalyParser.BlockStatContext ctx) { }
+	@Override public void exitBlockStatDef(ScalyParser.BlockStatDefContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterBlockStatTmplDef(ScalyParser.BlockStatTmplDefContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitBlockStatTmplDef(ScalyParser.BlockStatTmplDefContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterBlockStatExpr(ScalyParser.BlockStatExprContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitBlockStatExpr(ScalyParser.BlockStatExprContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -784,13 +796,25 @@ public class ScalyBaseListener implements ScalyListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterClassParam(ScalyParser.ClassParamContext ctx) { }
+	@Override public void enterClassParamVal(ScalyParser.ClassParamValContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitClassParam(ScalyParser.ClassParamContext ctx) { }
+	@Override public void exitClassParamVal(ScalyParser.ClassParamValContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterClassParamVar(ScalyParser.ClassParamVarContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitClassParamVar(ScalyParser.ClassParamVarContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -892,13 +916,37 @@ public class ScalyBaseListener implements ScalyListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterDcl(ScalyParser.DclContext ctx) { }
+	@Override public void enterDclValDcl(ScalyParser.DclValDclContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitDcl(ScalyParser.DclContext ctx) { }
+	@Override public void exitDclValDcl(ScalyParser.DclValDclContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterDclVarDcl(ScalyParser.DclVarDclContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitDclVarDcl(ScalyParser.DclVarDclContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterDclDefDcl(ScalyParser.DclDefDclContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitDclDefDcl(ScalyParser.DclDefDclContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -952,13 +1000,25 @@ public class ScalyBaseListener implements ScalyListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void enterPatVarDef(ScalyParser.PatVarDefContext ctx) { }
+	@Override public void enterPatVarDefVal(ScalyParser.PatVarDefValContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
-	@Override public void exitPatVarDef(ScalyParser.PatVarDefContext ctx) { }
+	@Override public void exitPatVarDefVal(ScalyParser.PatVarDefValContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterPatVarDefVar(ScalyParser.PatVarDefVarContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitPatVarDefVar(ScalyParser.PatVarDefVarContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *

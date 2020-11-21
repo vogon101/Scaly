@@ -66,7 +66,7 @@ stableId
    : Id
    | stableId '.' Id
 //   | (Id '.')? ('this' | 'super' classQualifier? '.' Id)
-   | (Id '.')? ('this' | 'super' '.' Id)
+//   | (Id '.')? ('this' | 'super' '.' Id)
    ;
 
 //classQualifier
@@ -89,22 +89,25 @@ functionArgTypes
 //   ;
 
 infixType
-   : compoundType (Id compoundType)*
+//   : compoundType (Id compoundType)*
+   : compoundType
    ;
 
 compoundType
+   : annotType
 //   : annotType ('with' annotType)* refinement?
-   : refinement
+//   | refinement
    ;
 
-//annotType
-//   : simpleType annotation*
-//   ;
+annotType
+   : simpleType //annotation*
+   ;
 
 simpleType
 //   : simpleType typeArgs
 //   : simpleType '#' Id
-   : stableId ('.' 'type')?
+//   : stableId ('.' 'type')?
+   : stableId
    | '(' types ')'
    ;
 
@@ -116,14 +119,14 @@ types
    : type_ (',' type_)*
    ;
 
-refinement
-   : NL? '{' refineStat+ '}'
-   ;
+//refinement
+//   : NL? '{' refineStat+ '}'
+//   ;
 
-refineStat
-   : dcl
-//   | 'type' typeDef
-   ;
+//refineStat
+//   : dcl
+////   | 'type' typeDef
+//   ;
 
 typePat
    : type_
@@ -140,6 +143,7 @@ expr
    : (bindings | '_') '=>' expr
    | expr1
    ;
+
 
 expr1
    : 'if' '(' expr ')' NL* expr ('else' expr)?                              # expr1_if
@@ -160,7 +164,8 @@ prefixDef
    ;
 
 postfixExpr
-   : infixExpr Id? (prefixDef simpleExpr1)* NL?
+//TODO   : infixExpr Id? (prefixDef simpleExpr1)* NL?
+   : infixExpr Id? NL?
    ;
 
 infixExpr
@@ -173,7 +178,8 @@ prefixExpr
    ;
 
 simpleExpr
-   : 'new' (classTemplate | templateBody)
+//   : 'new' (classTemplate | templateBody)
+   : 'new' simpleType
    | blockExpr
    ;
 
@@ -186,7 +192,8 @@ simpleExpr1
    | '_'                                # simpleExpr1_underscore
    | '(' exprs? ')'                     # simpleExpr1_brackets
    | simpleExpr '.' Id                  # simpleExpr1_member1
-   | simpleExpr1 '_'?  '.' Id     # simpleExpr1_member2
+   | simpleExpr1 '.' Id           # simpleExpr1_member2
+//   | simpleExpr1 '_'?  '.' Id           # simpleExpr1_member2
 //   | simpleExpr  typeArgs
 //   | simpleExpr1 '_'? typeArgs
    | simpleExpr1 argumentExprs    # simpleExpr1_application
@@ -198,8 +205,10 @@ exprs
 
 argumentExprs
    : '(' exprs? ')'
-   | '(' (exprs ',')? postfixExpr ':' '_' '*' ')'
-   | NL? blockExpr
+// Splats
+//   | '(' (exprs ',')? postfixExpr ':' '_' '*' ')'
+// Advanced block expr as function param
+//   | NL? blockExpr
    ;
 
 blockExpr
@@ -215,15 +224,15 @@ blockStat
 //   : import_
 //   : annotation* ('implicit' | 'lazy')? def
 //   | annotation* localModifier* tmplDef
-   : def
-   | localModifier* tmplDef
-   | expr1
+   : def                        #blockStatDef
+   | localModifier* tmplDef     #blockStatTmplDef
+   | expr1                      #blockStatExpr
    ;
 
 resultExpr
    : expr1
 //   | (bindings | ('implicit'? Id | '_') ':' compoundType) '=>' block
-   | (bindings | '_' ':' compoundType) '=>' block
+//   | (bindings | '_' ':' compoundType) '=>' block TODO
    ;
 
 //enumerators
@@ -315,8 +324,9 @@ param
 
 paramType
    : type_
-   | '=>' type_
-   | type_ '*'
+// No call by reference or splats for now
+//   | '=>' type_
+//   | type_ '*'
    ;
 
 classParamClauses
@@ -334,7 +344,9 @@ classParams
 
 classParam
 //   : annotation* modifier* ('val' | 'var')? Id ':' paramType ('=' expr)?
-   : modifier* ('val' | 'var')? Id ':' paramType ('=' expr)?
+//   : modifier* ('val' | 'var')? Id ':' paramType ('=' expr)?
+   : modifier* 'val' Id ':' paramType ('=' expr)? # classParamVal
+   | modifier* 'var' Id ':' paramType ('=' expr)? # classParamVar
    ;
 
 bindings
@@ -413,9 +425,9 @@ templateStat
 //   ;
 
 dcl
-   : 'val' valDcl
-   | 'var' varDcl
-   | 'def' funDcl
+   : 'val' valDcl # dclValDcl
+   | 'var' varDcl # dclVarDcl
+   | 'def' funDcl # dclDefDcl
 //   | 'type' NL* typeDcl
    ;
 
@@ -442,8 +454,8 @@ funSig
 //   ;
 
 patVarDef
-   : 'val' patDef
-   | 'var' varDef
+   : 'val' patDef #patVarDefVal
+   | 'var' varDef #patVarDefVar
    ;
 
 def
@@ -464,8 +476,10 @@ varDef
 
 funDef
    : funSig (':' type_)? '=' expr
-   | funSig NL? '{' block '}'
-   | 'this' paramClause paramClauses ('=' constrExpr | NL? constrBlock)
+   // Say no to procedure syntax
+//   | funSig NL? '{' block '}'
+   //TODO: Extra constructors
+//   | 'this' paramClause paramClauses ('=' constrExpr | NL? constrBlock)
    ;
 
 //typeDef
@@ -528,8 +542,8 @@ classParents
 
 
 constr
-//   : annotType argumentExprs*
-   : argumentExprs*
+   : annotType argumentExprs*
+   | argumentExprs*
    ;
 
 //earlyDefs

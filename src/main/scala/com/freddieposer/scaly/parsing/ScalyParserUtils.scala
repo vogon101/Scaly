@@ -19,9 +19,7 @@ object ScalyParserUtils {
     val cu = parser.compilationUnit()
     println(cu)
 
-    println(cu.accept(visitor))
-
-    ???
+    cu.accept(visitor)
 
   }
 

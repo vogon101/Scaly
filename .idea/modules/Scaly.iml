@@ -15,5 +15,10 @@
     <orderEntry type="library" name="sbt: org.antlr:antlr4-runtime:4.8-1:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.3:jar" level="project" />
     <orderEntry type="library" name="scala-sdk-2.13.3" level="application" />
+    <orderEntry type="library" name="scala-sdk-2.13.3 (3)" level="application" />
+    <orderEntry type="library" name="scala-sdk-2.13.3 (4)" level="application" />
+    <orderEntry type="library" name="scala-sdk-2.13.3" level="project" />
+    <orderEntry type="library" name="scala-sdk-2.13.3 (5)" level="application" />
+    <orderEntry type="library" name="scala-sdk-2.13.3 (2)" level="project" />
   </component>
 </module>
