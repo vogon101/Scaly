@@ -10,7 +10,11 @@ import scala.jdk.CollectionConverters.ListHasAsScala
 
 import scala.reflect.internal.FatalError
 
-
+/**
+ * Utilities for dealing with ANTLR4 parse trees in scala
+ * @param visit Visit function from a AbstractParseTreeVisitor[R]
+ * @tparam R Return type of visit
+ */
 class ParsingUtils[R](private val visit: org.antlr.v4.runtime.tree.ParseTree => R) {
 
   // Utility Functions
@@ -23,11 +27,17 @@ class ParsingUtils[R](private val visit: org.antlr.v4.runtime.tree.ParseTree => 
    */
   implicit def ListToList[T](xs: util.List[T]): List[T] = xs.asScala.toList
 
-  //TODO: This violates type safety
+  /**
+   * Visit a context and cast it to T (UNSAFE)
+   * @param ctx
+   * @tparam T
+   * @return
+   */
   def visitAs[T](ctx: ParserRuleContext): T = visit(ctx).asInstanceOf[T]
 
   //TODO: This violates type safety
   /**
+   * Takes a list of contexts, visits the the only one which is not null
    * @param ctxs - a list of context of which only one may be non-null.
    * @tparam T - Type to cast return to
    * @return
@@ -39,5 +49,9 @@ class ParsingUtils[R](private val visit: org.antlr.v4.runtime.tree.ParseTree => 
     visit(vs.head).asInstanceOf[T]
   }
 
-  def !!! = throw FatalError("This code should be unreachable")
+  /**
+   * Deliberate implementation missing
+   * @return
+   */
+  def !!! :Nothing = throw FatalError("This code should be unreachable")
 }

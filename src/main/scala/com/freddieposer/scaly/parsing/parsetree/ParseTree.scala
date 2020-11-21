@@ -17,8 +17,10 @@ abstract class Def extends ParseTree
 
 abstract class Dcl extends ParseTree
 
+// Children are in com.freddieposer.scaly.Expr
 abstract class Expr extends ParseTree
 
+// Children are in com.freddieposer.scaly.Literal
 abstract class Literal extends Expr
 
 sealed trait TopStatement extends Def

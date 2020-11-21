@@ -1,11 +1,17 @@
 package com.freddieposer.scaly.parsing.parsetree
 
+/**
+ * Class has toStringTree method
+ */
 trait HasToStringTree {
 
   def toStringTree: StringTree
 
 }
 
+/**
+ * A simple tree structure for pretty printing
+ */
 sealed abstract class StringTree {
 
   def prettyPrint(indent: Int = 0):String
@@ -28,6 +34,11 @@ object StringTree {
 
 }
 
+/**
+ * Node of the string tree
+ * @param name
+ * @param nodes
+ */
 case class StringTreeNode(name: String, nodes: List[(String, StringTree)]) extends StringTree {
 
   override def toString: String =
@@ -40,6 +51,11 @@ case class StringTreeNode(name: String, nodes: List[(String, StringTree)]) exten
 
 }
 
+/**
+ * Leaf with multiple properties
+ * @param name
+ * @param members
+ */
 case class StringTreeLeaf(name: String, members: List[(String, String)]) extends StringTree {
 
   override def toString: String =
@@ -52,6 +68,10 @@ case class StringTreeLeaf(name: String, members: List[(String, String)]) extends
 
 }
 
+/**
+ * Leaf with just a single String value
+ * @param value
+ */
 case class StringTreeStringLeaf(value: String) extends StringTree {
 
   override def toString: String = value
