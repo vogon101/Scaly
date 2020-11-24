@@ -1,6 +1,4 @@
 package com.freddieposer.scaly
-
-import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 
 import com.freddieposer.scaly.AST.ASTBuilder
@@ -8,7 +6,6 @@ import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.backend.pyc.PycFile
 
 import scala.jdk.CollectionConverters.ListHasAsScala
-import scala.io.Source
 
 object Test {
 
@@ -42,9 +39,6 @@ object Test {
 
     val lines = Files.readAllLines(Paths.get("parsing_test.scala")).asScala.mkString("\n")
     println(lines)
-//
-//    val cu = ScalyParserUtils.parse(lines)
-//    println(cu.toStringTree.prettyPrint())
 
     import scala.meta._
 
