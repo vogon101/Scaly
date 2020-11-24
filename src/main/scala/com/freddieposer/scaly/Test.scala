@@ -1,19 +1,16 @@
 package com.freddieposer.scaly
-
-import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 
-import com.freddieposer.scaly.backend.pyc.defs.PycTypeBytes
-import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, ImmutableByteArrayStream, MutableByteArrayStream}
-import com.freddieposer.scaly.backend.pyc.{PyObject, PycFile}
+import com.freddieposer.scaly.AST.ASTBuilder
+import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
+import com.freddieposer.scaly.backend.pyc.PycFile
 
-import scala.io.Source
+import scala.jdk.CollectionConverters.ListHasAsScala
 
 object Test {
 
-  def main(args: Array[String]): Unit = {
-
-    var bytes = Files.readAllBytes(Paths.get("test2.pyc"))
+  def test_pyc(): Unit = {
+    var bytes = Files.readAllBytes(Paths.get("test_files/test2.pyc"))
     println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
     println(
       bytes.map((String.format("%02x", _)))
@@ -36,8 +33,24 @@ object Test {
     println(PycFile.readFromBytes(out))
 
     Files.write(Paths.get("out.pyc"), out.bytes)
+  }
 
+  def test_parsing(): Unit = {
 
+    val lines = Files.readAllLines(Paths.get("test_files/parsing_test.scala")).asScala.mkString("\n")
+    println(lines)
+
+    import scala.meta._
+
+    val x = lines.parse[scala.meta.Source].get
+    println(x.structure)
+    println(x.stats.head.children)
+    println(ASTBuilder.fromScalaMeta(x))
+
+  }
+
+  def main(args: Array[String]): Unit = {
+    test_parsing()
   }
 
 }

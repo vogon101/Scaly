@@ -27,6 +27,7 @@ class PycFile(
 
     bytes.writeLong(magic, rev=false)
     bytes.writeLong(bit_field, rev=false)
+    // These will be wrong, they should be generated
     bytes.writeLong(moddate, rev=false)
     bytes.writeLong(fileSize, rev=false)
 

@@ -4,7 +4,6 @@ import java.lang.ClassCastException
 
 import com.freddieposer.scaly.backend.pyc.defs.{PyOpcode, PyOpcodeArgType, PycTypeBytes}
 import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, MutableByteArrayStream, RefList}
-import shapeless.WitnessWith.apply2
 
 import scala.collection.mutable.ArrayBuffer
 
