@@ -164,8 +164,8 @@ prefixDef
    ;
 
 postfixExpr
-//TODO   : infixExpr Id? (prefixDef simpleExpr1)* NL?
-   : infixExpr Id? NL?
+   : infixExpr Id? (prefixDef simpleExpr1)* NL?
+//   : infixExpr Id? NL?
    ;
 
 infixExpr

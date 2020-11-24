@@ -186,7 +186,6 @@ class ScalyParsingVisitor
       Option(ctx.expr()).map(visitExpr)
     )
 
-  //TODO
   override def visitParamType(ctx: ParamTypeContext): ScalyType =
     visitType_(ctx.type_())
 
