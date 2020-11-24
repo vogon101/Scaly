@@ -8,6 +8,6 @@ class A {
     (thing1.member.othermember.really.long.access + 2) + (other_thing)
   }
 
-  val x : Int b String
+//  val x : Int b String
 
 }

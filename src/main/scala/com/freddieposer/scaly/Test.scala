@@ -3,11 +3,9 @@ package com.freddieposer.scaly
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 
-import com.freddieposer.scaly.backend.pyc.defs.PycTypeBytes
-import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, ImmutableByteArrayStream, MutableByteArrayStream}
-import com.freddieposer.scaly.backend.pyc.{PyObject, PycFile}
-import com.freddieposer.scaly.parsing.ScalyParserUtils
-import com.freddieposer.scaly.parsing.antlr.ScalyParser
+import com.freddieposer.scaly.AST.ASTBuilder
+import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
+import com.freddieposer.scaly.backend.pyc.PycFile
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.io.Source
@@ -44,9 +42,16 @@ object Test {
 
     val lines = Files.readAllLines(Paths.get("parsing_test.scala")).asScala.mkString("\n")
     println(lines)
+//
+//    val cu = ScalyParserUtils.parse(lines)
+//    println(cu.toStringTree.prettyPrint())
 
-    val cu = ScalyParserUtils.parse(lines)
-    println(cu.toStringTree.prettyPrint())
+    import scala.meta._
+
+    val x = lines.parse[scala.meta.Source].get
+    println(x.structure)
+    println(x.stats.head.children)
+    println(ASTBuilder.fromScalaMeta(x))
 
   }
 
