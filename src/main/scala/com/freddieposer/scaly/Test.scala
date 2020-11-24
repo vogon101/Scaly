@@ -10,7 +10,7 @@ import scala.jdk.CollectionConverters.ListHasAsScala
 object Test {
 
   def test_pyc(): Unit = {
-    var bytes = Files.readAllBytes(Paths.get("test2.pyc"))
+    var bytes = Files.readAllBytes(Paths.get("test_files/test2.pyc"))
     println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
     println(
       bytes.map((String.format("%02x", _)))
@@ -37,7 +37,7 @@ object Test {
 
   def test_parsing(): Unit = {
 
-    val lines = Files.readAllLines(Paths.get("parsing_test.scala")).asScala.mkString("\n")
+    val lines = Files.readAllLines(Paths.get("test_files/parsing_test.scala")).asScala.mkString("\n")
     println(lines)
 
     import scala.meta._

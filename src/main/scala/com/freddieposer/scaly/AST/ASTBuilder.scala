@@ -41,7 +41,7 @@ object ASTBuilder {
         decl.map(buildScalyType),
         buildExpr(rhs.get) //TODO: This is an option - why?
       )
-      case Defn.Def(mods, name, tparams, paramss, declType, body) => DefDef (
+      case Defn.Def(mods, name, tparams, paramss, declType, body) => DefDef(
         name.value,
         paramss.map(_.map(buildParam)),
         declType.map(buildScalyType),
@@ -52,7 +52,7 @@ object ASTBuilder {
     }
 
   private def buildParam(param: Term.Param): FunParam =
-    //TODO: this is an option - why?
+  //TODO: this is an option - why?
     FunParam(param.name.value, param.decltpe.map(buildScalyType).get)
 
   private def buildScalyType(typ: Type): ScalyType =
@@ -75,7 +75,7 @@ object ASTBuilder {
       case Term.Tuple(args) => TupleExpr(args.map(buildExpr))
       case Term.Block(stats) => Block(stats.map(buildStatement))
       case Term.Select(lhs, name) => SelectExpr(buildExpr(lhs), name.value)
-      case Term.Name(value) =>IDExpr(value)
+      case Term.Name(value) => IDExpr(value)
     }
 
   private def buildLiteral(lit: Lit): Literal =
