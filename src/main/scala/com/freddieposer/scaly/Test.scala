@@ -4,6 +4,7 @@ import java.nio.file.{Files, Paths}
 import com.freddieposer.scaly.AST.ASTBuilder
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.backend.pyc.PycFile
+import com.freddieposer.scaly.typechecker.TypeChecker
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
@@ -37,7 +38,7 @@ object Test {
 
   def test_parsing(): Unit = {
 
-    val lines = Files.readAllLines(Paths.get("test_files/parsing_test.scala")).asScala.mkString("\n")
+    val lines = Files.readAllLines(Paths.get("test_files/test1.scala")).asScala.mkString("\n")
     println(lines)
 
     import scala.meta._
@@ -45,7 +46,11 @@ object Test {
     val x = lines.parse[scala.meta.Source].get
     println(x.structure)
     println(x.stats.head.children)
-    println(ASTBuilder.fromScalaMeta(x))
+    val ast = ASTBuilder.fromScalaMeta(x)
+    val tc = new TypeChecker(ast)
+
+    for ((name, typ) <- tc.globalContext.types)
+      println(f"$name : ${typ.members}")
 
   }
 
