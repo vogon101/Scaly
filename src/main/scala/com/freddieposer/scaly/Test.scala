@@ -1,10 +1,11 @@
 package com.freddieposer.scaly
 import java.nio.file.{Files, Paths}
 
-import com.freddieposer.scaly.AST.ASTBuilder
+import com.freddieposer.scaly.AST.{ASTBuilder, ScalyClassDef}
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.typechecker.TypeChecker
+import com.freddieposer.scaly.typechecker.context.BaseTypeContext
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
@@ -49,8 +50,10 @@ object Test {
     val ast = ASTBuilder.fromScalaMeta(x)
     val tc = new TypeChecker(ast)
 
-    for ((name, typ) <- tc.globalContext.types)
-      println(f"$name : ${typ.members}")
+//    for ((name, typ) <- tc.globalContext.types)
+//      println(f"$name : ${typ.members}")
+
+    println(tc.typeCheck())
 
   }
 

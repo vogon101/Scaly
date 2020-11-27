@@ -30,3 +30,6 @@ case class ScalyPlaceholderType() extends StaticScalyType with PlaceholderType {
 case class ScalyPlaceholderTypeName(name: String) extends StaticScalyType with PlaceholderType {
   override def members: TypeMap = ???
 }
+
+
+

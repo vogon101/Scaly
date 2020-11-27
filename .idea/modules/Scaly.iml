@@ -31,5 +31,6 @@
     <orderEntry type="library" name="sbt: org.scalameta:parsers_2.13:4.4.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalameta:scalameta_2.13:4.4.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scalameta:trees_2.13:4.4.0:jar" level="project" />
+    <orderEntry type="library" name="scala-sdk-2.13.3" level="application" />
   </component>
 </module>

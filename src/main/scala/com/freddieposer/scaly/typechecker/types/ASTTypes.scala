@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.typechecker.types
 
-import com.freddieposer.scaly.AST.{Dcl, ScalyClassDef, ScalyTemplate, Statement}
+import com.freddieposer.scaly.AST.{Dcl, DefDef, FunParam, ScalyASTType, ScalyClassDef, ScalyTemplate, Statement, ValDef, VarDef}
 import com.freddieposer.scaly.typechecker.context.{ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
 
@@ -14,18 +14,38 @@ case class ScalyASTClassType(
 
   override def visited: Boolean = _visited
 
-  override def members: TypeMap = construct {
+  override lazy val members: TypeMap = construct {
+
+    def convertClause(clause: List[FunParam]): ScalyType =
+      clause match {
+        case Nil => ScalyValType.ScalyUnitType
+        case x :: Nil => ScalyASTPlaceholderType(x.pType)
+        case _ => ScalyTupleType(clause.map(p => ScalyASTPlaceholderType(p.pType)))
+      }
+
+    def comvertParams(params: List[List[FunParam]], finalRet: ScalyType): ScalyType = {
+      params match {
+        case c :: Nil => ScalyFunctionType(convertClause(c), finalRet)
+        case c :: cs  => ScalyFunctionType(convertClause(c), comvertParams(cs, finalRet))
+        case Nil => ScalyFunctionType(ScalyValType.ScalyUnitType, finalRet)
+      }
+    }
+
     node.body match {
       case Some(ScalyTemplate(stats)) =>
-        stats.map {
-          case x @ Dcl(id) => id -> ScalyASTPlaceholderType(x)
-        }.toMap
+        stats.map { case d: Dcl => d match {
+          case ValDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
+          case VarDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
+          case DefDef(id, params, retType, body) =>
+            id -> comvertParams(params, ScalyASTPlaceholderType(retType.get))
+              //TODO: Return could be none - inference
+        }}.toMap
       case None => Map()
     }
   }
 
 }
 
-case class ScalyASTPlaceholderType(node: Statement) extends ASTScalyType with PlaceholderType {
+case class ScalyASTPlaceholderType(node: ScalyASTType) extends ASTScalyType with PlaceholderType {
   override lazy val members: TypeMap = ???
 }

@@ -56,7 +56,7 @@ object ASTBuilder {
   //TODO: this is an option - why?
     FunParam(param.name.value, param.decltpe.map(buildScalyType).get)
 
-  private def buildScalyType(typ: Type): ASTScalyType =
+  private def buildScalyType(typ: Type): ScalyASTType =
     typ match {
       case Type.Name(name) => ASTScalyTypeName(name)
       case Type.Tuple(types) => ASTScalyTupleType(types.map(buildScalyType))
