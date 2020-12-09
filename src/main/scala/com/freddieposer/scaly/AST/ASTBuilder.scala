@@ -77,6 +77,7 @@ object ASTBuilder {
       case Term.Block(stats) => Block(stats.map(buildStatement))
       case Term.Select(lhs, name) => SelectExpr(buildExpr(lhs), name.value)
       case Term.Name(value) => IDExpr(value)
+      case Term.This(qual) => IDExpr("this")
     }
 
   private def buildLiteral(lit: Lit): Literal =

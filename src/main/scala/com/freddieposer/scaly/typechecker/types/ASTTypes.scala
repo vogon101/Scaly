@@ -23,11 +23,11 @@ case class ScalyASTClassType(
         case _ => ScalyTupleType(clause.map(p => ScalyASTPlaceholderType(p.pType)))
       }
 
-    def comvertParams(params: List[List[FunParam]], finalRet: ScalyType): ScalyType = {
+    def convertParams(params: List[List[FunParam]], finalRet: ScalyType): ScalyType = {
       params match {
-        case c :: Nil => ScalyFunctionType(convertClause(c), finalRet)
-        case c :: cs  => ScalyFunctionType(convertClause(c), comvertParams(cs, finalRet))
-        case Nil => ScalyFunctionType(ScalyValType.ScalyUnitType, finalRet)
+        case c :: Nil => ScalyFunctionType(Some(convertClause(c)), finalRet)
+        case c :: cs  => ScalyFunctionType(Some(convertClause(c)), convertParams(cs, finalRet))
+        case Nil => ScalyFunctionType(None, finalRet)
       }
     }
 
@@ -37,7 +37,7 @@ case class ScalyASTClassType(
           case ValDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
           case VarDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
           case DefDef(id, params, retType, body) =>
-            id -> comvertParams(params, ScalyASTPlaceholderType(retType.get))
+            id -> convertParams(params, ScalyASTPlaceholderType(retType.get))
               //TODO: Return could be none - inference
         }}.toMap
       case None => Map()

@@ -1,6 +1,13 @@
 package com.freddieposer.scaly.typechecker
 
+import com.freddieposer.scaly.AST.ScalyAST
+import com.freddieposer.scaly.typechecker.context.TypeContext
+import com.freddieposer.scaly.typechecker.types.ScalyType
+
 object Utils {
+
+  type UR = Either[UnificationFailure, UnificationSuccess]
+  type TCR = Either[TypeError, TypeCheckSuccess]
 
   implicit class ListOfEithers[L, R](val xs: List[Either[L, R]]) extends AnyRef {
 
@@ -28,6 +35,26 @@ object Utils {
         case Right(Left(e)) => Left(e)
         case Right(Right(v)) => Right(v)
       }
+  }
+
+  implicit class ExtendedTCR(tcr: TCR) {
+
+    def mapError(t1: ScalyType, t2: ScalyType):Either[UnificationFailure, TypeCheckSuccess] =
+      tcr.left.map(e => new UnificationFailureFromTypeCheck(t1, t2, e)(e.ctx))
+
+  }
+
+  implicit class ExtendedUR(ur: UR) {
+
+    def mapError(node: ScalyAST): Either[TypeError, UnificationSuccess] =
+      ur.left.map(e => new TypeErrorFromUnificationFailure(e, node)(e.ctx))
+
+  }
+
+  implicit class ExtendedTypeSuccessList(tcrs: List[TypeCheckSuccess]) {
+
+    def toTypes: List[ScalyType] = tcrs.map(_.typ)
+
   }
 
 }

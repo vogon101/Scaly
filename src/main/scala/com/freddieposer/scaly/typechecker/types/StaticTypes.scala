@@ -10,7 +10,7 @@ case class ScalyClassType(name: String, parent: Option[ScalyType], myMembers: Ty
 
 }
 
-case class ScalyFunctionType(from: ScalyType, to: ScalyType) extends StaticScalyType {
+case class ScalyFunctionType(from: Option[ScalyType], to: ScalyType) extends StaticScalyType {
 
   override val members: TypeMap = defaultMembers ++ Map()
 
