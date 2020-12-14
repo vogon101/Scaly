@@ -6,15 +6,15 @@ sealed trait TopLevelStatement extends ScalyAST
 
 case class CompilationUnit(statements: List[TopLevelStatement]) extends ScalyAST
 
-sealed abstract class ScalyASTType extends ScalyAST
+sealed abstract class AST_ScalyType extends ScalyAST
 
-case class ASTScalyTypeName(name: String) extends ScalyASTType
+case class AST_ScalyTypeName(name: String) extends AST_ScalyType
 
-case class ASTScalyTypeSelect(lhs: Expr, rhs: String) extends ScalyASTType
+case class AST_ScalyTypeSelect(lhs: Expr, rhs: String) extends AST_ScalyType
 
-case class ASTScalyTupleType(types: List[ScalyASTType]) extends ScalyASTType
+case class AST_TupleScalyType(types: List[AST_ScalyType]) extends AST_ScalyType
 
-case class ASTScalyFunctionType(arguments: List[ScalyASTType], returnType: ScalyASTType) extends ScalyASTType
+case class AST_FunctionScalyType(arguments: List[AST_ScalyType], returnType: AST_ScalyType) extends AST_ScalyType
 
 abstract class Expr extends Statement
 
@@ -39,7 +39,7 @@ case class ClassParam(
                        modifiers: List[String],
                        memberType: String,
                        id: String,
-                       paramType: ScalyASTType,
+                       paramType: AST_ScalyType,
                        defaultValue: Option[Expr]
                      )
 
@@ -55,24 +55,24 @@ object Dcl {
 
 case class ValDef(
                    id: String,
-                   declType: Option[ScalyASTType],
+                   declType: Option[AST_ScalyType],
                    rhs: Expr
                  ) extends Dcl
 
 case class VarDef(
                    id: String,
-                   declType: Option[ScalyASTType],
+                   declType: Option[AST_ScalyType],
                    rhs: Expr
                  ) extends Dcl
 
 case class DefDef(
                    id: String,
                    params: List[List[FunParam]],
-                   retType: Option[ScalyASTType],
+                   retType: Option[AST_ScalyType],
                    body: Expr
                  ) extends Dcl
 
 case class FunParam(
                 name: String,
-                pType: ScalyASTType
+                pType: AST_ScalyType
                 ) extends ScalyAST

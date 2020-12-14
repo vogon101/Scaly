@@ -16,10 +16,23 @@ case class ScalyFunctionType(from: Option[ScalyType], to: ScalyType) extends Sta
 
 }
 
-case class ScalyTupleType(elems: List[ScalyType]) extends StaticScalyType {
+class ScalyTupleType private (val elems: List[ScalyType]) extends StaticScalyType {
+
   override lazy val members: TypeMap = defaultMembers ++ Map(
     elems.zipWithIndex.map { case (e, i) => f"_$i" -> e }: _*
   )
+
+}
+
+object ScalyTupleType {
+
+  def apply(elems: List[ScalyType]): ScalyType = elems match {
+    case Nil => ScalyValType.ScalyUnitType
+    case x :: Nil => x
+    case _ => ScalyTupleType(elems)
+  }
+
+  def unapply(arg: ScalyTupleType): Option[List[ScalyType]] = Some(arg.elems)
 
 }
 

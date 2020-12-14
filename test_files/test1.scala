@@ -14,6 +14,8 @@ class A {
 //  def x: Int => String = foo2("Freddie")
   def x(y: Int): String = foo2("Freddie")(y)
 
+//  def mInt: Int = "String"
+
   def foo2(name1: String)(name2: Int): String = {
     name1
   }
@@ -21,13 +23,28 @@ class A {
 
   def partialApp: String = x(10)
 
-//  def otherThing: Boolean = this.mName
+  def otherThing: Boolean = this.mName
+
+//  def mB: B = new B
+
+  def useB(b: B): Int = {
+    b.thing(this)
+    10
+  }
 
 //  def thing(x: String): Unit = 100
 
 
 }
 
-class B
+class B {
+
+  def thing(a: A): String = {
+
+    a.partialApp
+
+  }
+
+}
 
 class C extends A

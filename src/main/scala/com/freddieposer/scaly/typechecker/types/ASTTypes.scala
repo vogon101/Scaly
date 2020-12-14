@@ -1,8 +1,12 @@
 package com.freddieposer.scaly.typechecker.types
 
-import com.freddieposer.scaly.AST.{Dcl, DefDef, FunParam, ScalyASTType, ScalyClassDef, ScalyTemplate, Statement, ValDef, VarDef}
+import com.freddieposer.scaly.AST.{Dcl, DefDef, FunParam, AST_ScalyType, ScalyClassDef, ScalyTemplate, Statement, ValDef, VarDef}
 import com.freddieposer.scaly.typechecker.context.{ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
+
+case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType with PlaceholderType {
+  override lazy val members: TypeMap = ???
+}
 
 case class ScalyASTClassType(
                               name: String,
@@ -46,6 +50,3 @@ case class ScalyASTClassType(
 
 }
 
-case class ScalyASTPlaceholderType(node: ScalyASTType) extends ASTScalyType with PlaceholderType {
-  override lazy val members: TypeMap = ???
-}

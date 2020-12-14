@@ -59,6 +59,7 @@ class TypeChecker(
   def buildFunctionType(returnType: ScalyType, types: List[List[ScalyType]]): ScalyType = {
     types.foldRight(returnType) {
       case (Nil, acc) => ScalyFunctionType(Some(ScalyValType.ScalyUnitType), acc)
+      case (x :: Nil, acc) => ScalyFunctionType(Some(x), acc)
       case (xs, acc) => ScalyFunctionType(Some(ScalyTupleType(xs)), acc)
     }
   }
@@ -85,9 +86,7 @@ class TypeChecker(
                         doesUnify(actualRetType, declaredRT)
                           .mapError(stat)
                           //TODO: Include the successes and actual type information
-                          .map(us =>
-                            Success(buildFunctionType(actualRetType, paramTypes.map(_.map(_._2))), stat)
-                          )
+                          .map(us => Success(buildFunctionType(actualRetType, paramTypes.map(_.map(_._2))), stat))
                     }
 
                 }
@@ -108,19 +107,19 @@ class TypeChecker(
   }
 
 
-  def convertType(astType: ScalyASTType)(implicit ctx: TypeContext): TCR = addToError(astType, ctx) {
+  def convertType(astType: AST_ScalyType)(implicit ctx: TypeContext): TCR = addToError(astType, ctx) {
     astType match {
-      case ASTScalyTypeName(name) =>
+      case AST_ScalyTypeName(name) =>
         ctx.getWellFormedType(name)
           .toRight(TypeError(s"Cannot find type name $name", astType))
           .map(Success(_, astType))
-      case ASTScalyTypeSelect(lhs, rhs) => ???
-      case ASTScalyTupleType(types) =>
+      case AST_ScalyTypeSelect(lhs, rhs) => ???
+      case AST_TupleScalyType(types) =>
         types
           .map(convertType)
           .collapse
           .map(successes => Successes(ScalyTupleType(successes.toTypes), astType, successes))
-      case ASTScalyFunctionType(arguments, returnType) =>
+      case AST_FunctionScalyType(arguments, returnType) =>
         (arguments.map(convertType).collapse, convertType(returnType)) match {
           case (Left(e), _) => Left(e)
           case (_, Left(e)) => Left(e)
@@ -144,7 +143,13 @@ class TypeChecker(
     expr match {
 
       case l: Literal => Right(Success(ScalyValType.literalType(l), expr))
-      case SelectExpr(lhs, rhs) => ???
+      case SelectExpr(lhs, rhs) =>
+        typeCheck_Expr(lhs).flatMap {
+          case Success(typ, _) =>
+            typ.members.get(rhs)
+              .map(Success(_, expr))
+              .toRight(Failure(s"$typ doesn't have member $rhs", expr))
+        }
       case IDExpr(name) =>
         ctx.getVarType(name)
           .toRight(TypeError(s"Cannot find type $name", expr))
@@ -201,8 +206,16 @@ class TypeChecker(
         convertType(x.node)
           .mapError(t1, t2)
           .map { t => doesUnify(t.typ, t1) }.collapse
+
+//      case (x: ScalyASTClassType, _) =>
+
+
       case (static1: StaticScalyType, static2: StaticScalyType) =>
         doesUnify_static(static1, static2)
+      case (x: ScalyASTClassType, y: ScalyASTClassType) =>
+        //TODO: currently just checks the names
+        if (x equals y) Right(UnificationSuccess(x, y))
+        else Left(UnificationFailure(x, y, s"Classes ${x.name} and ${y.name} are not equal"))
 
     }
 

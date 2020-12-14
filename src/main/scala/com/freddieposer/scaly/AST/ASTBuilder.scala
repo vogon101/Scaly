@@ -56,13 +56,13 @@ object ASTBuilder {
   //TODO: this is an option - why?
     FunParam(param.name.value, param.decltpe.map(buildScalyType).get)
 
-  private def buildScalyType(typ: Type): ScalyASTType =
+  private def buildScalyType(typ: Type): AST_ScalyType =
     typ match {
-      case Type.Name(name) => ASTScalyTypeName(name)
-      case Type.Tuple(types) => ASTScalyTupleType(types.map(buildScalyType))
-      case Type.Select(lhs, rhs) => ASTScalyTypeSelect(buildExpr(lhs), rhs.value)
+      case Type.Name(name) => AST_ScalyTypeName(name)
+      case Type.Tuple(types) => AST_TupleScalyType(types.map(buildScalyType))
+      case Type.Select(lhs, rhs) => AST_ScalyTypeSelect(buildExpr(lhs), rhs.value)
       case Type.Function(params, res) =>
-        ASTScalyFunctionType(params.map(buildScalyType), buildScalyType(res))
+        AST_FunctionScalyType(params.map(buildScalyType), buildScalyType(res))
     }
 
   private def buildExpr(term: Term): Expr =
