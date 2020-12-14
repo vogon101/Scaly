@@ -14,14 +14,15 @@ object ASTBuilder {
       case Defn.Class(mods, name, tparams, ctor, templ) =>
         ScalyClassDef(
           name.value,
-          templ.inits.map { case x: Type.Name => x.value },
+          //TODO: constructors
+          templ.inits.map { x: Init => x.name.value },
           if (templ.stats.isEmpty) None else Some(ScalyTemplate(templ.stats.map(buildStatement))),
           ctor.paramss.map(_.map(buildClassParam))
         )
       case Defn.Object(mods, name, templ) =>
         ScalyObjectDef(
           name.value,
-          templ.inits.map { case x: Type.Name => x.value },
+          templ.inits.map { x: Init => x.name.value },
           if (templ.stats.isEmpty) None else Some(ScalyTemplate(templ.stats.map(buildStatement))),
         )
 
@@ -55,13 +56,13 @@ object ASTBuilder {
   //TODO: this is an option - why?
     FunParam(param.name.value, param.decltpe.map(buildScalyType).get)
 
-  private def buildScalyType(typ: Type): ScalyType =
+  private def buildScalyType(typ: Type): AST_ScalyType =
     typ match {
-      case Type.Name(name) => ScalyTypeName(name)
-      case Type.Tuple(types) => ScalyTupleType(types.map(buildScalyType))
-      case Type.Select(lhs, rhs) => ScalyTypeSelect(buildExpr(lhs), rhs.value)
+      case Type.Name(name) => AST_ScalyTypeName(name)
+      case Type.Tuple(types) => AST_TupleScalyType(types.map(buildScalyType))
+      case Type.Select(lhs, rhs) => AST_ScalyTypeSelect(buildExpr(lhs), rhs.value)
       case Type.Function(params, res) =>
-        ScalyFunctionType(params.map(buildScalyType), buildScalyType(res))
+        AST_FunctionScalyType(params.map(buildScalyType), buildScalyType(res))
     }
 
   private def buildExpr(term: Term): Expr =
@@ -76,6 +77,7 @@ object ASTBuilder {
       case Term.Block(stats) => Block(stats.map(buildStatement))
       case Term.Select(lhs, name) => SelectExpr(buildExpr(lhs), name.value)
       case Term.Name(value) => IDExpr(value)
+      case Term.This(qual) => IDExpr("this")
     }
 
   private def buildLiteral(lit: Lit): Literal =

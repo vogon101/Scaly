@@ -6,15 +6,15 @@ sealed trait TopLevelStatement extends ScalyAST
 
 case class CompilationUnit(statements: List[TopLevelStatement]) extends ScalyAST
 
-abstract class ScalyType extends ScalyAST
+sealed abstract class AST_ScalyType extends ScalyAST
 
-case class ScalyTypeName(name: String) extends ScalyType
+case class AST_ScalyTypeName(name: String) extends AST_ScalyType
 
-case class ScalyTypeSelect(lhs: Expr, rhs: String) extends ScalyType
+case class AST_ScalyTypeSelect(lhs: Expr, rhs: String) extends AST_ScalyType
 
-case class ScalyTupleType(types: List[ScalyType]) extends ScalyType
+case class AST_TupleScalyType(types: List[AST_ScalyType]) extends AST_ScalyType
 
-case class ScalyFunctionType(arguments: List[ScalyType], returnType: ScalyType) extends ScalyType
+case class AST_FunctionScalyType(arguments: List[AST_ScalyType], returnType: AST_ScalyType) extends AST_ScalyType
 
 abstract class Expr extends Statement
 
@@ -39,34 +39,40 @@ case class ClassParam(
                        modifiers: List[String],
                        memberType: String,
                        id: String,
-                       paramType: ScalyType,
+                       paramType: AST_ScalyType,
                        defaultValue: Option[Expr]
                      )
 
-sealed abstract class Statement extends ScalyAST {
+sealed abstract class Statement extends ScalyAST
 
+sealed abstract class Dcl extends Statement {
+  val id: String
+}
+
+object Dcl {
+  def unapply(arg: Dcl): Option[String] = Some(arg.id)
 }
 
 case class ValDef(
                    id: String,
-                   declType: Option[ScalyType],
+                   declType: Option[AST_ScalyType],
                    rhs: Expr
-                 ) extends Statement
+                 ) extends Dcl
 
 case class VarDef(
                    id: String,
-                   declType: Option[ScalyType],
+                   declType: Option[AST_ScalyType],
                    rhs: Expr
-                 ) extends Statement
+                 ) extends Dcl
 
 case class DefDef(
                    id: String,
                    params: List[List[FunParam]],
-                   retType: Option[ScalyType],
+                   retType: Option[AST_ScalyType],
                    body: Expr
-                 ) extends Statement
+                 ) extends Dcl
 
 case class FunParam(
                 name: String,
-                pType: ScalyType
-                )
+                pType: AST_ScalyType
+                ) extends ScalyAST
