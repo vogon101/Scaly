@@ -1,13 +1,12 @@
 package com.freddieposer.scaly.typechecker
 
 import com.freddieposer.scaly.AST._
+import com.freddieposer.scaly.typechecker.Utils._
 import com.freddieposer.scaly.typechecker.Variance.Variance
+import com.freddieposer.scaly.typechecker._TypeCheckResult._
+import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
 import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.types._
-import com.freddieposer.scaly.typechecker.Utils._
-import com.freddieposer.scaly.typechecker._TypeCheckResult._
-
-import scala.annotation.tailrec
 
 class TypeChecker(
                    val ast: CompilationUnit
@@ -24,13 +23,6 @@ class TypeChecker(
     _gc
   }
 
-  def TCRFold[T](acc: TCR)(f: (T, TypeCheckSuccess) => TCR)(xs: List[T]): TCR =
-    xs.foldLeft(acc) {
-      case (e@Left(_), _) => e
-      case (Right(s), x) =>
-        f(x, s).map { case s2@Success(typ, node) => Successes(typ, node, List(s))(s2.ctx) }
-    }
-
   def addToError(node: ScalyAST, context: TypeContext)(f: => TCR): TCR =
     f.left.map(new TypeErrorContext(_, node)(context))
 
@@ -41,7 +33,7 @@ class TypeChecker(
         //TODO: Inheritance
         val ctx = new ThisTypeContext(ScalyASTClassType(id, None, node), Some(globalContext))
         body.map(stat =>
-          TCRFold[Statement](Right(Success(ScalyValType.ScalyUnitType, UnitLiteral)(ctx))) {
+          Right(Success(ScalyValType.ScalyUnitType, UnitLiteral)(ctx)).collect[Statement] {
             case (statement, acc) => typeCheck(statement)(acc.ctx, Variance.IN)
           }(stat.stats)
         ).getOrElse(Right(Success(ScalyValType.ScalyUnitType, node)(ctx)))
@@ -150,9 +142,6 @@ class TypeChecker(
     }
   }
 
-
-
-
   private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext, variance: Variance): TCR = addToError(expr, ctx) {
     expr match {
 
@@ -162,7 +151,7 @@ class TypeChecker(
           case Success(typ, _) =>
             typ.getMember(rhs)
               .map(Success(_, expr))
-              .toRight(Failure(s"$typ doesn't have member $rhs", expr))
+              .left.map(Failure(_, expr))
         }
       case IDExpr(name) =>
         ctx.getVarType(name)
@@ -227,7 +216,7 @@ class TypeChecker(
       case (static1: StaticScalyType, static2: StaticScalyType) =>
         doesUnify_static(static1, static2)
       case (x: ScalyASTClassType, y: ScalyASTClassType) =>
-        //TODO: currently just checks the names
+        //TODO: currently just checks reference equality
         if (x equals y) Right(UnificationSuccess(x, y))
         else Left(UnificationFailure(x, y, s"Classes ${x.name} and ${y.name} are not equal"))
 

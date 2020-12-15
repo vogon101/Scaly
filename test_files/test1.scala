@@ -58,6 +58,8 @@ class A {
 
   def useC(c: C): String = c.x(100)
 
+  def useC2(c: C): String = c.foo2(c.x(101))(20)
+
 //  def thing(x: String): Unit = 100
 
 

@@ -11,8 +11,6 @@ class TypeContext(
                    val parent: Option[TypeContext],
                  ) {
 
-  println(parent)
-
   private type MMap[K, V] = mutable.Map[K, V]
 
   def getWellFormedType(name: String): Option[ScalyType] =

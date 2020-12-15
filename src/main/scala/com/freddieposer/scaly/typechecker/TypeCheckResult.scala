@@ -36,13 +36,13 @@ object Success {
     new TypeCheckSuccess(typ, node)
 
   def unapply(success: TypeCheckSuccess): Option[(ScalyType, ScalyAST)] =
-    Some (success.typ, success.node)
+    Some(success.typ, success.node)
 
 }
 
 
 class TypeCheckSuccess_Combination(_typ: ScalyType,
-                                  _node: ScalyAST,
+                                   _node: ScalyAST,
                                    val supports: List[TypeCheckSuccess]
                                   )(implicit ctx: TypeContext) extends TypeCheckSuccess(_typ, _node) {
 
@@ -62,6 +62,6 @@ class TypeErrorContext(inner: TypeError, override val node: ScalyAST)
 }
 
 class TypeErrorFromUnificationFailure(
-                                     val failure: UnificationFailure,
-                                     val _node: ScalyAST
-                                     ) (implicit ctx: TypeContext) extends TypeError(failure.message, _node)
+                                       val failure: UnificationFailure,
+                                       val _node: ScalyAST
+                                     )(implicit ctx: TypeContext) extends TypeError(failure.message, _node)

@@ -1,21 +1,10 @@
 package com.freddieposer.scaly.typechecker.context
 
-import com.freddieposer.scaly.AST.{AST_FunctionScalyType, AST_ScalyType, AST_ScalyTypeName, AST_ScalyTypeSelect, AST_TupleScalyType}
-import com.freddieposer.scaly.typechecker.{Success, TypeError, TypeErrorContext}
-import com.freddieposer.scaly.typechecker.Utils.TCR
-import com.freddieposer.scaly.typechecker._TypeCheckResult.Successes
-import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyTupleType, ScalyType, ScalyValType}
-import com.freddieposer.scaly.AST._
-import com.freddieposer.scaly.typechecker.Variance.Variance
-import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, ThisTypeContext, TypeContext}
-import com.freddieposer.scaly.typechecker.types._
-import com.freddieposer.scaly.typechecker.Utils._
-import com.freddieposer.scaly.typechecker._TypeCheckResult._
-import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
+import com.freddieposer.scaly.typechecker.types.{ScalyType, _}
 
 class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeContext) {
 
-  //TODO: Make this an either
+  //TODO: Refactor the TypeCheckResult to not (always) require a node so there is one result type
   def getMember(memberName: String): Either[String, ScalyType] = subject match {
     case staticType: StaticScalyType => staticType match {
       case ScalyPlaceholderTypeName(name) =>
@@ -25,14 +14,14 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
       case x: ScalyType => getMemberOfWellFormedType(x, memberName)
     }
     case astType: ASTScalyType => astType match {
-      case ScalyASTClassType(name, parent, node) => ???
+      case classType: ScalyASTClassType => getMemberOfWellFormedType(classType, memberName)
       case ScalyASTPlaceholderType(node) => ???
       case _ => ???
     }
   }
 
   private def getMemberOfWellFormedType(typ: ScalyType, memberName: String): Either[String, ScalyType] =
-    typ.getMember(memberName)
+    typ.getOwnMember(memberName)
       .orElse(typ.parent.flatMap(p => TypeInterpretation(p).getMember(memberName).toOption))
       .toRight(s"Type $typ does not have member $memberName")
 
@@ -41,6 +30,9 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
 
 object TypeInterpretation {
 
-  def apply(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation = new TypeInterpretation(subject)(context)
+  def apply(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
+    new TypeInterpretation(subject)(context)
 
+  implicit def TypeToInterpretation(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
+    TypeInterpretation(subject)
 }

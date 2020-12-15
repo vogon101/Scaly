@@ -1,7 +1,6 @@
 package com.freddieposer.scaly.typechecker.types
 
-import com.freddieposer.scaly.AST.{Dcl, DefDef, FunParam, AST_ScalyType, ScalyClassDef, ScalyTemplate, Statement, ValDef, VarDef}
-import com.freddieposer.scaly.typechecker.context.{ThisTypeContext, TypeContext}
+import com.freddieposer.scaly.AST._
 import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
 
 case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType with PlaceholderType {
@@ -19,16 +18,16 @@ case class ScalyASTClassType(
   override lazy val members: TypeMap = construct {
 
     def convertClause(clause: List[FunParam]): ScalyType =
-    clause match {
-      case Nil => ScalyValType.ScalyUnitType
-      case x :: Nil => ScalyASTPlaceholderType(x.pType)
-      case _ => ScalyTupleType(clause.map(p => ScalyASTPlaceholderType(p.pType)))
-    }
+      clause match {
+        case Nil => ScalyValType.ScalyUnitType
+        case x :: Nil => ScalyASTPlaceholderType(x.pType)
+        case _ => ScalyTupleType(clause.map(p => ScalyASTPlaceholderType(p.pType)))
+      }
 
     def convertParams(params: List[List[FunParam]], finalRet: ScalyType): ScalyType = {
       params match {
         case c :: Nil => ScalyFunctionType(Some(convertClause(c)), finalRet)
-        case c :: cs  => ScalyFunctionType(Some(convertClause(c)), convertParams(cs, finalRet))
+        case c :: cs => ScalyFunctionType(Some(convertClause(c)), convertParams(cs, finalRet))
         case Nil => ScalyFunctionType(None, finalRet)
       }
     }
@@ -41,12 +40,14 @@ case class ScalyASTClassType(
           case DefDef(id, params, retType, body) =>
             id -> convertParams(params, ScalyASTPlaceholderType(retType.get))
           //TODO: Return could be none - inference
-        }}.toMap
+        }
+        }.toMap
       case None => Map()
     }
   }
 
   private val _visited: Boolean = false
+
   override def visited: Boolean = _visited
 
 }

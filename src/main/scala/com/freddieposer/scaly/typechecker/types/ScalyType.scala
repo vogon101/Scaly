@@ -1,8 +1,7 @@
 package com.freddieposer.scaly.typechecker.types
 
-import com.freddieposer.scaly.AST.{ScalyAST, ScalyClassDef, ScalyTemplate, Statement}
+import com.freddieposer.scaly.AST.ScalyAST
 import com.freddieposer.scaly.typechecker.context.TypeContext._
-import com.freddieposer.scaly.typechecker.context.{ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.types.ScalyType._
 
 import scala.collection.mutable
@@ -11,19 +10,14 @@ trait PlaceholderType
 
 sealed abstract class ScalyType {
 
-  protected def members: TypeMap
+  def members: TypeMap
 
   val parent: Option[ScalyType]
 
   def visited: Boolean
 
-  //TODO: TypeInterpretation should allow a class to be interpreted within a TypeContext etc
-  //  This could be syntactic sugar to help slim down the TypeChecker - taking over functions like
-  //  convert type. I do not want to have this function have knowledge of the TypeChecker so
-  //  having an explicit interpretation might be a good compromise.
-  //  This probably needs sitting down and actually planning out but ¯\_(ツ)_/¯
-  def getMember(id: String)(implicit context: TypeContext): Option[ScalyType] =
-    members.get(id).orElse(parent.flatMap(_.getMember(id)))
+  def getOwnMember(id: String): Option[ScalyType] =
+    members.get(id)
 
 
 }

@@ -3,12 +3,12 @@ package com.freddieposer.scaly.typechecker.context
 import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
 import com.freddieposer.scaly.typechecker.types.ScalyType
 
-class ThisTypeContext private (
-                     val owner: ScalyType,
-                     val _p: Option[TypeContext],
-                     _t: TypeMap,
-                     _v: TypeMap
-                     ) extends TypeContext(_t, _v, _p){
+class ThisTypeContext private(
+                               val owner: ScalyType,
+                               val _p: Option[TypeContext],
+                               _t: TypeMap,
+                               _v: TypeMap
+                             ) extends TypeContext(_t, _v, _p) {
 
   def this(o: ScalyType, _p: Option[TypeContext]) = this(o, _p, Map(), Map())
 

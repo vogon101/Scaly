@@ -34,12 +34,12 @@ case class UnificationCombination(override val t1: ScalyType,
 case class UnificationFailure(override val t1: ScalyType,
                               override val t2: ScalyType,
                               message: String
-                             )(implicit _ctx: TypeContext) extends _UnificationResult(t1, t2){
+                             )(implicit _ctx: TypeContext) extends _UnificationResult(t1, t2) {
   override def map(f: UnificationSuccess => _UnificationResult): _UnificationResult = this
 }
 
 class UnificationFailureFromTypeCheck(
-                                     override val t1: ScalyType,
-                                     override val t2: ScalyType,
-                                     val error: TypeError
+                                       override val t1: ScalyType,
+                                       override val t2: ScalyType,
+                                       val error: TypeError
                                      )(implicit _ctx: TypeContext) extends UnificationFailure(t1, t2, error.message)
