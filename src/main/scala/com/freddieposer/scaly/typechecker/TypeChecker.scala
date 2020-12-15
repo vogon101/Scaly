@@ -7,6 +7,7 @@ import com.freddieposer.scaly.typechecker._TypeCheckResult._
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
 import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.types._
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 
 class TypeChecker(
                    val ast: CompilationUnit
@@ -109,7 +110,7 @@ class TypeChecker(
                     typeCheck(body)(ctx.extend(Map(), ((id -> buildFunctionType(declaredRT, paramTypes.map(_.map(_._2)))) :: paramTypes.flatten).toMap), variance)
                       .flatMap {
                         case Success(actualRetType, node) =>
-                          doesUnify(actualRetType, declaredRT)
+                          doesUnify(actualRetType, declaredRT)(ctx, Variance.CO)
                             .mapError(stat)
                             //TODO: Include the successes and actual type information
                             .map(us => Success(buildFunctionType(actualRetType, paramTypes.map(_.map(_._2))), stat))
@@ -131,7 +132,7 @@ class TypeChecker(
             case Success(actualType, _) => typ match {
               case Some(t: AST_ScalyType) => convertType(t).flatMap {
                 case Success(declaredType, _) =>
-                  doesUnify(declaredType, actualType)
+                  doesUnify(actualType, declaredType)(ctx, Variance.CO)
                     .mapError(stat)
                     .map(us => Success(actualType, stat))
               }
@@ -180,7 +181,7 @@ class TypeChecker(
             actuals
               .map(typeCheck_Expr).collapse
               .map(ts => ScalyTupleType(ts.toTypes))
-              .map(doesUnify(_, formalTypes).mapError(expr))
+              .map(doesUnify(_, formalTypes)(ctx, Variance.CO).mapError(expr))
               .collapse
               //TODO: Apply unification results
               //TODO: Include the success of the RHS
@@ -199,8 +200,24 @@ class TypeChecker(
     }
   }
 
+  //TODO: For variance we need to be incredibly careful with the order of these types
+
+  /**
+   * Does t1 unify with t2 under the given variance
+   * Unifies if:
+   *  - t1 == t2
+   *  - t1 < t2 and CO-VARIANT
+   *  - t1 > t2 and CONTRA-VARIANT
+   *
+   * @param t1
+   * @param t2
+   * @param ctx
+   * @param variance
+   * @return
+   */
   private def doesUnify(t1: ScalyType, t2: ScalyType)(implicit ctx: TypeContext, variance: Variance): UR =
     (t1, t2) match {
+      case _ if variance == Variance.CONTRA => doesUnify(t2, t1)(ctx, Variance.CO)
       case (x: ScalyASTPlaceholderType, _) =>
         convertType(x.node)
           .mapError(t1, t2)
@@ -208,27 +225,33 @@ class TypeChecker(
       case (_, x: ScalyASTPlaceholderType) =>
         convertType(x.node)
           .mapError(t1, t2)
-          .map { t => doesUnify(t.typ, t1) }.collapse
-
-      //      case (x: ScalyASTClassType, _) =>
-
+          .map { t => doesUnify(t1, t.typ) }.collapse
 
       case (static1: StaticScalyType, static2: StaticScalyType) =>
         doesUnify_static(static1, static2)
+
+
+      case _ if (variance == Variance.CO) =>
+        if (t1.isSubtypeOf(t2)) Right(UnificationSuccess(t1, t2))
+        else Left(UnificationFailure(t1, t2, s"$t1 is not a subtype ot $t2"))
+
       case (x: ScalyASTClassType, y: ScalyASTClassType) =>
         //TODO: currently just checks reference equality
         if (x equals y) Right(UnificationSuccess(x, y))
         else Left(UnificationFailure(x, y, s"Classes ${x.name} and ${y.name} are not equal"))
 
+      case _ => Left(UnificationFailure(t1, t2, s"Cannot unify types ${t1} and ${t2} under $variance"))
+
     }
 
   def doesUnify_static(t1: StaticScalyType, t2: StaticScalyType)(implicit ctx: TypeContext, variance: Variance): UR =
     (t1, t2) match {
+      case _ if variance == Variance.CONTRA => doesUnify(t2, t1)(ctx, Variance.CO)
       case (ScalyFunctionType(from1, to1), ScalyFunctionType(from2, to2)) =>
         (from1, from2) match {
           case (None, None) => doesUnify(to1, to2)
           case (Some(f1), Some(f2)) =>
-            doesUnify(f1, f2)
+            doesUnify(f1, f2)(ctx, variance.flip)
               .flatMap(ur =>
                 doesUnify(to1, to2)
                   .map(ur2 => UnificationCombination(t1, t2, ur, ur2))
@@ -237,16 +260,21 @@ class TypeChecker(
         }
 
       case (ScalyFunctionType(None, rt), _) => doesUnify(rt, t2)
-      case (_, ScalyFunctionType(None, _)) => doesUnify_static(t2, t1)
+      case (_, ScalyFunctionType(None, _)) => doesUnify_static(t2, t1)(ctx, variance.flip)
 
       case (ScalyValType(n1), ScalyValType(n2)) if (n1 equals n2) => Right(UnificationSuccess(t1, t2))
 
       case (ScalyTupleType(x :: Nil), y) => doesUnify(x, y)
-      case (y, ScalyTupleType(x :: Nil)) => doesUnify(x, y)
+      case (y, ScalyTupleType(x :: Nil)) => doesUnify(x, y)(ctx, variance.flip)
 
       case (ScalyValType.ScalyUnitType, ScalyTupleType(Nil)) => Right(UnificationSuccess(t1, t2))
       case (ScalyTupleType(Nil), ScalyValType.ScalyUnitType) => Right(UnificationSuccess(t1, t2))
       //TODO: Unit and Nothing types - needs a notion of _co/contra_ variance
+
+      case _ if (variance == Variance.CO) =>
+        if (t1.isSubtypeOf(t2)) Right(UnificationSuccess(t1, t2))
+        else Left(UnificationFailure(t1, t2, s"Static types: $t1 is not a subtype ot $t2"))
+
       case _ => Left(UnificationFailure(t1, t2, s"Cannot unify static types [$t1] and [$t2]"))
     }
 

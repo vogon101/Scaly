@@ -1,5 +1,6 @@
 package com.freddieposer.scaly.typechecker.context
 
+import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
 import com.freddieposer.scaly.typechecker.types.{ScalyType, _}
 
 class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeContext) {
@@ -24,6 +25,28 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
     typ.getOwnMember(memberName)
       .orElse(typ.parent.flatMap(p => TypeInterpretation(p).getMember(memberName).toOption))
       .toRight(s"Type $typ does not have member $memberName")
+
+  def isSubtypeOf(obj: ScalyType): Boolean = (subject, obj) match {
+
+    case (ScalyPlaceholderTypeName(name), t2) =>
+      context.getWellFormedType(name).exists(_ isSubtypeOf t2)
+
+    case (t1, ScalyPlaceholderTypeName(name)) =>
+      context.getWellFormedType(name).exists(t1 isSubtypeOf _)
+
+    case (t1, t2) => (t1 equals t2) || (t1.parent.exists(_.isSubtypeOf(t2)))
+  }
+
+  private def isStaticSubtypeOf(t1: StaticScalyType, t2: StaticScalyType): Boolean = {
+    //TODO: This is very unlikely to be enough but works for now
+    (t1 equals t2) || (t1.parent.exists(_.isSubtypeOf(t2)))
+  }
+
+  //    (subject, typ) match {
+//
+//      case (subj: StaticScalyType, obj: StaticScalyType) => staticIsSubtypeOf(subj, obj)
+//
+//    }
 
 
 }

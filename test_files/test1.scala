@@ -56,11 +56,23 @@ class A {
     10
   }
 
+  def toStringTest():String = {
+    (100).toString()
+  }
+
   def useC(c: C): String = c.x(100)
 
   def useC2(c: C): String = c.foo2(c.x(101))(20)
 
+  def useC3(c: C): String = c.toString
+
+  def varianceTest(b: B): Boolean = this equals b
+
 //  def thing(x: String): Unit = 100
+
+  def variances(d: Dog)(f: Animal => Dog): Animal = f(d)
+
+  def variancesAgain(p: Puppy)(f2: Dog => Puppy): Object = variances(p)(f2)
 
 
 }
@@ -76,3 +88,8 @@ class B {
 }
 
 class C extends A
+
+class Animal
+class Dog extends Animal
+class Cat extends Animal
+class Puppy extends Dog
