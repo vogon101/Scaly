@@ -1,7 +1,5 @@
 package com.freddieposer.scaly.AST
 
-import com.google.protobuf.Internal.DoubleList
-
 import scala.meta._
 
 object ASTBuilder {

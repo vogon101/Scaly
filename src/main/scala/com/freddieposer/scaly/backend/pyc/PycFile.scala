@@ -22,14 +22,14 @@ class PycFile(
        |""".stripMargin
 
   def toBytes: ByteArrayStream = {
-    
+
     val bytes = new MutableByteArrayStream()
 
-    bytes.writeLong(magic, rev=false)
-    bytes.writeLong(bit_field, rev=false)
+    bytes.writeLong(magic, rev = false)
+    bytes.writeLong(bit_field, rev = false)
     // These will be wrong, they should be generated
-    bytes.writeLong(moddate, rev=false)
-    bytes.writeLong(fileSize, rev=false)
+    bytes.writeLong(moddate, rev = false)
+    bytes.writeLong(fileSize, rev = false)
 
     bytes.write(codeObject.toBytes)
 

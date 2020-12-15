@@ -85,6 +85,6 @@ case class DefDef(
                  ) extends Dcl
 
 case class FunParam(
-                name: String,
-                pType: AST_ScalyType
-                ) extends ScalyAST
+                     name: String,
+                     pType: AST_ScalyType
+                   ) extends ScalyAST

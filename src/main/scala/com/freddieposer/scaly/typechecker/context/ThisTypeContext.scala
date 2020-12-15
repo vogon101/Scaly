@@ -14,8 +14,8 @@ class ThisTypeContext private(
 
   override def getVarType(name: String): Option[ScalyType] =
     if (name equals "this") Some(owner)
-    else if (owner.members.contains(name)) owner.members.get(name)
-    else super.getVarType(name)
+    else owner.getOwnMember(name)
+      .orElse(super.getVarType(name))
 
   override def addTypes(e: List[(String, ScalyType)]): TypeContext =
     new ThisTypeContext(owner, _p, types ++ e, vars)

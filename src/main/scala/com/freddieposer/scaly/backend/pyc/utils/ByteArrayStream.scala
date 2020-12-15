@@ -1,9 +1,8 @@
 package com.freddieposer.scaly.backend.pyc.utils
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.freddieposer.scaly.backend.pyc.defs.PycTypeBytes
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable.ArrayBuffer
 
 abstract class ByteArrayStream {
@@ -12,11 +11,11 @@ abstract class ByteArrayStream {
 
   protected[ByteArrayStream] var _offset: AtomicInteger = new AtomicInteger(0)
 
-  def offset:Int = _offset.get()
+  def offset: Int = _offset.get()
 
   def reset(): Unit = _offset.set(0)
 
-  def take_bytes(n: Int):List[Byte] = {
+  def take_bytes(n: Int): List[Byte] = {
     if (offset + n > bytes.length) throw new Error(s"No more bytes ${offset + n}")
     bytes.slice(offset, _offset.addAndGet(n)).toList
   }
@@ -33,7 +32,9 @@ abstract class ByteArrayStream {
 
   def isConsumed: Boolean = offset >= bytes.length
 
-  def skip(n: Int): ByteArrayStream = {_offset.addAndGet(n); this}
+  def skip(n: Int): ByteArrayStream = {
+    _offset.addAndGet(n); this
+  }
 
   override def toString: String = f"BAS(${bytes.map(_.toHexString).mkString(" ")})"
 
@@ -58,17 +59,17 @@ object ByteArrayStream {
   }
 
   def join(bass: List[ByteArrayStream]): ImmutableByteArrayStream =
-    bass.foldLeft(ByteArrayStream()) { case (x,y) => x + y }
+    bass.foldLeft(ByteArrayStream()) { case (x, y) => x + y }
 
 }
 
-class ImmutableByteArrayStream (override val bytes: Array[Byte]) extends ByteArrayStream {
+class ImmutableByteArrayStream(override val bytes: Array[Byte]) extends ByteArrayStream {
 
-  def + (that: ByteArrayStream): ImmutableByteArrayStream = ByteArrayStream(Array(bytes, that.bytes).flatten)
+  def +(that: ByteArrayStream): ImmutableByteArrayStream = ByteArrayStream(Array(bytes, that.bytes).flatten)
 
 }
 
-class MutableByteArrayStream (private val _m_bytes: ArrayBuffer[Byte] = ArrayBuffer()) extends ByteArrayStream {
+class MutableByteArrayStream(private val _m_bytes: ArrayBuffer[Byte] = ArrayBuffer()) extends ByteArrayStream {
 
   override def bytes: Array[Byte] = _m_bytes.toArray
 

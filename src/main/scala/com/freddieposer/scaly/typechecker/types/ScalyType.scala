@@ -10,7 +10,7 @@ trait PlaceholderType
 
 sealed abstract class ScalyType {
 
-  def members: TypeMap
+  protected def members: TypeMap
 
   val parent: Option[ScalyType]
 
@@ -18,7 +18,6 @@ sealed abstract class ScalyType {
 
   def getOwnMember(id: String): Option[ScalyType] =
     members.get(id)
-
 
 }
 
