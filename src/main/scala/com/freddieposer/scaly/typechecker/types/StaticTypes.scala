@@ -33,7 +33,7 @@ object ScalyTupleType {
   def apply(elems: List[ScalyType]): ScalyType = elems match {
     case Nil => ScalyValType.ScalyUnitType
     case x :: Nil => x
-    case _ => ScalyTupleType(elems)
+    case _ => new ScalyTupleType(elems)
   }
 
   def unapply(arg: ScalyTupleType): Option[List[ScalyType]] = Some(arg.elems)

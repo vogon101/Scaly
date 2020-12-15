@@ -72,8 +72,15 @@ class A {
 
   def variances(d: Dog)(f: Animal => Dog): Animal = f(d)
 
-  def variancesAgain(p: Puppy)(f2: Dog => Puppy): Object = variances(p)(f2)
+  def variancesAgain(p: Puppy)(f2: Object => Puppy): Object = variances(p)(f2)
 
+  def operatorTest(v1: Vector, v2: Vector): Object = v1 + v2
+
+  def additionTest: String = (100 + 20.0.toInt).toString
+
+  def nullTest(f: Int => String => Dog => Cat): Animal = {
+    f(null)(null)(null)
+  }
 
 }
 
@@ -93,3 +100,9 @@ class Animal
 class Dog extends Animal
 class Cat extends Animal
 class Puppy extends Dog
+
+class Vector {
+
+  def +(that: Vector): Vector = this + that
+
+}
