@@ -4,7 +4,7 @@ import com.freddieposer.scaly.typechecker.context.TypeContext
 import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
 import com.freddieposer.scaly.typechecker.types.ScalyType.defaultMembers
 
-case class ScalyClassType(name: String, parent: Option[ScalyType], myMembers: TypeMap) extends StaticScalyType {
+case class ScalyClassType(name: String, override val parent: Option[ScalyType], myMembers: TypeMap) extends StaticScalyType {
 
   override val members: TypeMap = defaultMembers ++ myMembers
 

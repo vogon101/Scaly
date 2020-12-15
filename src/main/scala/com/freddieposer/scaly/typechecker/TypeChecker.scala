@@ -64,53 +64,10 @@ class TypeChecker(
     }
   }
 
-
-  def typeCheck(stat: Statement)(implicit ctx: TypeContext, variance: Variance): TCR = addToError(stat, ctx) {
-    stat match {
-      case e: Expr => typeCheck_Expr(e)
-      case d: Dcl => d match {
-        case DefDef(id, params, retType, body) => updateContext(id) { () =>
-          val paramResults = params.map(ps =>
-            ps.map(p => p.name -> convertType(p.pType))
-            //.collect { case (_, e@Left(_)) => e }
-          )
-          val errors = paramResults.map(_.collect { case (_, e@Left(_)) => e }).collect { case xs@_ :: _ => xs }
-          errors match {
-            case Nil =>
-              val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ } }
-              retType match {
-                case Some(rt) => convertType(rt).flatMap {
-                  case Success(declaredRT, _) =>
-                    typeCheck(body)(ctx.child(Map(), ((id -> declaredRT) :: paramTypes.flatten).toMap), variance).flatMap {
-                      case Success(actualRetType, node) =>
-                        doesUnify(actualRetType, declaredRT)
-                          .mapError(stat)
-                          //TODO: Include the successes and actual type information
-                          .map(us => Success(buildFunctionType(actualRetType, paramTypes.map(_.map(_._2))), stat))
-                    }
-
-                }
-                case None =>
-                  typeCheck(body)(ctx.addVars(paramTypes.flatten), variance)
-                //TODO: Update the type in the context
-
-              }
-            //TODO Add info
-            case (x :: _) :: _ => x
-          }
-
-        }
-        case VarDef(id, typ, rhs) => ???
-        case ValDef(id, declType, rhs) => ???
-      }
-    }
-  }
-
-
-  def convertType(astType: AST_ScalyType)(implicit ctx: TypeContext): TCR = addToError(astType, ctx) {
+  private def convertType(astType: AST_ScalyType)(implicit context: TypeContext): TCR = addToError(astType, context) {
     astType match {
       case AST_ScalyTypeName(name) =>
-        ctx.getWellFormedType(name)
+        context.getWellFormedType(name)
           .toRight(TypeError(s"Cannot find type name $name", astType))
           .map(Success(_, astType))
       case AST_ScalyTypeSelect(lhs, rhs) => ???
@@ -139,6 +96,63 @@ class TypeChecker(
     }
   }
 
+
+  def typeCheck(stat: Statement)(implicit ctx: TypeContext, variance: Variance): TCR = addToError(stat, ctx) {
+    //TODO: VARIANCES
+    stat match {
+      case e: Expr => typeCheck_Expr(e)
+      case d: Dcl => d match {
+        case DefDef(id, params, retType, body) => updateContext(id) { () =>
+          val paramResults = params.map(ps =>
+            ps.map(p => p.name -> convertType(p.pType))
+            //.collect { case (_, e@Left(_)) => e }
+          )
+          val errors = paramResults.map(_.collect { case (_, e@Left(_)) => e }).collect { case xs@_ :: _ => xs }.flatten
+          errors match {
+            case Nil =>
+              val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ } }
+              retType match {
+                case Some(rt) => convertType(rt).flatMap {
+                  case Success(declaredRT, _) =>
+                    typeCheck(body)(ctx.extend(Map(), ((id -> buildFunctionType(declaredRT, paramTypes.map(_.map(_._2)))) :: paramTypes.flatten).toMap), variance)
+                      .flatMap {
+                        case Success(actualRetType, node) =>
+                          doesUnify(actualRetType, declaredRT)
+                            .mapError(stat)
+                            //TODO: Include the successes and actual type information
+                            .map(us => Success(buildFunctionType(actualRetType, paramTypes.map(_.map(_._2))), stat))
+                      }
+
+                }
+                case None =>
+                  typeCheck(body)(ctx.addVars(paramTypes.flatten), variance)
+                //TODO: Update the type in the context
+
+              }
+            //TODO Add info
+            case es@_ :: _ => Left(TypeError(s"Cannot typecheck parameters for def: $stat", stat))
+          }
+
+        }
+        case MemberDcl(_, typ, rhs) =>
+          typeCheck(rhs).flatMap {
+            case Success(actualType, _) => typ match {
+              case Some(t: AST_ScalyType) => convertType(t).flatMap {
+                case Success(declaredType, _) =>
+                  doesUnify(declaredType, actualType)
+                    .mapError(stat)
+                    .map(us => Success(actualType, stat))
+              }
+              case None => typeCheck(rhs)
+            }
+          }
+      }
+    }
+  }
+
+
+
+
   private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext, variance: Variance): TCR = addToError(expr, ctx) {
     expr match {
 
@@ -146,7 +160,7 @@ class TypeChecker(
       case SelectExpr(lhs, rhs) =>
         typeCheck_Expr(lhs).flatMap {
           case Success(typ, _) =>
-            typ.members.get(rhs)
+            typ.getMember(rhs)
               .map(Success(_, expr))
               .toRight(Failure(s"$typ doesn't have member $rhs", expr))
         }
@@ -207,7 +221,7 @@ class TypeChecker(
           .mapError(t1, t2)
           .map { t => doesUnify(t.typ, t1) }.collapse
 
-//      case (x: ScalyASTClassType, _) =>
+      //      case (x: ScalyASTClassType, _) =>
 
 
       case (static1: StaticScalyType, static2: StaticScalyType) =>

@@ -6,6 +6,9 @@ import scala.collection.mutable
 
 sealed case class ScalyValType(name: String) extends StaticScalyType {
   override def members: TypeMap = ???
+
+  //TODO: Parents for val types
+  override val parent: Option[ScalyType] = None
 }
 
 object ScalyValType {
