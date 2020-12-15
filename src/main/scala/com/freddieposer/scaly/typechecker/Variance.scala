@@ -2,8 +2,16 @@ package com.freddieposer.scaly.typechecker
 
 object Variance extends Enumeration {
 
-  type Variance = Value
+  protected case class Val() extends super.Val {
+    def flip: Variance = this match {
+      case CONTRA => CO
+      case CO => CONTRA
+      case IN => IN
+    }
+  }
 
-  val IN, CO, CONTRA = Value
+  type Variance = Val
 
+
+  val IN, CO, CONTRA = Val()
 }

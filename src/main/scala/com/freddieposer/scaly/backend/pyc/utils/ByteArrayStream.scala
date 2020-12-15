@@ -33,7 +33,8 @@ abstract class ByteArrayStream {
   def isConsumed: Boolean = offset >= bytes.length
 
   def skip(n: Int): ByteArrayStream = {
-    _offset.addAndGet(n); this
+    _offset.addAndGet(n);
+    this
   }
 
   override def toString: String = f"BAS(${bytes.map(_.toHexString).mkString(" ")})"

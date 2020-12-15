@@ -56,11 +56,40 @@ class A {
     10
   }
 
+  def toStringTest():String = {
+    (100).toString()
+  }
+
   def useC(c: C): String = c.x(100)
 
   def useC2(c: C): String = c.foo2(c.x(101))(20)
 
+  def useC3(c: C): String = c.toString
+
+  def varianceTest(b: B): Boolean = this equals b
+
 //  def thing(x: String): Unit = 100
+
+  def variances(d: Dog)(f: Animal => Dog): Animal = f(d)
+
+  def variancesAgain(p: Puppy)(f2: Object => Puppy): Object = variances(p)(f2)
+
+  def operatorTest(v1: Vector, v2: Vector): Vector = v1 + v2
+
+  def additionTest: String = (100 + 20.0.toInt).toString
+
+  def nullTest(f: Int => String => Dog => Cat): Animal = {
+    f(100)(null)(null)
+  }
+
+  def fib(n: Int): Int =
+    if (n < 2) 1
+    else fib(n - 1) + fib(n - 2)
+
+  val ifTest: Vector =
+    if (true) operatorTest(null, null)
+    else operatorTest(operatorTest(null, null) + null, null)
+
 
 
 }
@@ -76,3 +105,14 @@ class B {
 }
 
 class C extends A
+
+class Animal
+class Dog extends Animal
+class Cat extends Animal
+class Puppy extends Dog
+
+class Vector {
+
+  def +(that: Vector): Vector = this + that
+
+}

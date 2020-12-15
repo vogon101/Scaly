@@ -3,7 +3,7 @@ package com.freddieposer.scaly
 import com.freddieposer.scaly.AST.ASTBuilder
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
-import com.freddieposer.scaly.typechecker.TypeChecker
+import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
 
 import java.nio.file.{Files, Paths}
 import scala.jdk.CollectionConverters.ListHasAsScala
@@ -11,6 +11,7 @@ import scala.meta.{Defn, Stat}
 
 object Test {
 
+  //TODO: An actual test suite
   def test_pyc(): Unit = {
     var bytes = Files.readAllBytes(Paths.get("test_files/test2.pyc"))
     println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
@@ -71,7 +72,24 @@ object Test {
     //      println(f"$name : ${typ.members}")
 
     val res = tc.typeCheck()
-    println(res)
+
+    def printError(error: TypeError): Unit = error match {
+      case context: TypeErrorContext =>
+        println(s"Error at ${context.node}")
+        printError(context.inner)
+      case failure: TypeErrorFromUnificationFailure =>
+        println(failure)
+      case _ =>
+    }
+
+    res match {
+      case Left(value) =>
+        println("Unable to typecheck program")
+        printError(value)
+      case Right(value) =>
+        println("Success!")
+        println(value)
+    }
 
 
   }

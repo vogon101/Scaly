@@ -6,18 +6,20 @@ import com.freddieposer.scaly.typechecker.types.ScalyType._
 
 import scala.collection.mutable
 
-trait PlaceholderType
+trait PlaceholderType {
+
+}
 
 sealed abstract class ScalyType {
 
-  protected def members: TypeMap
+  protected def memberTypes: TypeMap
 
   val parent: Option[ScalyType]
 
   def visited: Boolean
 
   def getOwnMember(id: String): Option[ScalyType] =
-    members.get(id)
+    memberTypes.get(id)
 
 }
 
@@ -31,8 +33,6 @@ object ScalyType {
 
 abstract class StaticScalyType extends ScalyType {
   override val visited: Boolean = true
-  //TODO: Parents for static types
-  override val parent: Option[ScalyType] = None
 }
 
 abstract class ASTScalyType extends ScalyType {
