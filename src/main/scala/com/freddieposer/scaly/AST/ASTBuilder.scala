@@ -1,7 +1,5 @@
 package com.freddieposer.scaly.AST
 
-import com.google.protobuf.Internal.DoubleList
-
 import scala.meta._
 
 object ASTBuilder {
@@ -15,7 +13,7 @@ object ASTBuilder {
         ScalyClassDef(
           name.value,
           //TODO: constructors
-          templ.inits.map { x: Init => x.name.value },
+          templ.inits.map { x: Init => x.toString },
           if (templ.stats.isEmpty) None else Some(ScalyTemplate(templ.stats.map(buildStatement))),
           ctor.paramss.map(_.map(buildClassParam))
         )

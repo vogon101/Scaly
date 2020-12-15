@@ -1,11 +1,7 @@
 package com.freddieposer.scaly.backend.pyc
 
-import java.lang.ClassCastException
-
 import com.freddieposer.scaly.backend.pyc.defs.{PyOpcode, PyOpcodeArgType, PycTypeBytes}
 import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, MutableByteArrayStream, RefList}
-
-import scala.collection.mutable.ArrayBuffer
 
 class PyCodeObject(
                     val nargs: Int,
@@ -70,14 +66,14 @@ class PyCodeObject(
     code.as_ints.zipWithIndex.grouped(2).map {
       case List((op, i), (arg, _)) =>
         val opcode = PyOpcode.opcodeMap(op)
-        f"${i/2}%3d ${PyOpcode.opcodeMap(op)}%20s # " + (if(opcode.takesArg)
-        opcode.argType match {
-          case Some(PyOpcodeArgType.IDX_CONST_LIST) =>
-            f"$arg%-2d - ${getConstant(arg).shortName}"
-          case Some(PyOpcodeArgType.IDX_NAME_LIST) =>
-            f"$arg%-2d - ${getName(arg).shortName}"
-          case _ => f"$arg%-2d"
-        } else "")
+        f"${i / 2}%3d ${PyOpcode.opcodeMap(op)}%20s # " + (if (opcode.takesArg)
+          opcode.argType match {
+            case Some(PyOpcodeArgType.IDX_CONST_LIST) =>
+              f"$arg%-2d - ${getConstant(arg).shortName}"
+            case Some(PyOpcodeArgType.IDX_NAME_LIST) =>
+              f"$arg%-2d - ${getName(arg).shortName}"
+            case _ => f"$arg%-2d"
+          } else "")
     }.toList
   }
 

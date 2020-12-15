@@ -11,8 +11,6 @@ class TypeContext(
                    val parent: Option[TypeContext],
                  ) {
 
-  println(parent)
-
   private type MMap[K, V] = mutable.Map[K, V]
 
   def getWellFormedType(name: String): Option[ScalyType] =
@@ -33,7 +31,7 @@ class TypeContext(
   def addTypes(es: List[(String, ScalyType)]): TypeContext =
     TypeContext(types ++ es, vars, parent)
 
-  def child(types: TypeMap, vars: TypeMap): TypeContext =
+  def extend(types: TypeMap, vars: TypeMap): TypeContext =
     TypeContext(types, vars, Some(this))
 
   override def toString: String =

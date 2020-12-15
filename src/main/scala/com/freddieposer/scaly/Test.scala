@@ -1,12 +1,11 @@
 package com.freddieposer.scaly
-import java.nio.file.{Files, Paths}
 
-import com.freddieposer.scaly.AST.{ASTBuilder, ScalyClassDef}
-import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
+import com.freddieposer.scaly.AST.ASTBuilder
 import com.freddieposer.scaly.backend.pyc.PycFile
+import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.TypeChecker
-import com.freddieposer.scaly.typechecker.context.BaseTypeContext
 
+import java.nio.file.{Files, Paths}
 import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.meta.{Defn, Stat}
 
@@ -18,7 +17,7 @@ object Test {
     println(
       bytes.map((String.format("%02x", _)))
         .grouped(16).map(_.mkString(" "))
-        .zipWithIndex.map{case (s, i) => f"${i}%04x $s"}
+        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
         .mkString("\n")
     )
     val pyobj = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes))
@@ -30,7 +29,7 @@ object Test {
     println(
       bytes.map((String.format("%02x", _)))
         .grouped(16).map(_.mkString(" "))
-        .zipWithIndex.map{case (s, i) => f"${i}%04x $s"}
+        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
         .mkString("\n")
     )
     println(PycFile.readFromBytes(out))
@@ -68,12 +67,11 @@ object Test {
     val ast = ASTBuilder.fromScalaMeta(x)
     val tc = new TypeChecker(ast)
 
-//    for ((name, typ) <- tc.globalContext.types)
-//      println(f"$name : ${typ.members}")
+    //    for ((name, typ) <- tc.globalContext.types)
+    //      println(f"$name : ${typ.members}")
 
     val res = tc.typeCheck()
     println(res)
-
 
 
   }

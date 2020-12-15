@@ -53,17 +53,29 @@ object Dcl {
   def unapply(arg: Dcl): Option[String] = Some(arg.id)
 }
 
+sealed abstract class MemberDcl extends Dcl {
+  val declType: Option[AST_ScalyType]
+  val rhs: Expr
+}
+
+object MemberDcl {
+
+  def unapply(arg: MemberDcl): Option[(String, Option[AST_ScalyType], Expr)] =
+    Some((arg.id, arg.declType, arg.rhs))
+
+}
+
 case class ValDef(
                    id: String,
                    declType: Option[AST_ScalyType],
                    rhs: Expr
-                 ) extends Dcl
+                 ) extends MemberDcl
 
 case class VarDef(
                    id: String,
                    declType: Option[AST_ScalyType],
                    rhs: Expr
-                 ) extends Dcl
+                 ) extends MemberDcl
 
 case class DefDef(
                    id: String,
@@ -73,6 +85,6 @@ case class DefDef(
                  ) extends Dcl
 
 case class FunParam(
-                name: String,
-                pType: AST_ScalyType
-                ) extends ScalyAST
+                     name: String,
+                     pType: AST_ScalyType
+                   ) extends ScalyAST

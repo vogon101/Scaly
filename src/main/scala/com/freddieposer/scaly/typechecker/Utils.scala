@@ -1,7 +1,7 @@
 package com.freddieposer.scaly.typechecker
 
 import com.freddieposer.scaly.AST.ScalyAST
-import com.freddieposer.scaly.typechecker.context.TypeContext
+import com.freddieposer.scaly.typechecker._TypeCheckResult.Successes
 import com.freddieposer.scaly.typechecker.types.ScalyType
 
 object Utils {
@@ -39,8 +39,15 @@ object Utils {
 
   implicit class ExtendedTCR(tcr: TCR) {
 
-    def mapError(t1: ScalyType, t2: ScalyType):Either[UnificationFailure, TypeCheckSuccess] =
+    def mapError(t1: ScalyType, t2: ScalyType): Either[UnificationFailure, TypeCheckSuccess] =
       tcr.left.map(e => new UnificationFailureFromTypeCheck(t1, t2, e)(e.ctx))
+
+    def collect[T](f: (T, TypeCheckSuccess) => TCR)(xs: List[T]): TCR =
+      xs.foldLeft(tcr) {
+        case (e@Left(_), _) => e
+        case (Right(s), x) =>
+          f(x, s).map { case s2@Success(typ, node) => Successes(typ, node, List(s))(s2.ctx) }
+      }
 
   }
 

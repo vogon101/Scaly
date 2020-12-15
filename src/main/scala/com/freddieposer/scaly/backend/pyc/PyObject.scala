@@ -1,7 +1,7 @@
 package com.freddieposer.scaly.backend.pyc
 
 import com.freddieposer.scaly.backend.pyc.defs.PycTypeBytes
-import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, ImmutableByteArrayStream, RefList}
+import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, RefList}
 import com.freddieposer.scaly.utils.PrettyPrinter
 
 
@@ -64,7 +64,7 @@ object PyTrue extends PyBoolean(true) {
   override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
 }
 
-object PyFalse extends PyBoolean(false){
+object PyFalse extends PyBoolean(false) {
   override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
 }
 
@@ -108,10 +108,10 @@ class PyAscii(val text: String) extends PyObject {
   override def toBytes: ByteArrayStream =
     (
       if (text.length < 255)
-      ByteArrayStream(PycTypeBytes.TYPE_SHORT_ASCII) + ByteArrayStream((text.length & 0xff).toByte)
-    else
-      ByteArrayStream(PycTypeBytes.TYPE_ASCII) + ByteArrayStream.fromLongs(text.length)
-    ) + ByteArrayStream(text.toCharArray)
+        ByteArrayStream(PycTypeBytes.TYPE_SHORT_ASCII) + ByteArrayStream((text.length & 0xff).toByte)
+      else
+        ByteArrayStream(PycTypeBytes.TYPE_ASCII) + ByteArrayStream.fromLongs(text.length)
+      ) + ByteArrayStream(text.toCharArray)
 }
 
 object PyAscii {

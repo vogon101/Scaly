@@ -1,10 +1,9 @@
 package com.freddieposer.scaly.typechecker.types
 
-import com.freddieposer.scaly.typechecker.context.TypeContext
 import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
 import com.freddieposer.scaly.typechecker.types.ScalyType.defaultMembers
 
-case class ScalyClassType(name: String, parent: Option[ScalyType], myMembers: TypeMap) extends StaticScalyType {
+case class ScalyClassType(name: String, override val parent: Option[ScalyType], myMembers: TypeMap) extends StaticScalyType {
 
   override val members: TypeMap = defaultMembers ++ myMembers
 
@@ -16,7 +15,7 @@ case class ScalyFunctionType(from: Option[ScalyType], to: ScalyType) extends Sta
 
 }
 
-class ScalyTupleType private (val elems: List[ScalyType]) extends StaticScalyType {
+class ScalyTupleType private(val elems: List[ScalyType]) extends StaticScalyType {
 
   override lazy val members: TypeMap = defaultMembers ++ Map(
     elems.zipWithIndex.map { case (e, i) => f"_$i" -> e }: _*
