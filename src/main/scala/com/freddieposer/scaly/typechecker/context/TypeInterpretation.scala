@@ -1,5 +1,6 @@
 package com.freddieposer.scaly.typechecker.context
 
+import com.freddieposer.scaly.AST.AST_ScalyTypeName
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType._
@@ -18,7 +19,10 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
     }
     case astType: ASTScalyType => astType match {
       case classType: ScalyASTClassType => getMemberOfWellFormedType(classType, memberName)
-      case ScalyASTPlaceholderType(node) => ???
+      case ScalyASTPlaceholderType(AST_ScalyTypeName(name)) =>
+        context.getWellFormedType(name)
+          .toRight(s"Cannot convert type $name under $context")
+          .flatMap(getMemberOfWellFormedType(_, memberName))
       case _ => ???
     }
   }
@@ -38,20 +42,10 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
     case (ScalyNullType, t) if (t.isInstanceOf[ScalyValType] && !t.equals(ScalyStringType)) => false
     case (ScalyNullType, _) => true
 
+    case (ScalyTupleType(ts1), ScalyTupleType(ts2)) => ts1.zip(ts2).forall { case (a, b) => a.isSubtypeOf(b) }
+
     case (t1, t2) => (t1 equals t2) || (t1.parent.exists(_.isSubtypeOf(t2)))
   }
-
-  private def isStaticSubtypeOf(t1: StaticScalyType, t2: StaticScalyType): Boolean = {
-    //TODO: This is very unlikely to be enough but works for now
-    (t1 equals t2) || (t1.parent.exists(_.isSubtypeOf(t2)))
-  }
-
-  //    (subject, typ) match {
-//
-//      case (subj: StaticScalyType, obj: StaticScalyType) => staticIsSubtypeOf(subj, obj)
-//
-//    }
-
 
 }
 

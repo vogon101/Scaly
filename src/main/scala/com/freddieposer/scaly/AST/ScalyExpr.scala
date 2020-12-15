@@ -10,6 +10,6 @@ case class Block(statements: List[Statement]) extends Expr
 
 case class IDExpr(name: String) extends Expr
 
-
+case class IfExpr(cond: Expr, tBranch: Expr, fBranch: Expr) extends Expr
 
 

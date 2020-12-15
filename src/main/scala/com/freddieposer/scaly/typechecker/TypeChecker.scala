@@ -8,6 +8,7 @@ import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInter
 import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.types._
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyBooleanType
 
 class TypeChecker(
                    val ast: CompilationUnit
@@ -31,7 +32,6 @@ class TypeChecker(
 
     ast.statements.map {
       case node@ScalyClassDef(id, parents, body, params) =>
-        //TODO: Inheritance
         val ctx = new ThisTypeContext(ScalyASTClassType(id, None, node), Some(globalContext))
         body.map(stat =>
           Right(Success(ScalyValType.ScalyUnitType, UnitLiteral)(ctx)).collect[Statement] {
@@ -91,7 +91,6 @@ class TypeChecker(
 
 
   def typeCheck(stat: Statement)(implicit ctx: TypeContext, variance: Variance): TCR = addToError(stat, ctx) {
-    //TODO: VARIANCES
     stat match {
       case e: Expr => typeCheck_Expr(e)
       case d: Dcl => d match {
@@ -190,6 +189,27 @@ class TypeChecker(
           case _ => Left(TypeError("Application of non-functional type", expr))
         }
         }
+      case IfExpr(cond, tBranch, fBranch) =>
+        typeCheck(cond)
+          .flatMap { case condSuccess@Success(t, _) =>
+            doesUnify(t, ScalyBooleanType)(ctx, Variance.CO)
+              .mapError(cond)
+              .flatMap(boolSuccess => typeCheck(tBranch).flatMap(
+                tBranchSuccess => typeCheck(fBranch).flatMap(
+                  fBranchSuccess => doesUnify(tBranchSuccess.typ, fBranchSuccess.typ)(ctx, Variance.IN)
+                    .mapError(expr)
+                    .flatMap {
+                      //TODO: Common parent
+                      us =>
+                        Right(Successes(
+                          tBranchSuccess.typ,
+                          expr,
+                          List(condSuccess, tBranchSuccess, fBranchSuccess)
+                        ))
+                    }
+                )
+              ))
+          }
       case Block(statements) =>
         statements
           .foldLeft(Right(Success(ScalyValType.ScalyUnitType, expr)): TCR) {
@@ -200,7 +220,7 @@ class TypeChecker(
     }
   }
 
-  //TODO: For variance we need to be incredibly careful with the order of these types
+  //
 
   /**
    * Does t1 unify with t2 under the given variance
@@ -208,6 +228,8 @@ class TypeChecker(
    *  - t1 == t2
    *  - t1 < t2 and CO-VARIANT
    *  - t1 > t2 and CONTRA-VARIANT
+   *
+   * NOTE: For variance we need to be incredibly careful with the order of these types
    *
    * @param t1
    * @param t2
@@ -233,7 +255,7 @@ class TypeChecker(
 
       case _ if (variance == Variance.CO) =>
         if (t1.isSubtypeOf(t2)) Right(UnificationSuccess(t1, t2))
-        else Left(UnificationFailure(t1, t2, s"$t1 is not a subtype ot $t2"))
+        else Left(UnificationFailure(t1, t2, s"$t1 is not a subtype of $t2"))
 
       case (x: ScalyASTClassType, y: ScalyASTClassType) =>
         //TODO: currently just checks reference equality
@@ -269,11 +291,10 @@ class TypeChecker(
 
       case (ScalyValType.ScalyUnitType, ScalyTupleType(Nil)) => Right(UnificationSuccess(t1, t2))
       case (ScalyTupleType(Nil), ScalyValType.ScalyUnitType) => Right(UnificationSuccess(t1, t2))
-      //TODO: Unit and Nothing types - needs a notion of _co/contra_ variance
 
       case _ if (variance == Variance.CO) =>
         if (t1.isSubtypeOf(t2)) Right(UnificationSuccess(t1, t2))
-        else Left(UnificationFailure(t1, t2, s"Static types: $t1 is not a subtype ot $t2"))
+        else Left(UnificationFailure(t1, t2, s"Static types: $t1 is not a subtype of $t2"))
 
       case _ => Left(UnificationFailure(t1, t2, s"Cannot unify static types [$t1] and [$t2]"))
     }

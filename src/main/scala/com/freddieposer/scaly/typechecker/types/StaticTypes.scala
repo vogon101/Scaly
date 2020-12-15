@@ -26,6 +26,8 @@ class ScalyTupleType private(val elems: List[ScalyType]) extends StaticScalyType
     elems.zipWithIndex.map { case (e, i) => f"_$i" -> e }: _*
   )
 
+  override def toString: String = s"TupleType(${elems.mkString(", ")})"
+
 }
 
 object ScalyTupleType {

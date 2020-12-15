@@ -10,10 +10,10 @@ case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType wit
 }
 
 class ScalyASTClassType(
-                              val name: String,
-                              private val _parent: Option[ScalyType],
-                              val node: ScalyClassDef
-                            ) extends ASTScalyType with PlaceholderType {
+                         val name: String,
+                         private val _parent: Option[ScalyType],
+                         val node: ScalyClassDef
+                       ) extends ASTScalyType with PlaceholderType {
 
 
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))

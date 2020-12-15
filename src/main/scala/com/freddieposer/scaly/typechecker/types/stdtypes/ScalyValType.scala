@@ -5,8 +5,6 @@ import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyObjectUtils._
 import com.freddieposer.scaly.typechecker.types.{ScalyType, StaticScalyType}
 
-import scala.meta.Lit.Null
-
 sealed abstract case class ScalyValType(name: String) extends StaticScalyType {
 
 
@@ -44,41 +42,47 @@ object ScalyValType {
     "Null" -> ScalyNullType
   )
 
-  private lazy val numericConverterTypes: TypeMap = Map(
+  private def numericConverterTypes(typ: ScalyValType): TypeMap = Map(
     "toInt" -> (O --> ScalyIntType),
     "toFloat" -> (O --> ScalyFloatType),
     "toDouble" -> (O --> ScalyDoubleType),
-    "toChar" -> (O --> ScalyCharType)
+    "toChar" -> (O --> ScalyCharType),
+    "+" -> (typ --> typ),
+    "-" -> (typ --> typ),
+    "<" -> (typ --> ScalyBooleanType),
+    ">" -> (typ --> ScalyBooleanType),
+    ">=" -> (typ --> ScalyBooleanType),
+    "<=" -> (typ --> ScalyBooleanType)
   )
 
   object ScalyStringType extends ScalyValType("String") {
-    override protected lazy val memberTypes: TypeMap = Map (
+    override protected lazy val memberTypes: TypeMap = Map(
       "+" -> (ScalyStringType --> ScalyStringType)
     )
   }
 
   object ScalyIntType extends ScalyValType("Int") {
-    override protected lazy val memberTypes: TypeMap = Map (
+    override protected lazy val memberTypes: TypeMap = Map(
       "+" -> (ScalyIntType --> ScalyIntType)
-    ) ++ numericConverterTypes
+    ) ++ numericConverterTypes(ScalyIntType)
   }
 
   object ScalyFloatType extends ScalyValType("Float") {
-    override protected lazy val memberTypes: TypeMap = Map (
+    override protected lazy val memberTypes: TypeMap = Map(
       "+" -> (ScalyFloatType --> ScalyFloatType)
-    ) ++ numericConverterTypes
+    ) ++ numericConverterTypes(ScalyFloatType)
   }
 
   object ScalyDoubleType extends ScalyValType("Double") {
-    override protected lazy val memberTypes: TypeMap = Map (
+    override protected lazy val memberTypes: TypeMap = Map(
       "+" -> (ScalyDoubleType --> ScalyDoubleType)
-    ) ++ numericConverterTypes
+    ) ++ numericConverterTypes(ScalyDoubleType)
   }
 
   object ScalyCharType extends ScalyValType("Char") {
-    override protected lazy val memberTypes: TypeMap = Map (
+    override protected lazy val memberTypes: TypeMap = Map(
       "+" -> (ScalyCharType --> ScalyCharType)
-    ) ++ numericConverterTypes
+    ) ++ numericConverterTypes(ScalyCharType)
   }
 
   object ScalyBooleanType extends ScalyValType("Boolean")

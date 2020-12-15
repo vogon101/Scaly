@@ -74,13 +74,23 @@ class A {
 
   def variancesAgain(p: Puppy)(f2: Object => Puppy): Object = variances(p)(f2)
 
-  def operatorTest(v1: Vector, v2: Vector): Object = v1 + v2
+  def operatorTest(v1: Vector, v2: Vector): Vector = v1 + v2
 
   def additionTest: String = (100 + 20.0.toInt).toString
 
   def nullTest(f: Int => String => Dog => Cat): Animal = {
-    f(null)(null)(null)
+    f(100)(null)(null)
   }
+
+  def fib(n: Int): Int =
+    if (n < 2) 1
+    else fib(n - 1) + fib(n - 2)
+
+  val ifTest: Vector =
+    if (true) operatorTest(null, null)
+    else operatorTest(operatorTest(null, null) + null, null)
+
+
 
 }
 

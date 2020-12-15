@@ -76,6 +76,7 @@ object ASTBuilder {
       case Term.Select(lhs, name) => SelectExpr(buildExpr(lhs), name.value)
       case Term.Name(value) => IDExpr(value)
       case Term.This(qual) => IDExpr("this")
+      case Term.If(cond, tBranch, fBranch) => IfExpr(buildExpr(cond), buildExpr(tBranch), buildExpr(fBranch))
     }
 
   private def buildLiteral(lit: Lit): Literal =

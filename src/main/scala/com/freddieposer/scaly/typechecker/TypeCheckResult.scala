@@ -54,7 +54,7 @@ case class TypeError(message: String,
                      override val node: ScalyAST
                     )(implicit ctx: TypeContext) extends _TypeCheckResult(node)
 
-class TypeErrorContext(inner: TypeError, override val node: ScalyAST)
+class TypeErrorContext(val inner: TypeError, override val node: ScalyAST)
                       (implicit ctx: TypeContext) extends TypeError(inner.message, node) {
 
   override def toString: String = f"Error at $node with $ctx\n${inner.toString}"
@@ -64,4 +64,8 @@ class TypeErrorContext(inner: TypeError, override val node: ScalyAST)
 class TypeErrorFromUnificationFailure(
                                        val failure: UnificationFailure,
                                        val _node: ScalyAST
-                                     )(implicit ctx: TypeContext) extends TypeError(failure.message, _node)
+                                     )(implicit ctx: TypeContext) extends TypeError(failure.message, _node) {
+
+  override def toString: String = s"Failed to Unify: ${failure.message} at $node"
+
+}

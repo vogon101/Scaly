@@ -1,8 +1,8 @@
 package com.freddieposer.scaly.typechecker.types.stdtypes
 
 import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyStringType, ScalyUnitType}
-import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyTupleType, ScalyType, StaticScalyType}
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyStringType}
+import com.freddieposer.scaly.typechecker.types.{ScalyType, StaticScalyType}
 
 object ScalyObject extends StaticScalyType {
 

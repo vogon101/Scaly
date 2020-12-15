@@ -3,7 +3,6 @@ package com.freddieposer.scaly.typechecker.types
 import com.freddieposer.scaly.AST.ScalyAST
 import com.freddieposer.scaly.typechecker.context.TypeContext._
 import com.freddieposer.scaly.typechecker.types.ScalyType._
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyObject
 
 import scala.collection.mutable
 
