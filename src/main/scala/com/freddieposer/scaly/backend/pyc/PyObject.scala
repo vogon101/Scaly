@@ -112,9 +112,16 @@ class PyAscii(val text: String) extends PyObject {
       else
         ByteArrayStream(PycTypeBytes.TYPE_ASCII) + ByteArrayStream.fromLongs(text.length)
       ) + ByteArrayStream(text.toCharArray)
+
+  override def equals(obj: Any): Boolean = obj match {
+    case a: PyAscii => text equals a.text
+    case _ => false
+  }
 }
 
 object PyAscii {
+
+  def apply(text: String): PyAscii = new PyAscii(text)
 
   def readPyAscii(isSmall: Boolean = false)(implicit data: ByteArrayStream): PyAscii = {
     val length = if (isSmall) data.head() else data.readLong()
@@ -130,6 +137,11 @@ class PyInt(val value: Int) extends PyObject {
 
   override def toBytes: ByteArrayStream =
     ByteArrayStream(PycTypeBytes.TYPE_INT) + ByteArrayStream.fromLongs(value)
+
+  override def equals(obj: Any): Boolean = obj match {
+    case a: PyInt => value equals a.value
+    case _ => false
+  }
 }
 
 object PyInt {

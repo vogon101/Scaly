@@ -1,11 +1,14 @@
 package com.freddieposer.scaly
 
 import com.freddieposer.scaly.AST.ASTBuilder
+import com.freddieposer.scaly.backend.ISTCompiler
+import com.freddieposer.scaly.backend.internal.ISTBuilder
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
 
 import java.nio.file.{Files, Paths}
+import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.meta.{Defn, Stat}
 
@@ -13,29 +16,36 @@ object Test {
 
   //TODO: An actual test suite
   def test_pyc(): Unit = {
-    var bytes = Files.readAllBytes(Paths.get("test_files/test2.pyc"))
-    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
-    println(
-      bytes.map((String.format("%02x", _)))
-        .grouped(16).map(_.mkString(" "))
-        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
-        .mkString("\n")
-    )
-    val pyobj = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes))
-    println(pyobj)
+    var bytes1 = Files.readAllBytes(Paths.get("test_files/compiled.pyc"))
+    val pyobj1 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes1))
+    println(pyobj1)
 
-    val out = pyobj.toBytes
-    bytes = out.bytes
-    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
-    println(
-      bytes.map((String.format("%02x", _)))
-        .grouped(16).map(_.mkString(" "))
-        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
-        .mkString("\n")
-    )
-    println(PycFile.readFromBytes(out))
+    var bytes2 = Files.readAllBytes(Paths.get("test_files/sclass.pyc"))
+    val pyobj2 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes2))
+    println(pyobj2)
 
-    Files.write(Paths.get("out.pyc"), out.bytes)
+
+//    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
+//    println(
+//      bytes.map((String.format("%02x", _)))
+//        .grouped(16).map(_.mkString(" "))
+//        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
+//        .mkString("\n")
+//    )
+
+
+//    val out = pyobj.toBytes
+//    bytes = out.bytes
+////    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
+////    println(
+////      bytes.map((String.format("%02x", _)))
+////        .grouped(16).map(_.mkString(" "))
+////        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
+////        .mkString("\n")
+////    )
+//    println(PycFile.readFromBytes(out))
+//
+//    Files.write(Paths.get("test_files/sclass2.pyc"), out.bytes)
   }
 
   def printAST(stat: Stat, indent: Int): Unit = stat match {
@@ -53,7 +63,17 @@ object Test {
     case x => println(s"${"\t" * indent}${x.structure}")
   }
 
-  def test_parsing(): Unit = {
+  @tailrec
+  def printError(error: TypeError): Unit = error match {
+    case context: TypeErrorContext =>
+      println(s"Error at ${context.node}")
+      printError(context.inner)
+    case failure: TypeErrorFromUnificationFailure =>
+      println(failure)
+    case _ =>
+  }
+
+  def test_tc(): Unit = {
 
     val lines = Files.readAllLines(Paths.get("test_files/test1.scala")).asScala.mkString("\n")
     println(lines)
@@ -73,15 +93,6 @@ object Test {
 
     val res = tc.typeCheck()
 
-    def printError(error: TypeError): Unit = error match {
-      case context: TypeErrorContext =>
-        println(s"Error at ${context.node}")
-        printError(context.inner)
-      case failure: TypeErrorFromUnificationFailure =>
-        println(failure)
-      case _ =>
-    }
-
     res match {
       case Left(value) =>
         println("Unable to typecheck program")
@@ -94,8 +105,41 @@ object Test {
 
   }
 
+  def test_compile(): Unit = {
+
+
+    val lines = Files.readAllLines(Paths.get("test_files/compileTest.scala")).asScala.mkString("\n")
+    println(lines)
+
+    import scala.meta._
+
+    val x = lines.parse[scala.meta.Source].get
+    val ast = ASTBuilder.fromScalaMeta(x)
+    val tc = new TypeChecker(ast)
+
+    val res = tc.typeCheck()
+
+    res match {
+      case Left(value) =>
+        println("Unable to typecheck program")
+        printError(value)
+      case Right(value) =>
+        println("Success!")
+        println(value)
+
+        val ist = ISTBuilder.buildIST(ast)
+        val pyCodeObject = new ISTCompiler("placeholder").compile(ist)
+        println(pyCodeObject)
+        val f = PycFile(pyCodeObject)
+        Files.write(Paths.get("test_files/compiled.pyc"), f.toBytes.bytes)
+
+    }
+
+  }
+
   def main(args: Array[String]): Unit = {
-    test_parsing()
+    test_pyc()
+    test_compile()
   }
 
 }

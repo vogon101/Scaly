@@ -90,8 +90,6 @@ class A {
     if (true) operatorTest(null, null)
     else operatorTest(operatorTest(null, null) + null, null)
 
-
-
 }
 
 class B {

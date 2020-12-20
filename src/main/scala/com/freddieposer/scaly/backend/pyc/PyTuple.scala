@@ -67,4 +67,8 @@ object PyTuple {
     pt
   }
 
+  def apply(objects: List[PyObject]): PyTuple = new PyTuple(ListBuffer(objects:_*))
+
+  def empty: PyTuple = new PyTuple(ListBuffer())
+
 }

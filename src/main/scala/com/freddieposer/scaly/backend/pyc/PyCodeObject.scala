@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.backend.pyc
 
-import com.freddieposer.scaly.backend.pyc.defs.{PyOpcode, PyOpcodeArgType, PycTypeBytes}
+import com.freddieposer.scaly.backend.pyc.defs.{PyOpcodes, PyOpcodeArgType, PycTypeBytes}
 import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, MutableByteArrayStream, RefList}
 
 class PyCodeObject(
@@ -65,8 +65,8 @@ class PyCodeObject(
   def formatCode(): List[String] = {
     code.as_ints.zipWithIndex.grouped(2).map {
       case List((op, i), (arg, _)) =>
-        val opcode = PyOpcode.opcodeMap(op)
-        f"${i / 2}%3d ${PyOpcode.opcodeMap(op)}%20s # " + (if (opcode.takesArg)
+        val opcode = PyOpcodes.opcodeMap(op)
+        f"${i / 2}%3d ${PyOpcodes.opcodeMap(op)}%20s # " + (if (opcode.takesArg)
           opcode.argType match {
             case Some(PyOpcodeArgType.IDX_CONST_LIST) =>
               f"$arg%-2d - ${getConstant(arg).shortName}"
