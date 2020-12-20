@@ -3,7 +3,7 @@ package com.freddieposer.scaly.backend
 import com.freddieposer.scaly.backend.internal.{IST_Class, IST_CompilationUnit}
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.PyOpcode
-import com.freddieposer.scaly.backend.pyc.{PyAscii, PyCodeObject, PyNone, PyObject, PyString, PyTuple}
+import com.freddieposer.scaly.backend.pyc._
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
@@ -17,6 +17,7 @@ class ISTCompiler(_filename: String) {
     private val _names: ArrayBuffer[PyAscii] = ArrayBuffer()
 
     def constants: PyTuple = PyTuple(_constants.toList)
+
     def names: PyTuple = PyTuple(_names.toList)
 
     private def _getter[T](o: T, l: ArrayBuffer[T]): Byte = {
@@ -45,7 +46,7 @@ class ISTCompiler(_filename: String) {
 
     val code = {
       import PyOpcodes._
-      buildCode (implicit a1 => implicit a2 => classes.flatMap { c =>
+      buildCode(implicit a1 => implicit a2 => classes.flatMap { c =>
         List(
           LOAD_BUILD_CLASS,
           (LOAD_CONST, ctx.const(c)),
@@ -61,11 +62,11 @@ class ISTCompiler(_filename: String) {
     }
 
 
-//    val varnames = ???
-//    val freeVars = ???
-//    val cellVars = ???
+    //    val varnames = ???
+    //    val freeVars = ???
+    //    val cellVars = ???
     val name = "<module>".toPy
-//    val lnotab = ???
+    //    val lnotab = ???
 
     val stackSize: Int = 10 // ???
 
@@ -84,7 +85,7 @@ class ISTCompiler(_filename: String) {
 
     val code = {
       import PyOpcodes._
-      buildCode ( implicit a1 => implicit a2 => List(
+      buildCode(implicit a1 => implicit a2 => List(
         (LOAD_NAME, ctx.name("__name__".toPy)),
         (STORE_NAME, ctx.name("__module__".toPy)),
         (LOAD_CONST, ctx.const(istClass.name.toPy)),
@@ -102,18 +103,22 @@ class ISTCompiler(_filename: String) {
   }
 
   private class R
+
   private val r = new R
 
   def buildCode(f: (PyOpcode => R) => (((PyOpcode, Byte)) => R) => List[R]): PyString = {
     val bytes: ListBuffer[Byte] = ListBuffer()
-    def adder(opcode: PyOpcode): R  = {
+
+    def adder(opcode: PyOpcode): R = {
       bytes ++= List(opcode.byte, 0.toByte)
       r
     }
+
     def adderArg(t: (PyOpcode, Byte)): R = {
       bytes ++= List(t._1.byte, t._2)
       r
     }
+
     f(adder)(adderArg)
     new PyString(bytes.toList)
   }

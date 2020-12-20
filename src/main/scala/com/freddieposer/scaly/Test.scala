@@ -25,27 +25,27 @@ object Test {
     println(pyobj2)
 
 
-//    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
-//    println(
-//      bytes.map((String.format("%02x", _)))
-//        .grouped(16).map(_.mkString(" "))
-//        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
-//        .mkString("\n")
-//    )
+    //    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
+    //    println(
+    //      bytes.map((String.format("%02x", _)))
+    //        .grouped(16).map(_.mkString(" "))
+    //        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
+    //        .mkString("\n")
+    //    )
 
 
-//    val out = pyobj.toBytes
-//    bytes = out.bytes
-////    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
-////    println(
-////      bytes.map((String.format("%02x", _)))
-////        .grouped(16).map(_.mkString(" "))
-////        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
-////        .mkString("\n")
-////    )
-//    println(PycFile.readFromBytes(out))
-//
-//    Files.write(Paths.get("test_files/sclass2.pyc"), out.bytes)
+    //    val out = pyobj.toBytes
+    //    bytes = out.bytes
+    ////    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
+    ////    println(
+    ////      bytes.map((String.format("%02x", _)))
+    ////        .grouped(16).map(_.mkString(" "))
+    ////        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
+    ////        .mkString("\n")
+    ////    )
+    //    println(PycFile.readFromBytes(out))
+    //
+    //    Files.write(Paths.get("test_files/sclass2.pyc"), out.bytes)
   }
 
   def printAST(stat: Stat, indent: Int): Unit = stat match {
