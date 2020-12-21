@@ -86,9 +86,9 @@ class PyString(val str: List[Byte]) extends PyObject {
 
   def as_ints: List[Int] = str.map(_ & 0xff)
 
-  def -> (that: PyString) = new PyString(str ++ that.str)
+  def ->(that: PyString) = new PyString(str ++ that.str)
 
-  def --> (those: Iterable[PyString]): PyString =
+  def -->(those: Iterable[PyString]): PyString =
     new PyString(str ++ those.flatMap(_.str))
 
   override def toBytes: ByteArrayStream =

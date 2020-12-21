@@ -1,6 +1,7 @@
 package com.freddieposer.scaly.backend.pyc
 
-import com.freddieposer.scaly.backend.pyc.defs.{PyOpcodes, PyOpcodeArgType, PycTypeBytes}
+import com.freddieposer.scaly.backend.CompilationContext
+import com.freddieposer.scaly.backend.pyc.defs.{PyOpcodeArgType, PyOpcodes, PycTypeBytes}
 import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, MutableByteArrayStream, RefList}
 
 class PyCodeObject(
@@ -135,7 +136,21 @@ object PyCodeObject {
       code, consts, names, varnames, freeVars, cellVars, name, filename, lnotab
     )
     refList.insert(x, idx, flag)
-
-
   }
+
+  def apply(
+             ctx: CompilationContext, code: PyString,
+             name: PyAscii, filename: PyAscii,
+             nargs: Int, nPosOnly: Int, nLocals: Int, stackSize: Int, flags: Int,
+             varnames: PyTuple = PyTuple.empty, freeVars: PyTuple = PyTuple.empty, cellVars: PyTuple = PyTuple.empty,
+             lnotab: PyString = PyString.empty,
+             firstLineNo: Int = 1, nKwargs: Int = 0
+           ): PyCodeObject = {
+    //TODO: Excludes kwargs
+    new PyCodeObject(
+      nargs, nPosOnly, nKwargs, nLocals, stackSize, flags, firstLineNo,
+      code, ctx.constants, ctx.names, varnames, freeVars, cellVars, name, filename, lnotab
+    )
+  }
+
 }

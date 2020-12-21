@@ -13,6 +13,10 @@ class CompilationContext {
 
   def names: PyTuple = PyTuple(_names.toList)
 
+  def const(c: PyObject): Byte = _getter(c, _constants)
+
+  def name(n: PyAscii): Byte = _getter(n, _names)
+
   private def _getter[T](o: T, l: ArrayBuffer[T]): Byte = {
 
     val i = l.indexWhere(_ equals o)
@@ -23,9 +27,5 @@ class CompilationContext {
     } else (i & 0xff).toByte
 
   }
-
-  def const(c: PyObject): Byte = _getter(c, _constants)
-
-  def name(n: PyAscii): Byte = _getter(n, _names)
 
 }

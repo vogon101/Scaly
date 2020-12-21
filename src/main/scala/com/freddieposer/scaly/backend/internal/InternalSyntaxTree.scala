@@ -2,6 +2,11 @@ package com.freddieposer.scaly.backend.internal
 
 import com.freddieposer.scaly.backend.pyc.PyObject
 
+/*
+TODO: This should form part of the type check process so that these have the types with them. This then
+  allows for things like select of defs to be done correctly.
+  Could possibly use @property to deal with that? - may handle behind the scenes
+ */
 class IST
 
 class IST_CompilationUnit(val classes: List[IST_Class]) extends IST
@@ -24,14 +29,14 @@ case class IST_Function(
 
 //TODO: defs without application
 case class IST_FunctionCall(
-                      lhs: IST_Expression,
-                      rhs: IST_Expression
-                      ) extends IST_Expression
+                             lhs: IST_Expression,
+                             rhs: IST_Expression
+                           ) extends IST_Expression
 
 case class IST_If(
-                 cond: IST_Expression,
-                 tBranch: IST_Expression,
-                 fBranch: Option[IST_Expression]
+                   cond: IST_Expression,
+                   tBranch: IST_Expression,
+                   fBranch: Option[IST_Expression]
                  ) extends IST_Expression
 
 case class IST_Literal(py: PyObject) extends IST_Expression

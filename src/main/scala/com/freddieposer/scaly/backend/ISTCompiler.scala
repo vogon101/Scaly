@@ -93,8 +93,9 @@ class ISTCompiler(_filename: String) {
       println(code.str)
 
       //TODO: Understand flags
-      new PyCodeObject(istFunction.args.length, istFunction.args.length, 0, nLocals, stackSize, 67, 1,
-        code, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty, PyTuple.empty, name.toPy, filename, PyString.empty)
+      PyCodeObject(
+        ctx, code, name.toPy, filename, istFunction.args.length, istFunction.args.length, nLocals, stackSize, 67
+      )
     }
 
   def compileExpression(expression: IST_Expression, ctx: CompilationContext): PyString =
@@ -123,7 +124,7 @@ class ISTCompiler(_filename: String) {
   def compileBlock(block: IST_Block, ctx: CompilationContext): PyString =
     block.statements.map {
       case expr: IST_Expression => compileExpression(expr, ctx)
-        //TODO: Blocks can contain statements
+      //TODO: Blocks can contain statements
       case _ => ???
     }.foldRight(PyString.empty)(_ -> _)
 

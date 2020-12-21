@@ -1,7 +1,7 @@
 package com.freddieposer.scaly.backend.internal
 
-import com.freddieposer.scaly.AST.{Application, Block, BooleanLiteral, CompilationUnit, Dcl, DefDef, Expr, FunParam, IDExpr, IfExpr, IntLiteral, Literal, MemberDcl, NullLiteral, ScalyAST, ScalyClassDef, ScalyObjectDef, SelectExpr, Statement, StringLiteral, TupleExpr, UnitLiteral, ValDef, VarDef}
-import com.freddieposer.scaly.backend.pyc.{PyAscii, PyFalse, PyInt, PyNone, PyTrue}
+import com.freddieposer.scaly.AST._
+import com.freddieposer.scaly.backend.pyc._
 
 object ISTBuilder {
 
@@ -11,26 +11,29 @@ object ISTBuilder {
       case ScalyClassDef(id, parents, body, params) =>
         //TODO: parents
         val statements = body.map(_.stats.groupBy {
-          case _: Expr   => "EXPR"
+          case _: Expr => "EXPR"
           case _: VarDef => "VAR"
           case _: ValDef => "VAL"
           case _: DefDef => "DEF"
         }).getOrElse(Map())
 
         //These are unchecked because of type erasure but that is ok
-        val vals = statements.get("VAL").map {case ds: List[ValDef] => ds.map {
+        val vals = statements.get("VAL").map { case ds: List[ValDef] => ds.map {
           case ValDef(id, _, rhs) => id -> ???
-        }.toMap}.getOrElse(Map())
+        }.toMap
+        }.getOrElse(Map())
 
 
-        val vars = statements.get("VAR").map {case ds: List[VarDef] => ds.map {
+        val vars = statements.get("VAR").map { case ds: List[VarDef] => ds.map {
           case VarDef(id, _, rhs) => id -> ???
-        }.toMap}.getOrElse(Map())
+        }.toMap
+        }.getOrElse(Map())
 
 
-        val defs: Map[String, IST_Function] = statements.get("DEF").map {case ds: List[DefDef] => ds.map {
+        val defs: Map[String, IST_Function] = statements.get("DEF").map { case ds: List[DefDef] => ds.map {
           case DefDef(id, params, _, body) => id -> buildFunction(params, body)
-        }.toMap}.getOrElse(Map())
+        }.toMap
+        }.getOrElse(Map())
 
         IST_Class(id, vals, vars, defs)
       case ScalyObjectDef(id, parents, body) => ???
@@ -41,7 +44,7 @@ object ISTBuilder {
   def buildFunction(params: List[List[FunParam]], expr: Expr): IST_Function = params match {
     case Nil => ???
     case x :: Nil => IST_Function(x.map(_.name), buildExpr(expr))
-    case x :: xs =>IST_Function(x.map(_.name), buildFunction(xs, expr))
+    case x :: xs => IST_Function(x.map(_.name), buildFunction(xs, expr))
   }
 
   def buildStatement(statement: Statement): IST_Statement = statement match {

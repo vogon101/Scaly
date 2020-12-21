@@ -6,6 +6,7 @@ object PyOpcodes extends Enumeration {
 
   protected case class Val(opcode: Int, argType: Option[PyOpcodeArgType] = None) extends super.Val {
     def takesArg: Boolean = opcode >= 90
+
     def byte: Byte = (opcode & 0xff).toByte
   }
 
