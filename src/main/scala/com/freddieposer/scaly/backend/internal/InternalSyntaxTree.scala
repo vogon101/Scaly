@@ -37,3 +37,9 @@ case class IST_If(
 case class IST_Literal(py: PyObject) extends IST_Expression
 
 case class IST_Block(statements: List[IST_Statement]) extends IST_Expression
+
+case class IST_Application(lhs: IST_Expression, args: List[IST_Expression]) extends IST_Expression
+
+//TODO: This transformation should be used in future for the various types
+//  e.g. when the arm selected is a def
+case class IST_Select(lhs: IST_Expression, rhs: String) extends IST_Expression

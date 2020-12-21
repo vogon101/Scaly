@@ -1,6 +1,10 @@
 class Main:
 
     def main():
-        return 10
+        if x:
+            y()
+        else:
+            z()
+        return 999
 
 print(Main.main())

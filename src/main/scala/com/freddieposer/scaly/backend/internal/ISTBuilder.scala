@@ -55,8 +55,10 @@ object ISTBuilder {
     case TupleExpr(elems) => ???
     case Block(statements) =>
       IST_Block(statements.map(buildStatement))
-    case SelectExpr(lhs, rhs) => ???
-    case Application(lhs, args) => ???
+    case SelectExpr(lhs, rhs) =>
+      IST_Select(buildExpr(lhs), rhs)
+    case Application(lhs, args) =>
+      IST_Application(buildExpr(lhs), args.map(buildExpr))
     case IfExpr(cond, tBranch, fBranch) =>
       IST_If(buildExpr(cond), buildExpr(tBranch), Some(buildExpr(fBranch)))
   }

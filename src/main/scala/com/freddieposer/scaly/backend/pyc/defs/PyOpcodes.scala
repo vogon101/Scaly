@@ -131,7 +131,7 @@ object PyOpcodes extends Enumeration {
   val BUILD_CONST_KEY_MAP: Val = Val(156)
   val BUILD_STRING: Val = Val(157)
   val BUILD_TUPLE_UNPACK_WITH_CALL: Val = Val(158)
-  val LOAD_METHOD: Val = Val(160)
+  val LOAD_METHOD: Val = Val(160, Some(PyOpcodeArgType.IDX_NAME_LIST))
   val CALL_METHOD: Val = Val(161)
 
 }

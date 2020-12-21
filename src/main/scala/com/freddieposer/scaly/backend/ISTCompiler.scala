@@ -105,6 +105,15 @@ class ISTCompiler(_filename: String) {
           case IST_Function(args, body) => ???
           case IST_FunctionCall(lhs, rhs) => ???
           case IST_If(cond, tBranch, fBranch) => ???
+          case IST_Select(lhs, rhs) =>
+            //TODO: This syntax is horrible
+            useCode(compileExpression(lhs, ctx))
+            //TODO: Not everything is a method!
+            c(LOAD_METHOD, ctx.name(rhs.toPy))
+          case IST_Application(lhs, args) =>
+            useCode(compileExpression(lhs, ctx))
+            args.foreach(arg => useCode(compileExpression(arg, ctx)))
+            c(CALL_METHOD, args.length.toByte)
           case literal: IST_Literal => c(LOAD_CONST, ctx.const(literal.py))
           case block: IST_Block => useCode(compileBlock(block, ctx))
         }

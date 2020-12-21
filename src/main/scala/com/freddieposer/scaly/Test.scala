@@ -14,15 +14,20 @@ import scala.meta.{Defn, Stat}
 
 object Test {
 
+  val Q = '"'
   val COMPILED_OUTPUT_FILE = "test_files/compiled.pyc"
+  val DUMP_PYTHON_FILE = "test_files/simple_class.py"
   val DUMP_INPUT_FILE = "test_files/sclass.pyc"
   val SCALA_INPUT_FILE = "test_files/test1.scala"
 
   //TODO: An actual test suite
   def test_pyc(): Unit = {
+    import sys.process._
     var bytes1 = Files.readAllBytes(Paths.get(COMPILED_OUTPUT_FILE))
     val pyobj1 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes1))
     println(pyobj1)
+
+    s"bash test_files/compile.sh $Q$DUMP_PYTHON_FILE$Q $Q$DUMP_INPUT_FILE$Q".!
 
     var bytes2 = Files.readAllBytes(Paths.get(DUMP_INPUT_FILE))
     val pyobj2 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes2))
@@ -143,7 +148,6 @@ object Test {
 
   def test_run(): Unit = {
     import sys.process._
-    val Q = '"'
     val command = s"bash test_files/run_compiled.sh $Q${COMPILED_OUTPUT_FILE}$Q"
     val res = command.!!
     println(command)

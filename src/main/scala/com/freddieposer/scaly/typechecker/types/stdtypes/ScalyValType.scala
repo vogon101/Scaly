@@ -63,7 +63,9 @@ object ScalyValType {
 
   object ScalyIntType extends ScalyValType("Int") {
     override protected lazy val memberTypes: TypeMap = Map(
-      "+" -> (ScalyIntType --> ScalyIntType)
+      "+" -> (ScalyIntType --> ScalyIntType),
+      "imag" -> (O --> ScalyIntType),
+      "to_bytes" -> (List(ScalyIntType, ScalyStringType).T --> ScalyStringType)
     ) ++ numericConverterTypes(ScalyIntType)
   }
 

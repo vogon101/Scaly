@@ -1,11 +1,7 @@
 class Main {
 
   def main(): String = {
-    100
-    200
-    true
-    false
-    "Hello World"
+    101.to_bytes(1, "big")
   }
 
 }
