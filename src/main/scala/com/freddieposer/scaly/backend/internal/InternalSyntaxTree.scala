@@ -1,5 +1,7 @@
 package com.freddieposer.scaly.backend.internal
 
+import com.freddieposer.scaly.backend.pyc.PyObject
+
 class IST
 
 class IST_CompilationUnit(val classes: List[IST_Class]) extends IST
@@ -32,6 +34,6 @@ case class IST_If(
                  fBranch: Option[IST_Expression]
                  ) extends IST_Expression
 
-abstract class IST_Literal extends IST_Expression
+case class IST_Literal(py: PyObject) extends IST_Expression
 
 case class IST_Block(statements: List[IST_Statement]) extends IST_Expression

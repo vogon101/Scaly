@@ -86,6 +86,11 @@ class PyString(val str: List[Byte]) extends PyObject {
 
   def as_ints: List[Int] = str.map(_ & 0xff)
 
+  def -> (that: PyString) = new PyString(str ++ that.str)
+
+  def --> (those: Iterable[PyString]): PyString =
+    new PyString(str ++ those.flatMap(_.str))
+
   override def toBytes: ByteArrayStream =
     ByteArrayStream(PycTypeBytes.TYPE_STRING) + ByteArrayStream.fromLongs(str.length) + ByteArrayStream(str)
 }
@@ -96,6 +101,8 @@ object PyString {
     val length = data.readLong()
     new PyString(data.take_bytes(length))
   }
+
+  lazy val empty = new PyString(Nil)
 
 }
 

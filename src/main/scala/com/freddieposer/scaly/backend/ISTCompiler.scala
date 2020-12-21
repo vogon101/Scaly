@@ -1,46 +1,23 @@
 package com.freddieposer.scaly.backend
 
-import com.freddieposer.scaly.backend.internal.{IST_Class, IST_CompilationUnit}
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.PyOpcode
+import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
-
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{CALL_FUNCTION, CALL_METHOD, LOAD_METHOD, LOAD_NAME, POP_TOP, RETURN_VALUE}
 
 class ISTCompiler(_filename: String) {
 
+  import CodeGenerationUtils._
+
   private val filename = _filename.toPy
 
-  class CompilationContext {
-
-    private val _constants: ArrayBuffer[PyObject] = ArrayBuffer()
-    private val _names: ArrayBuffer[PyAscii] = ArrayBuffer()
-
-    def constants: PyTuple = PyTuple(_constants.toList)
-
-    def names: PyTuple = PyTuple(_names.toList)
-
-    private def _getter[T](o: T, l: ArrayBuffer[T]): Byte = {
-
-      val i = l.indexWhere(_ equals o)
-
-      if (i == -1) {
-        l.append(o)
-        ((l.length - 1) & 0xff).toByte
-      } else (i & 0xff).toByte
-
-    }
-
-    def const(c: PyObject): Byte = _getter(c, _constants)
-
-    def name(n: PyAscii): Byte = _getter(n, _names)
-
+  private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
+    val ctx = new CompilationContext
+    f(ctx)
   }
 
 
-  def compile(ist: IST_CompilationUnit): PyCodeObject = {
-
-    val ctx = new CompilationContext
+  def compile(ist: IST_CompilationUnit): PyCodeObject = withContext { ctx =>
 
     val classes = ist.classes.map(compileClass(_, ctx))
 
@@ -48,18 +25,16 @@ class ISTCompiler(_filename: String) {
       import PyOpcodes._
       buildCode(implicit a1 => implicit a2 => classes.flatMap { c =>
         List(
-          LOAD_BUILD_CLASS,
+          ~LOAD_BUILD_CLASS,
           (LOAD_CONST, ctx.const(c)),
           (LOAD_CONST, ctx.const(c.name)),
-          MAKE_FUNCTION,
+          ~MAKE_FUNCTION,
           (LOAD_CONST, ctx.const(c.name)),
           (CALL_FUNCTION, 2.toByte),
-          (STORE_NAME, ctx.name(c.name)),
-          (LOAD_CONST, ctx.const(PyNone)),
-          RETURN_VALUE
+          (STORE_NAME, ctx.name(c.name))
         )
       })
-    }
+    } -> TestCaddy(ctx) -> ReturnNone(ctx)
 
 
     //    val varnames = ???
@@ -76,24 +51,29 @@ class ISTCompiler(_filename: String) {
     )
   }
 
-  def compileClass(istClass: IST_Class, outerContext: CompilationContext): PyCodeObject = {
-
+  def compileClass(istClass: IST_Class, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
 
     val stackSize: Int = 10 // ???
 
-    val ctx: CompilationContext = new CompilationContext
+    val functions = istClass.defMembers.map(t => compileFunction(t._1, t._2, ctx))
+    import PyOpcodes._
 
     val code = {
-      import PyOpcodes._
       buildCode(implicit a1 => implicit a2 => List(
         (LOAD_NAME, ctx.name("__name__".toPy)),
         (STORE_NAME, ctx.name("__module__".toPy)),
         (LOAD_CONST, ctx.const(istClass.name.toPy)),
-        (STORE_NAME, ctx.name("__qualname__".toPy)),
-        (LOAD_CONST, ctx.const(PyNone)),
-        RETURN_VALUE
+        (STORE_NAME, ctx.name("__qualname__".toPy))
       ))
-    }
+    } --> functions.map(func => buildCode { implicit a1 =>
+      implicit a2 =>
+        List(
+          (LOAD_CONST, ctx.const(func)),
+          (LOAD_CONST, ctx.const(func.name)),
+          (MAKE_FUNCTION, func.nargs.toByte),
+          (STORE_NAME, ctx.name(func.name))
+        )
+    }) -> ReturnNone(ctx)
 
     new PyCodeObject(
       0, 0, 0, 0, stackSize, 64, 1,
@@ -102,33 +82,53 @@ class ISTCompiler(_filename: String) {
 
   }
 
-  private class R
+  //Context should track max stack size
+  def compileFunction(name: String, istFunction: IST_Function, outerContext: CompilationContext): PyCodeObject =
+    withContext { ctx =>
 
-  private val r = new R
+      val stackSize = 10
+      val nLocals = istFunction.args.length // TODO: + number of other locals
 
-  def buildCode(f: (PyOpcode => R) => (((PyOpcode, Byte)) => R) => List[R]): PyString = {
-    val bytes: ListBuffer[Byte] = ListBuffer()
+      val code = compileExpression(istFunction.body, ctx) -> buildCode(RETURN_VALUE)
+      println(code.str)
 
-    def adder(opcode: PyOpcode): R = {
-      bytes ++= List(opcode.byte, 0.toByte)
-      r
+      //TODO: Understand flags
+      new PyCodeObject(istFunction.args.length, istFunction.args.length, 0, nLocals, stackSize, 67, 1,
+        code, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty, PyTuple.empty, name.toPy, filename, PyString.empty)
     }
 
-    def adderArg(t: (PyOpcode, Byte)): R = {
-      bytes ++= List(t._1.byte, t._2)
-      r
+  def compileExpression(expression: IST_Expression, ctx: CompilationContext): PyString =
+    buildCode { implicit a1 =>
+      implicit a2 =>
+        import PyOpcodes._
+        expression match {
+          case IST_Function(args, body) => ???
+          case IST_FunctionCall(lhs, rhs) => ???
+          case IST_If(cond, tBranch, fBranch) => ???
+          case literal: IST_Literal => c(LOAD_CONST, ctx.const(literal.py))
+          case block: IST_Block => useCode(compileBlock(block, ctx))
+        }
     }
 
-    f(adder)(adderArg)
-    new PyString(bytes.toList)
-  }
+  //Currently doesn't return - should be managed by compileFunction
+  def compileBlock(block: IST_Block, ctx: CompilationContext): PyString =
+    block.statements.map {
+      case expr: IST_Expression => compileExpression(expr, ctx)
+        //TODO: Blocks can contain statements
+      case _ => ???
+    }.foldRight(PyString.empty)(_ -> _)
 
-  abstract class PyConverter(val value: AnyVal) {
-    def toPy: PyObject
-  }
 
-  implicit class StringPyConverter(val value: String) {
-    def toPy: PyAscii = new PyAscii(value)
+  private def TestCaddy(ctx: CompilationContext): PyString = buildCode { implicit a1 =>
+    implicit a2 =>
+      List(
+        (LOAD_NAME, ctx.name("print".toPy)),
+        (LOAD_NAME, ctx.name("Main".toPy)),
+        (LOAD_METHOD, ctx.name("main".toPy).toByte),
+        (CALL_METHOD, 0.toByte),
+        (CALL_FUNCTION, 1.toByte),
+        ~POP_TOP
+      )
   }
 
 }

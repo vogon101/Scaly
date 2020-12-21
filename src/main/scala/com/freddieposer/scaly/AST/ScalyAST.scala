@@ -1,5 +1,7 @@
 package com.freddieposer.scaly.AST
 
+import com.freddieposer.scaly.backend.internal.IST_Literal
+
 sealed abstract class ScalyAST
 
 sealed trait TopLevelStatement extends ScalyAST

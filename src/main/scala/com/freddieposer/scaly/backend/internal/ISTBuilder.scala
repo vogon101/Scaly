@@ -1,6 +1,7 @@
 package com.freddieposer.scaly.backend.internal
 
-import com.freddieposer.scaly.AST.{Application, Block, CompilationUnit, Dcl, DefDef, Expr, FunParam, IDExpr, IfExpr, Literal, MemberDcl, ScalyAST, ScalyClassDef, ScalyObjectDef, SelectExpr, Statement, TupleExpr, ValDef, VarDef}
+import com.freddieposer.scaly.AST.{Application, Block, BooleanLiteral, CompilationUnit, Dcl, DefDef, Expr, FunParam, IDExpr, IfExpr, IntLiteral, Literal, MemberDcl, NullLiteral, ScalyAST, ScalyClassDef, ScalyObjectDef, SelectExpr, Statement, StringLiteral, TupleExpr, UnitLiteral, ValDef, VarDef}
+import com.freddieposer.scaly.backend.pyc.{PyAscii, PyFalse, PyInt, PyNone, PyTrue}
 
 object ISTBuilder {
 
@@ -16,6 +17,7 @@ object ISTBuilder {
           case _: DefDef => "DEF"
         }).getOrElse(Map())
 
+        //These are unchecked because of type erasure but that is ok
         val vals = statements.get("VAL").map {case ds: List[ValDef] => ds.map {
           case ValDef(id, _, rhs) => id -> ???
         }.toMap}.getOrElse(Map())
@@ -59,7 +61,13 @@ object ISTBuilder {
       IST_If(buildExpr(cond), buildExpr(tBranch), Some(buildExpr(fBranch)))
   }
 
-  def buildLiteral(literal: Literal): IST_Literal = ???
-
+  def buildLiteral(literal: Literal): IST_Literal = IST_Literal(literal match {
+    case NullLiteral => PyNone
+    case UnitLiteral => ???
+    case IntLiteral(value) => new PyInt(value)
+    case StringLiteral(value) => PyAscii(value)
+    case BooleanLiteral(true) => PyTrue
+    case BooleanLiteral(false) => PyFalse
+  })
 
 }

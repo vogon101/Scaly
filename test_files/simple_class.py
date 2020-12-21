@@ -1,11 +1,6 @@
 class Main:
-    pass
 
-# class Dog:
-#     pass
-#
-# #     def main():
-#         print("Hello world")
+    def main():
+        return 10
 
-# if __name__ == "__main__":
-#     Main.main()
+print(Main.main())

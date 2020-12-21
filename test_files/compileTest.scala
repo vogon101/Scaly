@@ -1,13 +1,11 @@
 class Main {
 
-  def main(): Unit = {
-
+  def main(): String = {
+    100
+    200
+    true
+    false
+    "Hello World"
   }
 
 }
-
-class Dog
-
-class Cat
-
-class Animal
