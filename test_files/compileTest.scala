@@ -1,7 +1,8 @@
 class Main {
 
   def main(): String = {
-    101.to_bytes(1, "big")
+    if (false) "Thing"
+    else "Not thing"
   }
 
 }

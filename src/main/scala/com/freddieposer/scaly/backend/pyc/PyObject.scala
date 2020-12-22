@@ -58,14 +58,16 @@ object PyObject {
 
 }
 
-abstract class PyBoolean(val value: Boolean) extends PyObject
+abstract class PyBoolean(val value: Boolean) extends PyObject {
+  override def toString: String = s"Py${value.toString}"
+}
 
 object PyTrue extends PyBoolean(true) {
   override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
 }
 
 object PyFalse extends PyBoolean(false) {
-  override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
+  override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_FALSE)
 }
 
 object PyNone extends PyObject {
