@@ -1,7 +1,16 @@
 class Main {
 
   def main(): String = {
-    101.to_bytes(1, "big")
+    if (false) {
+      1000
+      2000
+      3000
+      "Thing"
+    }
+    else{
+      50
+      "Not thing"
+    }
   }
 
 }

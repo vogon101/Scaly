@@ -67,7 +67,7 @@ class PyCodeObject(
     code.as_ints.zipWithIndex.grouped(2).map {
       case List((op, i), (arg, _)) =>
         val opcode = PyOpcodes.opcodeMap(op)
-        f"${i / 2}%3d ${PyOpcodes.opcodeMap(op)}%20s # " + (if (opcode.takesArg)
+        f"$i%3d ${PyOpcodes.opcodeMap(op)}%20s # " + (if (opcode.takesArg)
           opcode.argType match {
             case Some(PyOpcodeArgType.IDX_CONST_LIST) =>
               f"$arg%-2d - ${getConstant(arg).shortName}"

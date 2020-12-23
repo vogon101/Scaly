@@ -1,3 +1,12 @@
+print("ho ho ho")
+print("ho ho ho")
+print("ho ho ho")
+print("ho ho ho")
+print("ho ho ho")
+print("ho ho ho")
+print("ho ho ho")
+
+
 class Main:
 
     def main():
