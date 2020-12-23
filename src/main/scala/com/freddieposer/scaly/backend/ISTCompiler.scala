@@ -3,6 +3,7 @@ package com.freddieposer.scaly.backend
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.POP_TOP
 
 class ISTCompiler(_filename: String) {
 
@@ -125,8 +126,10 @@ class ISTCompiler(_filename: String) {
         compileExpression(lhs, ctx) -->
           args.flatMap(arg => compileExpression(arg, ctx)) -->
           (CALL_METHOD, args.length.toByte)
-      case literal: IST_Literal => BytecodeList((LOAD_CONST, ctx.const(literal.py)))
-      case block: IST_Block => compileBlock(block, ctx)
+      case literal: IST_Literal =>
+        BytecodeList((LOAD_CONST, ctx.const(literal.py)))
+      case block: IST_Block =>
+        compileBlock(block, ctx)
     }
   }
 
@@ -136,7 +139,12 @@ class ISTCompiler(_filename: String) {
       case expr: IST_Expression => compileExpression(expr, ctx)
       //TODO: Blocks can contain statements
       case _ => ???
-    }.foldRight(BytecodeList.empty)(_ --> _)
+      //    }.foldRight(BytecodeList.empty)(_ --> _)
+
+      //TODO: We need to be popping items off the stack here but we can only do this IF they add things
+      // thus all functions NEED to return a PY_NONE if they don't return something else!
+    }.flatMap(_ :: (~POP_TOP).toBCL :: Nil)
+      .dropRight(1).foldLeft(BytecodeList.empty)(_ --> _)
 
 
   private def TestCaddy(ctx: CompilationContext): BytecodeList = {

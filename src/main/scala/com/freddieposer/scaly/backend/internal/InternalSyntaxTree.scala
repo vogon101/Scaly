@@ -27,7 +27,7 @@ case class IST_Function(
                          body: IST_Expression
                        ) extends IST_Expression
 
-//TODO: defs without application
+//TODO: defs without application - perhaps could use the @property
 case class IST_FunctionCall(
                              lhs: IST_Expression,
                              rhs: IST_Expression
