@@ -1,6 +1,7 @@
 package com.freddieposer.scaly.typechecker.types
 
 import com.freddieposer.scaly.AST.ScalyAST
+import com.freddieposer.scaly.backend.internal.IST
 import com.freddieposer.scaly.typechecker.context.TypeContext._
 import com.freddieposer.scaly.typechecker.types.ScalyType._
 
@@ -10,7 +11,9 @@ trait PlaceholderType {
 
 }
 
-sealed abstract class ScalyType {
+sealed abstract class ScalyType extends IST {
+
+  override val typ: ScalyType = this
 
   protected def memberTypes: TypeMap
 
@@ -18,7 +21,7 @@ sealed abstract class ScalyType {
 
   def visited: Boolean
 
-  def getOwnMember(id: String): Option[ScalyType] =
+  def getOwnMember(id: String): Option[Location] =
     memberTypes.get(id)
 
 }
@@ -43,9 +46,9 @@ abstract class ASTScalyType extends ScalyType {
 
   val node: ScalyAST
 
-  protected def constructMutable(f: mutable.Map[String, ScalyType] => Unit): TypeMap = {
+  protected def constructMutable(f: mutable.Map[String, Location] => Unit): TypeMap = {
     _visited = true
-    val ms = mutable.Map[String, ScalyType]()
+    val ms = mutable.Map[String, Location]()
     f(ms)
     defaultMembers ++ ms.toMap
   }

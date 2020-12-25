@@ -18,5 +18,9 @@ object ScalyObjectUtils {
 
   }
 
+  implicit class ExtendedList(ts: List[ScalyType]) {
+    def T: ScalyType = ScalyTupleType(ts)
+  }
+
 
 }

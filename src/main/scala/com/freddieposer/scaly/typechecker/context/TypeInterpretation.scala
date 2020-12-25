@@ -1,6 +1,7 @@
 package com.freddieposer.scaly.typechecker.context
 
 import com.freddieposer.scaly.AST.AST_ScalyTypeName
+import com.freddieposer.scaly.typechecker.context.TypeContext._
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType._
@@ -8,8 +9,8 @@ import com.freddieposer.scaly.typechecker.types.{ScalyType, _}
 
 class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeContext) {
 
-  //TODO: Refactor the TypeCheckResult to not (always) require a node so there is one result type
-  def getMember(memberName: String): Either[String, ScalyType] = subject match {
+
+  def getMember(memberName: String): Either[String, Location] = subject match {
     case staticType: StaticScalyType => staticType match {
       case ScalyPlaceholderTypeName(name) =>
         context.getWellFormedType(name)
@@ -27,14 +28,14 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
     }
   }
 
-  private def getMemberOfWellFormedType(typ: ScalyType, memberName: String): Either[String, ScalyType] =
+  private def getMemberOfWellFormedType(typ: ScalyType, memberName: String): Either[String, Location] =
     typ.getOwnMember(memberName)
       .orElse(typ.parent.flatMap(p => TypeInterpretation(p).getMember(memberName).toOption))
       .toRight(s"Type $typ does not have member $memberName")
 
   def isSubtypeOf(obj: ScalyType): Boolean = (subject, obj) match {
     case (ScalyPlaceholderTypeName(name), t2) =>
-      context.getWellFormedType(name).exists(_ isSubtypeOf t2)
+      context.getWellFormedType(name).exists(_.typ isSubtypeOf t2)
     case (t1, ScalyPlaceholderTypeName(name)) =>
       context.getWellFormedType(name).exists(t1 isSubtypeOf _)
 

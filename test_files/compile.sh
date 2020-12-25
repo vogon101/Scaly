@@ -1,0 +1,1 @@
+python3 test_files/compile.py "$1" "$2"

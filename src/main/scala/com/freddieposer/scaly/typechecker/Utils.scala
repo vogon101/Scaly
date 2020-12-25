@@ -1,13 +1,13 @@
 package com.freddieposer.scaly.typechecker
 
 import com.freddieposer.scaly.AST.ScalyAST
-import com.freddieposer.scaly.typechecker._TypeCheckResult.Successes
+import com.freddieposer.scaly.backend.internal.IST
 import com.freddieposer.scaly.typechecker.types.ScalyType
 
 object Utils {
 
   type UR = Either[UnificationFailure, UnificationSuccess]
-  type TCR = Either[TypeError, TypeCheckSuccess]
+  type TCR[+T <: IST] = Either[TypeError, T]
 
   implicit class ListOfEithers[L, R](val xs: List[Either[L, R]]) extends AnyRef {
 
@@ -37,17 +37,17 @@ object Utils {
       }
   }
 
-  implicit class ExtendedTCR(tcr: TCR) {
+  implicit class ExtendedTCR[T <: IST](tcr: TCR[T]) {
 
-    def mapError(t1: ScalyType, t2: ScalyType): Either[UnificationFailure, TypeCheckSuccess] =
+    def mapError(t1: ScalyType, t2: ScalyType): Either[UnificationFailure, IST] =
       tcr.left.map(e => new UnificationFailureFromTypeCheck(t1, t2, e)(e.ctx))
 
-    def collect[T](f: (T, TypeCheckSuccess) => TCR)(xs: List[T]): TCR =
-      xs.foldLeft(tcr) {
-        case (e@Left(_), _) => e
-        case (Right(s), x) =>
-          f(x, s).map { case s2@Success(typ, node) => Successes(typ, node, List(s))(s2.ctx) }
-      }
+    //    def collect[T](f: (T, TypeCheckSuccess) => TCR)(xs: List[T]): TCR =
+    //      xs.foldLeft(tcr) {
+    //        case (e@Left(_), _) => e
+    //        case (Right(s), x) =>
+    //          f(x, s).map { case s2@Success(typ, node) => Successes(typ, node, List(s))(s2.ctx) }
+    //      }
 
   }
 
@@ -58,10 +58,10 @@ object Utils {
 
   }
 
-  implicit class ExtendedTypeSuccessList(tcrs: List[TypeCheckSuccess]) {
-
-    def toTypes: List[ScalyType] = tcrs.map(_.typ)
-
-  }
+  //  implicit class ExtendedTypeSuccessList(tcrs: List[TypeCheckSuccess]) {
+  //
+  //    def toTypes: List[ScalyType] = tcrs.map(_.typ)
+  //
+  //  }
 
 }

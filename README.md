@@ -7,8 +7,10 @@ _Compiling a Scala Inspired Language to CPython Bytecode_
     * `typechecker`
         * `context`
         * `types`
+            * `stdtypes` - Types in the standard library
     * `backend`
         * `pyc` - Code for reading and writing compiled python files
+        * `internal` - InternalSyntaxTree (IST) for representing code pre-compilation
     * `utils` - Utility classes
 
 ## Notes

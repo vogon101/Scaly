@@ -58,14 +58,18 @@ object PyObject {
 
 }
 
-abstract class PyBoolean(val value: Boolean) extends PyObject
+abstract class PyBoolean(val value: Boolean) extends PyObject {
+  override def toString: String = s"Py${value.toString}"
+
+  override def shortName: String = toString
+}
 
 object PyTrue extends PyBoolean(true) {
   override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
 }
 
 object PyFalse extends PyBoolean(false) {
-  override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_TRUE)
+  override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_FALSE)
 }
 
 object PyNone extends PyObject {
@@ -86,6 +90,11 @@ class PyString(val str: List[Byte]) extends PyObject {
 
   def as_ints: List[Int] = str.map(_ & 0xff)
 
+  def ->(that: PyString) = new PyString(str ++ that.str)
+
+  def -->(those: Iterable[PyString]): PyString =
+    new PyString(str ++ those.flatMap(_.str))
+
   override def toBytes: ByteArrayStream =
     ByteArrayStream(PycTypeBytes.TYPE_STRING) + ByteArrayStream.fromLongs(str.length) + ByteArrayStream(str)
 }
@@ -96,6 +105,8 @@ object PyString {
     val length = data.readLong()
     new PyString(data.take_bytes(length))
   }
+
+  lazy val empty = new PyString(Nil)
 
 }
 
@@ -112,9 +123,16 @@ class PyAscii(val text: String) extends PyObject {
       else
         ByteArrayStream(PycTypeBytes.TYPE_ASCII) + ByteArrayStream.fromLongs(text.length)
       ) + ByteArrayStream(text.toCharArray)
+
+  override def equals(obj: Any): Boolean = obj match {
+    case a: PyAscii => text equals a.text
+    case _ => false
+  }
 }
 
 object PyAscii {
+
+  def apply(text: String): PyAscii = new PyAscii(text)
 
   def readPyAscii(isSmall: Boolean = false)(implicit data: ByteArrayStream): PyAscii = {
     val length = if (isSmall) data.head() else data.readLong()
@@ -130,6 +148,11 @@ class PyInt(val value: Int) extends PyObject {
 
   override def toBytes: ByteArrayStream =
     ByteArrayStream(PycTypeBytes.TYPE_INT) + ByteArrayStream.fromLongs(value)
+
+  override def equals(obj: Any): Boolean = obj match {
+    case a: PyInt => value equals a.value
+    case _ => false
+  }
 }
 
 object PyInt {

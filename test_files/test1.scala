@@ -76,7 +76,7 @@ class A {
 
   def operatorTest(v1: Vector, v2: Vector): Vector = v1 + v2
 
-  def additionTest: String = (100 + 20.0.toInt).toString
+//  def additionTest: String = (100 + 20.0.toInt).toString
 
   def nullTest(f: Int => String => Dog => Cat): Animal = {
     f(100)(null)(null)
@@ -89,8 +89,6 @@ class A {
   val ifTest: Vector =
     if (true) operatorTest(null, null)
     else operatorTest(operatorTest(null, null) + null, null)
-
-
 
 }
 

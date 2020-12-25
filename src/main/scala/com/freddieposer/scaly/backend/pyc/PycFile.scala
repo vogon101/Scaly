@@ -66,4 +66,12 @@ object PycFile {
     retval
   }
 
+  def apply(co: PyCodeObject): PycFile = {
+
+    val fs = co.toBytes.bytes.length + 16
+
+    new PycFile(MAGIC_NUMBER, 0, 0, fs, co)
+
+  }
+
 }

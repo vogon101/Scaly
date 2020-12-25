@@ -1,6 +1,7 @@
 package com.freddieposer.scaly.backend.pyc
 
-import com.freddieposer.scaly.backend.pyc.defs.{PyOpcode, PyOpcodeArgType, PycTypeBytes}
+import com.freddieposer.scaly.backend.CompilationContext
+import com.freddieposer.scaly.backend.pyc.defs.{PyOpcodeArgType, PyOpcodes, PycTypeBytes}
 import com.freddieposer.scaly.backend.pyc.utils.{ByteArrayStream, MutableByteArrayStream, RefList}
 
 class PyCodeObject(
@@ -65,13 +66,15 @@ class PyCodeObject(
   def formatCode(): List[String] = {
     code.as_ints.zipWithIndex.grouped(2).map {
       case List((op, i), (arg, _)) =>
-        val opcode = PyOpcode.opcodeMap(op)
-        f"${i / 2}%3d ${PyOpcode.opcodeMap(op)}%20s # " + (if (opcode.takesArg)
+        val opcode = PyOpcodes.opcodeMap(op)
+        f"$i%3d ${PyOpcodes.opcodeMap(op)}%20s # " + (if (opcode.takesArg)
           opcode.argType match {
             case Some(PyOpcodeArgType.IDX_CONST_LIST) =>
               f"$arg%-2d - ${getConstant(arg).shortName}"
             case Some(PyOpcodeArgType.IDX_NAME_LIST) =>
               f"$arg%-2d - ${getName(arg).shortName}"
+            case Some(PyOpcodeArgType.LOCAL_VAR_NUM) =>
+              f"$arg%-2d - ${varnames.objects(arg).shortName}"
             case _ => f"$arg%-2d"
           } else "")
     }.toList
@@ -135,7 +138,21 @@ object PyCodeObject {
       code, consts, names, varnames, freeVars, cellVars, name, filename, lnotab
     )
     refList.insert(x, idx, flag)
-
-
   }
+
+  def apply(
+             ctx: CompilationContext, code: PyString,
+             name: PyAscii, filename: PyAscii,
+             nargs: Int, nPosOnly: Int, nLocals: Int, stackSize: Int, flags: Int,
+             varnames: PyTuple = PyTuple.empty, freeVars: PyTuple = PyTuple.empty, cellVars: PyTuple = PyTuple.empty,
+             lnotab: PyString = PyString.empty,
+             firstLineNo: Int = 1, nKwargs: Int = 0
+           ): PyCodeObject = {
+    //TODO: Excludes kwargs
+    new PyCodeObject(
+      nargs, nPosOnly, nKwargs, nLocals, stackSize, flags, firstLineNo,
+      code, ctx.constants, ctx.names, varnames, freeVars, cellVars, name, filename, lnotab
+    )
+  }
+
 }
