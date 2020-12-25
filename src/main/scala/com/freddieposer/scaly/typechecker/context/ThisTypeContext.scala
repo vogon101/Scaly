@@ -1,7 +1,7 @@
 package com.freddieposer.scaly.typechecker.context
 
-import com.freddieposer.scaly.typechecker.context.TypeContext.TypeMap
-import com.freddieposer.scaly.typechecker.types.ScalyType
+import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap}
+import com.freddieposer.scaly.typechecker.types.{ScalyType, SymbolSource}
 
 class ThisTypeContext private(
                                val owner: ScalyType,
@@ -12,15 +12,15 @@ class ThisTypeContext private(
 
   def this(o: ScalyType, _p: Option[TypeContext]) = this(o, _p, Map(), Map())
 
-  override def getVarType(name: String): Option[ScalyType] =
-    if (name equals "this") Some(owner)
+  override def getVarType(name: String): Option[Location] =
+    if (name equals "this") Some((owner, SymbolSource.THIS))
     else owner.getOwnMember(name)
       .orElse(super.getVarType(name))
 
-  override def addTypes(e: List[(String, ScalyType)]): TypeContext =
+  override def addTypes(e: List[(String, Location)]): TypeContext =
     new ThisTypeContext(owner, _p, types ++ e, vars)
 
-  override def addVars(es: List[(String, ScalyType)]): TypeContext =
+  override def addVars(es: List[(String, Location)]): TypeContext =
     new ThisTypeContext(owner, parent, types, vars ++ es)
 
 }

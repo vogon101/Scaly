@@ -60,6 +60,7 @@ object PyObject {
 
 abstract class PyBoolean(val value: Boolean) extends PyObject {
   override def toString: String = s"Py${value.toString}"
+
   override def shortName: String = toString
 }
 

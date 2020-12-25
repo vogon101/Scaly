@@ -2,7 +2,7 @@ package com.freddieposer.scaly
 
 import com.freddieposer.scaly.AST.ASTBuilder
 import com.freddieposer.scaly.backend.ISTCompiler
-import com.freddieposer.scaly.backend.internal.ISTBuilder
+//import com.freddieposer.scaly.backend.internal.ISTBuilder
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
@@ -132,11 +132,11 @@ object Test {
       case Left(value) =>
         println("Unable to typecheck program")
         printError(value)
-      case Right(value) =>
+      case Right(ist) =>
         println("Success!")
-        println(value)
+        println(ist)
 
-        val ist = ISTBuilder.buildIST(ast)
+        //        val ist = ISTBuilder.buildIST(ast)
         val pyCodeObject = new ISTCompiler("placeholder").compile(ist)
         println(pyCodeObject)
         val f = PycFile(pyCodeObject)
@@ -155,6 +155,7 @@ object Test {
   }
 
   def main(args: Array[String]): Unit = {
+    test_tc()
     test_pyc()
     test_compile()
     test_run()

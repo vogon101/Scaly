@@ -73,6 +73,8 @@ class PyCodeObject(
               f"$arg%-2d - ${getConstant(arg).shortName}"
             case Some(PyOpcodeArgType.IDX_NAME_LIST) =>
               f"$arg%-2d - ${getName(arg).shortName}"
+            case Some(PyOpcodeArgType.LOCAL_VAR_NUM) =>
+              f"$arg%-2d - ${varnames.objects(arg).shortName}"
             case _ => f"$arg%-2d"
           } else "")
     }.toList
