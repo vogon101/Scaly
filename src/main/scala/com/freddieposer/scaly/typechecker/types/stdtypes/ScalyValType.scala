@@ -10,7 +10,6 @@ sealed abstract case class ScalyValType(name: String) extends StaticScalyType {
 
   override protected def memberTypes: TypeMap = Map()
 
-  //TODO: Parents for val types
   override val parent: Option[ScalyType] = Some(ScalyObject)
 }
 

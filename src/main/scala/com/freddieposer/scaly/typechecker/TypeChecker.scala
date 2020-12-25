@@ -83,11 +83,11 @@ class TypeChecker(
   def typeCheck(stat: Statement)(implicit ctx: TypeContext, variance: Variance): TCR[IST_Statement] = addToError(stat, ctx) {
     stat match {
       case e: Expr => typeCheck_Expr(e)
+
       case d: Dcl => d match {
-        case DefDef(id, params, retType, body) => //updateContext(id) { () =>
+        case DefDef(id, params, retType, body) =>
           val paramResults = params.map(ps =>
             ps.map(p => p.name -> convertType(p.pType))
-            //.collect { case (_, e@Left(_)) => e }
           )
           val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
             .collect { case xs@_ :: _ => xs }.flatten.map(_.value)
@@ -117,7 +117,7 @@ class TypeChecker(
                   typeCheck_Expr(body)(ctx.addVars(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)), variance)
                     .map(bodyExpr => IST_Def(id, paramTypes, bodyExpr, ScalyFunctionType.build(bodyExpr.typ, ptList)))
 
-                //TODO: Update the type in the context
+                //TODO: Update the type in the context?
 
               }
             //TODO Add info
@@ -126,7 +126,6 @@ class TypeChecker(
 
 
         case m@MemberDcl(id, typ, rhs) =>
-
           typeCheck_Expr(rhs).flatMap { rhsExpr =>
             typ.map(convertType) match {
               case Some(dt) => dt.flatMap { declaredType =>
@@ -144,17 +143,6 @@ class TypeChecker(
             }
           }
 
-        //          typeCheck_Expr(rhs).flatMap {
-        //            case Success(actualType, _) => typ match {
-        //              case Some(t: AST_ScalyType) => convertType(t).flatMap {
-        //                case Success(declaredType, _) =>
-        //                  doesUnify(actualType, declaredType)(ctx, Variance.CO)
-        //                    .mapError(stat)
-        //                    .map(us => Success(actualType, stat))
-        //              }
-        //              case None => typeCheck(rhs)
-        //            }
-        //          }
       }
     }
   }
@@ -231,7 +219,8 @@ class TypeChecker(
         val res = statements
           .foldLeft((Right(IST_Literal(PyNone, ScalyUnitType)) :: Nil): List[TCR[IST_Statement]]) {
             case ((x@Right(_: IST_Statement)) :: xs, stat) =>
-              //TODO: Update the context!
+              //TODO: Update the context! - here if there is a val or var the context will have changed so
+              //  we need to deal with that. Removed contexts from TCR when made it IST so may need to add that in
               typeCheck(stat)(ctx, variance) :: x :: xs
             case ((e@Left(_)) :: _, _) => e :: Nil
           }
@@ -247,12 +236,6 @@ class TypeChecker(
           else IST_New(name, Nil, typ)
         }
 
-      //        statements
-      //          .foldLeft(Right(Success(ScalyValType.ScalyUnitType, expr)): TCR) {
-      //            case (Right(x: TypeCheckSuccess), statement) =>
-      //              typeCheck(statement)(x.ctx, variance)
-      //            case (Left(e), _) => Left(e)
-      //          }
     }
   }
 

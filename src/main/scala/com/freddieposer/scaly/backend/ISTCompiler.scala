@@ -163,7 +163,6 @@ class ISTCompiler(_filename: String) {
 
       case IST_Select(lhs, rhs, typ) =>
         val name = nameMangler.getOrElse(rhs, rhs)
-        //TODO: Not everything is a method!
         compileExpression(lhs, ctx) -->
           (LOAD_ATTR, ctx.name(name.toPy))
 
@@ -194,7 +193,7 @@ class ISTCompiler(_filename: String) {
             BytecodeList((LOAD_NAME, ctx.varname(THIS_NAME.toPy)))
 
         }
-      //TODO: This could simply be rewritten to be a function application
+      //TODO: This could simply be rewritten to be a function application?
       case IST_New(name, args, typ) => BytecodeList(
         (LOAD_GLOBAL, ctx.name(name.toPy)),
         (CALL_FUNCTION, 0.toByte)

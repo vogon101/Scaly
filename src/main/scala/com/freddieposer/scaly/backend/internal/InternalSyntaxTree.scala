@@ -7,11 +7,6 @@ import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyNothingType
 import com.freddieposer.scaly.typechecker.types.{ScalyASTClassType, ScalyFunctionType, ScalyTupleType, ScalyType}
 
-/*
-TODO: This should form part of the type check process so that these have the types with them. This then
-  allows for things like select of defs to be done correctly.
-  Could possibly use @property to deal with that? - may handle behind the scenes
- */
 abstract class IST extends SyntaxTree {
 
   val typ: ScalyType
@@ -24,6 +19,7 @@ class IST_CompilationUnit(val classes: List[IST_Class]) extends IST {
 
 }
 
+//TODO: Parents
 case class IST_Class(
                       name: String,
                       members: Map[String, IST_Member],

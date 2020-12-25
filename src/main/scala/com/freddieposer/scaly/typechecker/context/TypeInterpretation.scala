@@ -9,7 +9,7 @@ import com.freddieposer.scaly.typechecker.types.{ScalyType, _}
 
 class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeContext) {
 
-  //TODO: Refactor the TypeCheckResult to not (always) require a node so there is one result type
+
   def getMember(memberName: String): Either[String, Location] = subject match {
     case staticType: StaticScalyType => staticType match {
       case ScalyPlaceholderTypeName(name) =>
