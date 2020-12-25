@@ -11,10 +11,24 @@ class ISTCompiler(_filename: String) {
 
   private val filename = _filename.toPy
 
+  val THIS_NAME = "_this"
+
   private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
     val ctx = new CompilationContext
     f(ctx)
   }
+
+  val nameMangler: Map[String, String] = Map(
+    "+" -> "__add__",
+    "*" -> "__mul__",
+    "-" -> "__sub__",
+    "/" -> "__div__",
+    "<" -> "__lt__",
+    "<=" -> "__le__",
+    ">" -> "__gt__",
+    ">=" -> "__ge__",
+    "==" -> "__eq__"
+  )
 
 
   def compile(ist: IST_CompilationUnit): PyCodeObject = withContext { ctx =>
@@ -55,7 +69,20 @@ class ISTCompiler(_filename: String) {
 
     val stackSize: Int = 10 // ???
 
-    val functions = istClass.defMembers.map(t => compileFunction(t._1, t._2, ctx))
+    val tmp: Map[String, IST_Def] = istClass.members.flatMap {
+      case d: (String, IST_Def) => Some(d)
+      case _ => None
+    }
+
+
+    val functions = {
+      //TODO: Actual objects
+      if (istClass.name == "Main")
+        tmp.map(t => compileFunction(t._1, t._2.func, ctx))
+      else ctx.withClass {
+        tmp.map(t => compileFunction(t._1, t._2.func, ctx))
+      }
+    }
 
     val code: BytecodeList = {
       import PyOpcodes._
@@ -67,7 +94,7 @@ class ISTCompiler(_filename: String) {
       ) --> functions.flatMap(func => BytecodeList(
         (LOAD_CONST, ctx.const(func)),
         (LOAD_CONST, ctx.const(func.name)),
-        (MAKE_FUNCTION, func.nargs.toByte),
+        (MAKE_FUNCTION, 0.toByte),
         (STORE_NAME, ctx.name(func.name))
       )).toBCL --> ReturnNone(ctx)
     }
@@ -80,27 +107,43 @@ class ISTCompiler(_filename: String) {
   }
 
   //Context should track max stack size
-  def compileFunction(name: String, istFunction: IST_Function, outerContext: CompilationContext): PyCodeObject =
+  def compileFunction(_name: String, istFunction: IST_Function, outerContext: CompilationContext): PyCodeObject =
     withContext { ctx =>
       import PyOpcodes.RETURN_VALUE
+      val name = nameMangler.getOrElse(_name, _name)
+
+      val (nOtherLocals, nargs, localNames) = if (outerContext.inClass) (
+        0,
+        istFunction.args.length + 1,
+        THIS_NAME :: istFunction.args
+      ) else (
+        0,
+        istFunction.args.length,
+        istFunction.args
+      )
+
+      localNames.foreach(n => ctx.varname(n.toPy))
+
       val stackSize = 10
-      val nLocals = istFunction.args.length // TODO: + number of other locals
+      // TODO: + number of other locals
 
       val code: BytecodeList =
         compileExpression(istFunction.body, ctx) --> ~RETURN_VALUE
 
       //TODO: Understand flags
       PyCodeObject(
-        ctx, code.compile, name.toPy, filename, istFunction.args.length, istFunction.args.length, nLocals, stackSize, 67
+        ctx, code.compile, name.toPy, filename, nargs, istFunction.args.length,
+        nOtherLocals + nargs, stackSize, 67, varnames = PyTuple(localNames.map(_.toPy))
       )
     }
 
   def compileExpression(expression: IST_Expression, ctx: CompilationContext): BytecodeList = {
+    println(expression)
     import PyOpcodes._
     expression match {
-      case IST_Function(args, body) => ???
-      case IST_FunctionCall(lhs, rhs) => ???
-      case IST_If(cond, tBranch, Some(fBranch)) =>
+      case IST_Function(args, body, typ) => ???
+      //      case IST_FunctionCall(lhs, rhs) => ???
+      case IST_If(cond, tBranch, Some(fBranch), typ) =>
         val falseMarker = Marker.absolute
         val endMarker = Marker.relative
         compileExpression(cond, ctx) -->
@@ -110,7 +153,7 @@ class ISTCompiler(_filename: String) {
           (JUMP_FORWARD, endMarker) -->
           falseMarker -->
           compileExpression(fBranch, ctx) --> endMarker
-      case IST_If(cond, tBranch, None) =>
+      case IST_If(cond, tBranch, None, typ) =>
         val endMarker = Marker.absolute
         compileExpression(cond, ctx) -->
           (POP_JUMP_IF_FALSE, endMarker) -->
@@ -118,18 +161,45 @@ class ISTCompiler(_filename: String) {
           //          ~POP_TOP -->
           endMarker
 
-      case IST_Select(lhs, rhs) =>
+      case IST_Select(lhs, rhs, typ) =>
+        val name = nameMangler.getOrElse(rhs, rhs)
         //TODO: Not everything is a method!
         compileExpression(lhs, ctx) -->
-          (LOAD_METHOD, ctx.name(rhs.toPy))
-      case IST_Application(lhs, args) =>
+          (LOAD_ATTR, ctx.name(name.toPy))
+
+      case IST_Application(lhs, args, typ) =>
         compileExpression(lhs, ctx) -->
           args.flatMap(arg => compileExpression(arg, ctx)) -->
-          (CALL_METHOD, args.length.toByte)
+          (CALL_FUNCTION, args.length.toByte)
+
       case literal: IST_Literal =>
         BytecodeList((LOAD_CONST, ctx.const(literal.py)))
-      case block: IST_Block =>
-        compileBlock(block, ctx)
+
+      case block: IST_Block => compileBlock(block, ctx)
+
+      case IST_Name(_name, location) =>
+        val name = nameMangler.getOrElse(_name, _name)
+        import com.freddieposer.scaly.typechecker.types.SymbolSource._
+        location.source match {
+          case LOCAL =>
+            BytecodeList((LOAD_FAST, ctx.varname(name.toPy)))
+          case MEMBER =>
+            BytecodeList(
+              (LOAD_FAST, ctx.varname(THIS_NAME.toPy)),
+              (LOAD_ATTR, ctx.name(name.toPy))
+            )
+          case GLOBAL =>
+            BytecodeList((LOAD_GLOBAL, ctx.name(name.toPy)))
+          case THIS =>
+            BytecodeList((LOAD_NAME, ctx.varname(THIS_NAME.toPy)))
+
+        }
+      //TODO: This could simply be rewritten to be a function application
+      case IST_New(name, args, typ) => BytecodeList(
+        (LOAD_GLOBAL, ctx.name(name.toPy)),
+        (CALL_FUNCTION, 0.toByte)
+      )
+
     }
   }
 

@@ -12,4 +12,6 @@ case class IDExpr(name: String) extends Expr
 
 case class IfExpr(cond: Expr, tBranch: Expr, fBranch: Expr) extends Expr
 
+case class NewExpr(typ: AST_ScalyType, params: List[Expr]) extends Expr
+
 

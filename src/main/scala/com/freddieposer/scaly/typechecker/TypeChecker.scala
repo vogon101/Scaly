@@ -1,123 +1,122 @@
 package com.freddieposer.scaly.typechecker
 
 import com.freddieposer.scaly.AST._
+import com.freddieposer.scaly.backend.internal._
+import com.freddieposer.scaly.backend.pyc.PyNone
 import com.freddieposer.scaly.typechecker.Utils._
 import com.freddieposer.scaly.typechecker.Variance.Variance
-import com.freddieposer.scaly.typechecker._TypeCheckResult._
+import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, buildTypeMap}
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
 import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.types._
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyBooleanType
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyUnitType}
 
 class TypeChecker(
                    val ast: CompilationUnit
                  ) {
 
 
-  lazy val globalContext: TypeContext = {
-    var _gc: TypeContext = BaseTypeContext
-    ast.statements.foreach {
-      case c@ScalyClassDef(id, parents, _, _) =>
-        _gc = _gc addType (id -> ScalyASTClassType(id, parents.headOption.map(ScalyPlaceholderTypeName), c))
-      case ScalyObjectDef(id, parents, body) => ???
-    }
-    _gc
-  }
-
-  def addToError(node: ScalyAST, context: TypeContext)(f: => TCR): TCR =
+  def addToError[T <: IST](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
     f.left.map(new TypeErrorContext(_, node)(context))
 
-  def typeCheck(): TCR = {
+  def typeCheck(): TCR[IST_CompilationUnit] = {
+
+    val types: Map[String, ScalyASTClassType] =
+      ast.statements.map {
+        case c@ScalyClassDef(id, parents, _, _) =>
+          id -> ScalyASTClassType(id, parents.headOption.map(ScalyPlaceholderTypeName), c)
+        case ScalyObjectDef(id, parents, body) => ???
+      }.toMap
+
+    val globalContext = BaseTypeContext.addTypes(types.map { case (id, typ) => id -> Location(typ, SymbolSource.GLOBAL) }.toList)
 
     ast.statements.map {
-      case node@ScalyClassDef(id, parents, body, params) =>
-        val ctx = new ThisTypeContext(ScalyASTClassType(id, None, node), Some(globalContext))
-        body.map(stat =>
-          Right(Success(ScalyValType.ScalyUnitType, UnitLiteral)(ctx)).collect[Statement] {
-            case (statement, acc) => typeCheck(statement)(acc.ctx, Variance.IN)
-          }(stat.stats)
-        ).getOrElse(Right(Success(ScalyValType.ScalyUnitType, node)(ctx)))
-
+      //TODO: Parents
+      case ScalyClassDef(id, parents, body, params) =>
+        val ctx = new ThisTypeContext(types(id), Some(globalContext))
+        body.map(template =>
+          template.stats.map(stat =>
+            typeCheck(stat)(ctx, Variance.IN)
+          ).collapse)
+          .getOrElse(Right(Nil))
+          .map(stats => ISTBuilder.buildISTClass(id, stats, types(id)))
       case ScalyObjectDef(id, parents, body) => ???
-    }.collapse.map(Successes(ScalyValType.ScalyUnitType, ast, _)(globalContext))
+    }.collapse.map(new IST_CompilationUnit(_))
   }
 
-  def updateContext(id: String)
-                   (f: () => TCR)
-                   (implicit context: TypeContext): TCR = {
-    f().map { case s@Success(t, n) => Success(t, n)(s.ctx.addVar(id -> t)) }
-  }
+  //TODO: Passing the context with the IST? - see block
+  //  def updateContext[T <: IST](id: String)
+  //                             (f: () => TCR[T])
+  //                             (implicit context: TypeContext): TCR[T] = {
+  //    f().map { case s@Success(t, n) => Success(t, n)(s.ctx.addVar(id -> t)) }
+  //  }
 
-  def buildFunctionType(returnType: ScalyType, types: List[List[ScalyType]]): ScalyType = {
-    types.foldRight(returnType) {
-      case (Nil, acc) => ScalyFunctionType(Some(ScalyValType.ScalyUnitType), acc)
-      case (x :: Nil, acc) => ScalyFunctionType(Some(x), acc)
-      case (xs, acc) => ScalyFunctionType(Some(ScalyTupleType(xs)), acc)
-    }
-  }
 
-  private def convertType(astType: AST_ScalyType)(implicit context: TypeContext): TCR = addToError(astType, context) {
+  private def convertType(astType: AST_ScalyType)(implicit context: TypeContext): TCR[ScalyType] = addToError(astType, context) {
     astType match {
       case AST_ScalyTypeName(name) =>
         context.getWellFormedType(name)
           .toRight(TypeError(s"Cannot find type name $name", astType))
-          .map(Success(_, astType))
+          .map(l => l.typ)
       case AST_ScalyTypeSelect(lhs, rhs) => ???
       case AST_TupleScalyType(types) =>
         types
           .map(convertType)
           .collapse
-          .map(successes => Successes(ScalyTupleType(successes.toTypes), astType, successes))
+          .map(res => ScalyTupleType(res))
       case AST_FunctionScalyType(arguments, returnType) =>
         (arguments.map(convertType).collapse, convertType(returnType)) match {
           case (Left(e), _) => Left(e)
           case (_, Left(e)) => Left(e)
           case (Right(Nil), Right(ret)) =>
-            Right(Successes(
-              ScalyFunctionType(Some(ScalyValType.ScalyUnitType), ret.typ), astType, List(ret)
-            ))
+            Right(ScalyFunctionType(Some(ScalyValType.ScalyUnitType), ret.typ))
           case (Right(arg :: Nil), Right(ret)) =>
-            Right(Successes(
-              ScalyFunctionType(Some(arg.typ), ret.typ), astType, List(arg, ret)
-            ))
+            Right(ScalyFunctionType(Some(arg.typ), ret.typ))
           case (Right(args), Right(ret)) =>
-            Right(Successes(
-              ScalyFunctionType(Some(ScalyTupleType(args.toTypes)), ret.typ), astType, ret :: args
-            ))
+            Right(ScalyFunctionType(Some(ScalyTupleType(args)), ret.typ))
         }
     }
   }
 
 
-  def typeCheck(stat: Statement)(implicit ctx: TypeContext, variance: Variance): TCR = addToError(stat, ctx) {
+  def typeCheck(stat: Statement)(implicit ctx: TypeContext, variance: Variance): TCR[IST_Statement] = addToError(stat, ctx) {
     stat match {
       case e: Expr => typeCheck_Expr(e)
       case d: Dcl => d match {
-        case DefDef(id, params, retType, body) => updateContext(id) { () =>
+        case DefDef(id, params, retType, body) => //updateContext(id) { () =>
           val paramResults = params.map(ps =>
             ps.map(p => p.name -> convertType(p.pType))
             //.collect { case (_, e@Left(_)) => e }
           )
-          val errors = paramResults.map(_.collect { case (_, e@Left(_)) => e }).collect { case xs@_ :: _ => xs }.flatten
+          val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
+            .collect { case xs@_ :: _ => xs }.flatten.map(_.value)
           errors match {
             case Nil =>
-              val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ } }
+              val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
+              val ptList = paramTypes.map(_.values.toList)
               retType match {
-                case Some(rt) => convertType(rt).flatMap {
-                  case Success(declaredRT, _) =>
-                    typeCheck(body)(ctx.extend(Map(), ((id -> buildFunctionType(declaredRT, paramTypes.map(_.map(_._2)))) :: paramTypes.flatten).toMap), variance)
-                      .flatMap {
-                        case Success(actualRetType, node) =>
-                          doesUnify(actualRetType, declaredRT)(ctx, Variance.CO)
-                            .mapError(stat)
-                            //TODO: Include the successes and actual type information
-                            .map(us => Success(buildFunctionType(actualRetType, paramTypes.map(_.map(_._2))), stat))
-                      }
-
+                //Return type is specified
+                case Some(rt) => convertType(rt).flatMap { declaredRT =>
+                  val extendedContext = ctx.extend(
+                    Map(),
+                    buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)
+                      + (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER))
+                  )
+                  typeCheck_Expr(body)(extendedContext, variance)
+                    .flatMap { actualRetType =>
+                      doesUnify(actualRetType.typ, declaredRT)(ctx, Variance.CO)
+                        .mapError(stat)
+                        .map { _ =>
+                          IST_Def(id, paramTypes, actualRetType, ScalyFunctionType.build(actualRetType.typ, ptList))
+                        }
+                    }
                 }
+                //No return type declared - infer it. Cannot be recursive
                 case None =>
-                  typeCheck(body)(ctx.addVars(paramTypes.flatten), variance)
+                  typeCheck_Expr(body)(ctx.addVars(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)), variance)
+                    .map(bodyExpr => IST_Def(id, paramTypes, bodyExpr, ScalyFunctionType.build(bodyExpr.typ, ptList)))
+
                 //TODO: Update the type in the context
 
               }
@@ -125,98 +124,135 @@ class TypeChecker(
             case es@_ :: _ => Left(TypeError(s"Cannot typecheck parameters for def: $stat", stat))
           }
 
-        }
-        case MemberDcl(_, typ, rhs) =>
-          typeCheck(rhs).flatMap {
-            case Success(actualType, _) => typ match {
-              case Some(t: AST_ScalyType) => convertType(t).flatMap {
-                case Success(declaredType, _) =>
-                  doesUnify(actualType, declaredType)(ctx, Variance.CO)
-                    .mapError(stat)
-                    .map(us => Success(actualType, stat))
+
+        case m@MemberDcl(id, typ, rhs) =>
+
+          typeCheck_Expr(rhs).flatMap { rhsExpr =>
+            typ.map(convertType) match {
+              case Some(dt) => dt.flatMap { declaredType =>
+                doesUnify(rhsExpr.typ, declaredType)(ctx, Variance.CO)
+                  .mapError(stat)
+                  .map(_ => m match {
+                    case _: ValDef => IST_Val(id, rhsExpr, rhsExpr.typ)
+                    case _: VarDef => IST_Var(id, rhsExpr, rhsExpr.typ)
+                  })
               }
-              case None => typeCheck(rhs)
+              case None => m match {
+                case _: ValDef => Right(IST_Val(id, rhsExpr, rhsExpr.typ))
+                case _: VarDef => Right(IST_Var(id, rhsExpr, rhsExpr.typ))
+              }
             }
           }
+
+        //          typeCheck_Expr(rhs).flatMap {
+        //            case Success(actualType, _) => typ match {
+        //              case Some(t: AST_ScalyType) => convertType(t).flatMap {
+        //                case Success(declaredType, _) =>
+        //                  doesUnify(actualType, declaredType)(ctx, Variance.CO)
+        //                    .mapError(stat)
+        //                    .map(us => Success(actualType, stat))
+        //              }
+        //              case None => typeCheck(rhs)
+        //            }
+        //          }
       }
     }
   }
 
-  private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext, variance: Variance): TCR = addToError(expr, ctx) {
+  private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext, variance: Variance): TCR[IST_Expression] = addToError(expr, ctx) {
     expr match {
+      case l: Literal =>
+        Right(ISTBuilder.buildLiteral(l, ScalyValType.literalType(l)))
 
-      case l: Literal => Right(Success(ScalyValType.literalType(l), expr))
       case SelectExpr(lhs, rhs) =>
-        typeCheck_Expr(lhs).flatMap {
-          case Success(typ, _) =>
-            typ.getMember(rhs)
-              .map(Success(_, expr))
-              .left.map(Failure(_, expr))
+        typeCheck_Expr(lhs).flatMap { lhsExpr =>
+          lhsExpr.typ.getMember(rhs)
+            .map(l => IST_Select(lhsExpr, rhs, l.typ))
+            .left.map(TypeError(_, expr))
         }
+
       case IDExpr(name) =>
         ctx.getVarType(name)
           .toRight(TypeError(s"Cannot find type $name", expr))
-          .map(Success(_, expr))
+          .map(IST_Name(name, _))
 
       case TupleExpr(elems) =>
         elems
           .map(typeCheck_Expr)
           .collapse
-          .map(ts =>
-            Successes(ScalyTupleType(ts.toTypes), expr, ts)
-          )
+          .flatMap(ts => ScalyTupleType(ts.map(_.typ)) match {
+            case ScalyUnitType => Right(IST_Literal(PyNone, ScalyUnitType))
+            case tuple: ScalyTupleType => Right(IST_TupleExpr(ts, tuple))
+            case _ => typeCheck_Expr(elems.head)
+          })
+
       case Application(lhs, actuals) =>
-        typeCheck_Expr(lhs).flatMap { case lhs_success@Success(t, _) => t match {
-          case ScalyFunctionType(None, rType) =>
-            actuals match {
-              case Nil => Right(Success(rType, expr))
-              case _ => rType match {
-                case ScalyFunctionType(from, to) => ???
-                case _ => Left(Failure("Cannot apply to non-unit function", expr))
+        typeCheck_Expr(lhs).flatMap { lhsExpr =>
+          lhsExpr.typ match {
+            case ScalyFunctionType(None, rType) =>
+              actuals match {
+                case Nil => Right(IST_Application(lhsExpr, Nil, rType))
+                case _ => rType match {
+                  case ScalyFunctionType(from, to) => ???
+                  case _ => Left(TypeError("Cannot apply to non-unit function", expr))
+                }
               }
-            }
-          case ScalyFunctionType(Some(formalTypes), rType) =>
-            //TODO: formalTypes can be None - this would be invalid?
-            actuals
-              .map(typeCheck_Expr).collapse
-              .map(ts => ScalyTupleType(ts.toTypes))
-              .map(doesUnify(_, formalTypes)(ctx, Variance.CO).mapError(expr))
-              .collapse
-              //TODO: Apply unification results
-              //TODO: Include the success of the RHS
-              .map(rhs_success => Successes(rType, expr, lhs_success :: Nil))
-          //TODO: Apply syntax
-          case _ => Left(TypeError("Application of non-functional type", expr))
+            case ScalyFunctionType(Some(formalTypes), rType) =>
+              //TODO: formalTypes can be None - this would be invalid?
+              actuals
+                .map(typeCheck_Expr).collapse.flatMap { actualTypes =>
+                doesUnify(ScalyTupleType(actualTypes.map(_.typ)), formalTypes)(ctx, Variance.CO)
+                  .mapError(expr)
+                  .map(_ => IST_Application(lhsExpr, actualTypes, rType))
+              }
+            //TODO: Apply syntax
+            case _ => Left(TypeError("Application of non-functional type", expr))
+          }
         }
-        }
+
       case IfExpr(cond, tBranch, fBranch) =>
-        typeCheck(cond)
-          .flatMap { case condSuccess@Success(t, _) =>
-            doesUnify(t, ScalyBooleanType)(ctx, Variance.CO)
+        typeCheck_Expr(cond)
+          .flatMap { condExpr =>
+            doesUnify(condExpr.typ, ScalyBooleanType)(ctx, Variance.CO)
               .mapError(cond)
-              .flatMap(boolSuccess => typeCheck(tBranch).flatMap(
-                tBranchSuccess => typeCheck(fBranch).flatMap(
-                  fBranchSuccess => doesUnify(tBranchSuccess.typ, fBranchSuccess.typ)(ctx, Variance.IN)
+              .flatMap(_ => typeCheck_Expr(tBranch).flatMap(
+                tBranchExpr => typeCheck_Expr(fBranch).flatMap(
+                  fBranchExpr => doesUnify(tBranchExpr.typ, fBranchExpr.typ)(ctx, Variance.IN)
                     .mapError(expr)
                     .flatMap {
-                      //TODO: Common parent
-                      us =>
-                        Right(Successes(
-                          tBranchSuccess.typ,
-                          expr,
-                          List(condSuccess, tBranchSuccess, fBranchSuccess)
-                        ))
+                      //TODO: Common parent - the return type may not be tBranchExpr if they are not the same
+                      //TODO: No false branch
+                      _ => Right(IST_If(condExpr, tBranchExpr, Some(fBranchExpr), tBranchExpr.typ))
                     }
                 )
               ))
           }
       case Block(statements) =>
-        statements
-          .foldLeft(Right(Success(ScalyValType.ScalyUnitType, expr)): TCR) {
-            case (Right(x: TypeCheckSuccess), statement) =>
-              typeCheck(statement)(x.ctx, variance)
-            case (Left(e), _) => Left(e)
+        val res = statements
+          .foldLeft((Right(IST_Literal(PyNone, ScalyUnitType)) :: Nil): List[TCR[IST_Statement]]) {
+            case ((x@Right(_: IST_Statement)) :: xs, stat) =>
+              //TODO: Update the context!
+              typeCheck(stat)(ctx, variance) :: x :: xs
+            case ((e@Left(_)) :: _, _) => e :: Nil
           }
+        res match {
+          case Left(e) :: _ => Left(e)
+          case xs@Right(x) :: _ => Right(IST_Block(xs.map { case Right(z) => z }.reverse, x.typ))
+        }
+
+      case NewExpr(astType@AST_ScalyTypeName(name), params) =>
+        convertType(astType).map { typ =>
+          params.map(typeCheck_Expr)
+          if (params.nonEmpty) ???
+          else IST_New(name, Nil, typ)
+        }
+
+      //        statements
+      //          .foldLeft(Right(Success(ScalyValType.ScalyUnitType, expr)): TCR) {
+      //            case (Right(x: TypeCheckSuccess), statement) =>
+      //              typeCheck(statement)(x.ctx, variance)
+      //            case (Left(e), _) => Left(e)
+      //          }
     }
   }
 
