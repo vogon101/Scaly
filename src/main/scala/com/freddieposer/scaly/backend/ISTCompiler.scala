@@ -138,7 +138,6 @@ class ISTCompiler(_filename: String) {
     }
 
   def compileExpression(expression: IST_Expression, ctx: CompilationContext): BytecodeList = {
-    println(expression)
     import PyOpcodes._
     expression match {
       case IST_Function(args, body, typ) => ???
