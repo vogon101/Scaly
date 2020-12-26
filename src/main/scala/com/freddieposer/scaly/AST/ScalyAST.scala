@@ -1,8 +1,6 @@
 package com.freddieposer.scaly.AST
 
-import com.freddieposer.scaly.SyntaxTree
-
-sealed abstract class ScalyAST extends SyntaxTree
+sealed abstract class ScalyAST
 
 sealed trait TopLevelStatement extends ScalyAST
 
