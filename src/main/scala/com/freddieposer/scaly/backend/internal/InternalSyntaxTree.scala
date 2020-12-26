@@ -1,13 +1,12 @@
 package com.freddieposer.scaly.backend.internal
 
-import com.freddieposer.scaly.SyntaxTree
 import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyNothingType
 import com.freddieposer.scaly.typechecker.types.{ScalyASTClassType, ScalyFunctionType, ScalyTupleType, ScalyType}
 
-abstract class IST extends SyntaxTree {
+abstract class IST extends {
 
   val typ: ScalyType
 
@@ -77,12 +76,6 @@ object IST_Function {
 
 }
 
-//TODO: defs without application - perhaps could use the @property
-//case class IST_FunctionCall(
-//                             lhs: IST_Expression,
-//                             rhs: IST_Expression,
-//                             typ: ScalyType
-//                           ) extends IST_Expression
 
 case class IST_If(
                    cond: IST_Expression,
@@ -95,8 +88,10 @@ case class IST_Literal(py: PyObject, typ: ScalyValType) extends IST_Expression
 
 case class IST_Block(statements: List[IST_Statement], typ: ScalyType) extends IST_Expression
 
+//TODO: defs without application - perhaps could use the @property
 case class IST_Application(lhs: IST_Expression, args: List[IST_Expression], typ: ScalyType) extends IST_Expression
 
+//TODO: Constructor arguments
 case class IST_New(name: String, args: List[IST_Expression], typ: ScalyType) extends IST_Expression
 
 //TODO: This transformation should be used in future for the various types

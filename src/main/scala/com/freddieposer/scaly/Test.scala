@@ -2,7 +2,6 @@ package com.freddieposer.scaly
 
 import com.freddieposer.scaly.AST.ASTBuilder
 import com.freddieposer.scaly.backend.ISTCompiler
-//import com.freddieposer.scaly.backend.internal.ISTBuilder
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
