@@ -3,7 +3,7 @@ package com.freddieposer.scaly.backend
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{POP_TOP, STORE_FAST, STORE_NAME}
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{POP_TOP, STORE_FAST}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyUnitType
 
 class ISTCompiler(_filename: String) {
@@ -119,7 +119,6 @@ class ISTCompiler(_filename: String) {
 
     val bcStatements: List[BytecodeList] = statements.map {
       case IST_Member(id, expr) =>
-        println(compileExpression(expr, ctx))
         compileExpression(expr, ctx) -->
           BytecodeList(
             (LOAD_FAST, ctx.varname(THIS_NAME)),
@@ -169,14 +168,12 @@ class ISTCompiler(_filename: String) {
     import PyOpcodes._
     expression match {
       case IST_Function(args, body, typ) => ???
-      //      case IST_FunctionCall(lhs, rhs) => ???
       case IST_If(cond, tBranch, Some(fBranch), typ) =>
         val falseMarker = Marker.absolute
         val endMarker = Marker.relative
         compileExpression(cond, ctx) -->
           (POP_JUMP_IF_FALSE, falseMarker) -->
           compileExpression(tBranch, ctx) -->
-          //          ~POP_TOP -->
           (JUMP_FORWARD, endMarker) -->
           falseMarker -->
           compileExpression(fBranch, ctx) --> endMarker
@@ -185,7 +182,6 @@ class ISTCompiler(_filename: String) {
         compileExpression(cond, ctx) -->
           (POP_JUMP_IF_FALSE, endMarker) -->
           compileExpression(tBranch, ctx) -->
-          //          ~POP_TOP -->
           endMarker
 
       case IST_Select(lhs, rhs, typ) =>
@@ -207,9 +203,9 @@ class ISTCompiler(_filename: String) {
         val name = nameMangler.getOrElse(_name, _name)
         import com.freddieposer.scaly.typechecker.types.SymbolSource._
         location.source match {
-          case LOCAL =>
+          case LOCAL | LOCAL_WRITABLE =>
             BytecodeList((LOAD_FAST, ctx.varname(name.toPy)))
-          case MEMBER =>
+          case MEMBER | MEMBER_WRITABLE =>
             BytecodeList(
               (LOAD_FAST, ctx.varname(THIS_NAME)),
               (LOAD_ATTR, ctx.name(name.toPy))
@@ -226,16 +222,37 @@ class ISTCompiler(_filename: String) {
         (CALL_FUNCTION, 0.toByte)
       )
 
+      case IST_Assignment(_name, location, rhs) =>
+        val name = nameMangler.getOrElse(_name, _name)
+        import com.freddieposer.scaly.typechecker.types.SymbolSource._
+        compileExpression(rhs, ctx) --> (location.source match {
+          case LOCAL_WRITABLE => (STORE_FAST, ctx.varname(name.toPy)).toBCL
+          case MEMBER_WRITABLE => BytecodeList(
+            (LOAD_FAST, ctx.varname(THIS_NAME)),
+            (STORE_ATTR, ctx.name(name.toPy))
+          )
+          case _ => throw new Exception(s"Cannot assign to $location ($name)")
+        }) --> (LOAD_CONST, ctx.const(PyNone))
+
+      case IST_While(cond, body) =>
+        val endMarker = Marker.absolute
+        val condMarker = Marker.absolute
+        condMarker.toBCL -->
+          compileExpression(cond, ctx) -->
+          (POP_JUMP_IF_FALSE, endMarker) -->
+          compileExpression(body, ctx) -->
+          ~POP_TOP --> //Removes result of expression
+          (JUMP_ABSOLUTE, condMarker) -->
+          endMarker --> (LOAD_CONST, ctx.const(PyNone))
     }
   }
 
   //Currently doesn't return - should be managed by compileFunction
   def compileBlock(block: IST_Block, ctx: CompilationContext): BytecodeList = {
-    println(block.typ)
-    val toDrop = if (block.typ equals ScalyUnitType) 0 else 1
+    //TODO: Currently everything leaves something on the stack - could be more efficient if it didn't
     new BytecodeList(block.statements.map {
       case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
-      //TODO: Blocks can contain statements
+      //TODO: Blocks can contain defs
       case m: IST_Member => m match {
         case IST_Def(id, params, expr, typ) => ???
         case IST_Val(id, expr, typ) =>
@@ -247,10 +264,8 @@ class ISTCompiler(_filename: String) {
 
       //TODO: We need to be popping items off the stack here but we can only do this IF they add things
       // thus all functions NEED to return a PY_NONE if they don't return something else!
-    }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(toDrop).toList)
+    }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
   }
-
-
 
 
   private def TestCaddy(ctx: CompilationContext): BytecodeList = {

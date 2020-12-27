@@ -3,7 +3,7 @@ package com.freddieposer.scaly.backend.internal
 import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyNothingType
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyNothingType, ScalyUnitType}
 import com.freddieposer.scaly.typechecker.types.{ScalyASTClassType, ScalyFunctionType, ScalyTupleType, ScalyType}
 
 abstract class IST extends {
@@ -112,4 +112,17 @@ case class IST_Name(name: String, location: Location) extends IST_Expression {
 
 }
 
+//TODO: More complex assignments
+case class IST_Assignment(name: String, location: Location, rhs: IST_Expression) extends IST_Expression {
+
+  override val typ: ScalyType = ScalyUnitType
+
+}
+
 case class IST_TupleExpr(elems: List[IST_Expression], typ: ScalyTupleType) extends IST_Expression
+
+case class IST_While(cond: IST_Expression, body: IST_Expression) extends IST_Expression {
+
+  override val typ: ScalyType = ScalyUnitType
+
+}

@@ -77,7 +77,7 @@ object Test {
       printError(context.inner)
     case failure: TypeErrorFromUnificationFailure =>
       println(failure)
-    case _ =>
+    case _ => println(error)
   }
 
   def test_tc(): Unit = {

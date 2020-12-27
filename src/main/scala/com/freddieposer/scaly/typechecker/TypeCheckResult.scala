@@ -3,7 +3,7 @@ package com.freddieposer.scaly.typechecker
 import com.freddieposer.scaly.AST.ScalyAST
 import com.freddieposer.scaly.typechecker.context.TypeContext
 
-case class TypeError(message: String,
+sealed case class TypeError(message: String,
                      node: ScalyAST
                     )(implicit val ctx: TypeContext)
 

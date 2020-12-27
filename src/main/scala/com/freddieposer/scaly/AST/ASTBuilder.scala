@@ -79,6 +79,8 @@ object ASTBuilder {
       case Term.If(cond, tBranch, fBranch) => IfExpr(buildExpr(cond), buildExpr(tBranch), buildExpr(fBranch))
       case Term.New(Init(tpe, name, Nil)) => NewExpr(buildScalyType(tpe), Nil)
       case Term.New(Init(tpe, name, args :: Nil)) => NewExpr(buildScalyType(tpe), args.map(buildExpr))
+      case Term.Assign(lhs, rhs) => AssignExpr(buildExpr(lhs), buildExpr(rhs))
+      case Term.While(cond, body) => WhileExpr(buildExpr(cond), buildExpr(body))
     }
 
   private def buildLiteral(lit: Lit): Literal =

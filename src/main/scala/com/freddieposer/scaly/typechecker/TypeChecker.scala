@@ -37,7 +37,6 @@ class TypeChecker(
       case ScalyClassDef(id, parents, body, params) =>
         val ctx = new ThisTypeContext(types(id), Some(globalContext))
         body.map { template =>
-          println(template.stats)
           template.stats.map(stat =>
             typeCheck(stat, SymbolSource.MEMBER)(ctx, Variance.IN)
           ).collapse
@@ -148,8 +147,10 @@ class TypeChecker(
                     .map(_ => m match {
                       case _: ValDef =>
                         (IST_Val(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
-                      case _: VarDef =>
-                        (IST_Var(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
+                      case _: VarDef => (
+                        IST_Var(id, rhsExpr, rhsExpr.typ),
+                        ctx.addVar(id -> Location(rhsExpr.typ, SymbolSource.writable(source).get))
+                      )
                     })
                 }
                 case None => m match {
@@ -158,9 +159,10 @@ class TypeChecker(
                       (IST_Val(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
                     )
                   case _: VarDef =>
-                    Right(
-                      (IST_Var(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
-                    )
+                    Right((
+                      IST_Var(id, rhsExpr, rhsExpr.typ),
+                      ctx.addVar(id -> Location(rhsExpr.typ, SymbolSource.writable(source).get))
+                    ))
                 }
               }
             }
@@ -260,6 +262,27 @@ class TypeChecker(
           else IST_New(name, Nil, typ)
         }
 
+      case AssignExpr(lhs, rhs) => lhs match {
+        case IDExpr(_) => typeCheck_Expr(lhs).flatMap {
+          case IST_Name(name, location) =>
+            if (SymbolSource.isWritable(location.source))
+              typeCheck_Expr(rhs).flatMap { ist =>
+                doesUnify(ist.typ, location.typ)(ctx, Variance.CO).mapError(expr).map(_ => IST_Assignment(name, location, ist))
+              }
+            else Left(TypeError(s"Cannot assign to location $location", expr))
+        }
+        case _ => ???
+      }
+
+      case WhileExpr(cond, body) => typeCheck_Expr(cond).flatMap { condIST =>
+        doesUnify(condIST.typ, ScalyBooleanType)(ctx, Variance.CO)
+          .mapError(expr)
+          .flatMap { _ =>
+            typeCheck_Expr(body).map { bodyIST => IST_While(condIST, bodyIST) }
+          }
+      }
+
+
     }
   }
 
@@ -269,7 +292,7 @@ class TypeChecker(
    * Does t1 unify with t2 under the given variance
    * Unifies if:
    *  - t1 == t2
-   *  - t1 < t2 and CO-VARIANT
+   *  - t1 &#60; t2 and CO-VARIANT
    *  - t1 > t2 and CONTRA-VARIANT
    *
    * NOTE: For variance we need to be incredibly careful with the order of these types

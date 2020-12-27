@@ -14,4 +14,6 @@ case class IfExpr(cond: Expr, tBranch: Expr, fBranch: Expr) extends Expr
 
 case class NewExpr(typ: AST_ScalyType, params: List[Expr]) extends Expr
 
+case class AssignExpr(lhs: Expr, rhs: Expr) extends Expr
 
+case class WhileExpr(cond: Expr, body: Expr) extends Expr

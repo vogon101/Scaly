@@ -1,7 +1,7 @@
 package com.freddieposer.scaly.typechecker.types
 
 import com.freddieposer.scaly.AST._
-import com.freddieposer.scaly.typechecker.context.TypeContext.{TypeMap, buildTypeMap}
+import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap, buildTypeMap}
 import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValType}
 
 case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType with PlaceholderType {
@@ -37,17 +37,19 @@ class ScalyASTClassType(
 
     node.body match {
       case Some(ScalyTemplate(stats)) =>
-        buildTypeMap(stats.flatMap {
+        stats.flatMap {
           case d: Dcl => Some(d match {
             //TODO: declType can be none
-            case ValDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
-            case VarDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
+            case ValDef(id, declType, rhs) =>
+              id -> Location (ScalyASTPlaceholderType(declType.get), SymbolSource.MEMBER)
+            case VarDef(id, declType, rhs) =>
+              id -> Location (ScalyASTPlaceholderType(declType.get), SymbolSource.MEMBER_WRITABLE)
             case DefDef(id, params, retType, body) =>
-              id -> convertParams(params, ScalyASTPlaceholderType(retType.get))
+              id -> Location (convertParams(params, ScalyASTPlaceholderType(retType.get)), SymbolSource.MEMBER)
             //TODO: Return could be none - inference
           })
           case _: Expr => None
-        }.toMap, SymbolSource.MEMBER)
+        }.toMap
       case None => Map()
     }
   }

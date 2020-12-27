@@ -3,7 +3,7 @@ This is a member
 This is another member
 109
 This is a member
-99
+109
  */
 class Main {
 
@@ -23,12 +23,13 @@ class Foo {
   val member: String = "This is a member"
   var otherMember: String = "This is another member"
 
+
   def foo(n: Int): Int = {
 
     val x = n + 10
     print(x)
     bar(member)
-    n
+    x
 
   }
 
