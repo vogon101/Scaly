@@ -44,6 +44,8 @@ class PyTuple(private var _objectsBuffer: ListBuffer[PyObject]) extends PyObject
     else
       ByteArrayStream(PycTypeBytes.TYPE_TUPLE) + ByteArrayStream.fromLongs(objects.length)
       ) + ByteArrayStream.join(objects.map(_.toBytes))
+
+  def length:Int = _objectsBuffer.length
 }
 
 object PyTuple {

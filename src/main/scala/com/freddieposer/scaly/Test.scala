@@ -19,7 +19,6 @@ object Test {
   val DUMP_INPUT_FILE = "test_files/sclass.pyc"
   val SCALA_INPUT_FILE = "test_files/test1.scala"
 
-  //TODO: An actual test suite
   def test_pyc(): Unit = {
     import sys.process._
     var bytes1 = Files.readAllBytes(Paths.get(COMPILED_OUTPUT_FILE))

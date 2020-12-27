@@ -21,7 +21,8 @@ class IST_CompilationUnit(val classes: List[IST_Class]) extends IST {
 //TODO: Parents
 case class IST_Class(
                       name: String,
-                      members: Map[String, IST_Member],
+                      defs: Map[String, IST_Def],
+                      stats: List[IST_Statement],
                       typ: ScalyASTClassType
                     ) extends IST {
 
@@ -32,6 +33,13 @@ sealed abstract class IST_Statement extends IST
 
 sealed abstract class IST_Member extends IST_Statement {
   val id: String
+  val expr: IST_Expression
+}
+
+object IST_Member {
+
+  def unapply(arg: IST_Member): Option[(String, IST_Expression)] = Some((arg.id, arg.expr))
+
 }
 
 case class IST_Def(

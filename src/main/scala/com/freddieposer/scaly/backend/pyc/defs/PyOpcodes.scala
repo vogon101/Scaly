@@ -104,7 +104,7 @@ object PyOpcodes extends Enumeration {
   val SETUP_EXCEPT: Val = Val(121)
   val SETUP_FINALLY: Val = Val(122)
   val LOAD_FAST: Val = Val(124, Some(PyOpcodeArgType.LOCAL_VAR_NUM))
-  val STORE_FAST: Val = Val(125)
+  val STORE_FAST: Val = Val(125, Some(PyOpcodeArgType.LOCAL_VAR_NUM))
   val DELETE_FAST: Val = Val(126)
   val RAISE_VARARGS: Val = Val(130)
   val CALL_FUNCTION: Val = Val(131)

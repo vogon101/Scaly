@@ -15,19 +15,37 @@ class Main {
 
   def main(): Int = {
 
-    print((new FibGen).fib(0))
-    print((new FibGen).fib(1))
-    print((new FibGen).fib(2))
-    print((new FibGen).fib(3))
-    print((new FibGen).fib(4))
-    print((new FibGen).fib(5))
-    (new FibGen).fib(6)
+    val fg: FibGen = new FibGen
+    print(new FibGen)
+
+    print(fg)
+    print(fg.x)
+    print(fg.y)
+    (new FibGen).fib(20)
+//    val x: Int = 10
+//    print(x)
+//    (new FibGen).func(99)
 
 
   }
 
+
 }
 class FibGen {
+
+  val x: Int = {
+    print("Hello there")
+    10
+  }
+
+  print("General")
+
+  val y: Int = {
+    print("Kenobi")
+    100
+  }
+
+  def thing: Int = x
 
   def fib(n: Int): Int = {
     if (n == 0) 0
@@ -35,5 +53,13 @@ class FibGen {
     else fib(n - 1) + fib (n - 2)
   }
 
+  def func(n:Int): Int = {
+    val x = 10
+    print(x)
+    print(n)
+    x
+  }
+
 }
+
 

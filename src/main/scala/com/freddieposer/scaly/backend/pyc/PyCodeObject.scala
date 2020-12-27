@@ -144,14 +144,14 @@ object PyCodeObject {
              ctx: CompilationContext, code: PyString,
              name: PyAscii, filename: PyAscii,
              nargs: Int, nPosOnly: Int, nLocals: Int, stackSize: Int, flags: Int,
-             varnames: PyTuple = PyTuple.empty, freeVars: PyTuple = PyTuple.empty, cellVars: PyTuple = PyTuple.empty,
+             freeVars: PyTuple = PyTuple.empty, cellVars: PyTuple = PyTuple.empty,
              lnotab: PyString = PyString.empty,
              firstLineNo: Int = 1, nKwargs: Int = 0
            ): PyCodeObject = {
     //TODO: Excludes kwargs
     new PyCodeObject(
       nargs, nPosOnly, nKwargs, nLocals, stackSize, flags, firstLineNo,
-      code, ctx.constants, ctx.names, varnames, freeVars, cellVars, name, filename, lnotab
+      code, ctx.constants, ctx.names, ctx.varnames, freeVars, cellVars, name, filename, lnotab
     )
   }
 

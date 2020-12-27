@@ -20,6 +20,8 @@ object CodeGenerationUtils {
 
     def toBCL: BytecodeList = BytecodeList(this)
 
+    override def toString: String = f"BC($length)"
+
   }
 
   implicit class BytecodeByte(val value: Byte) extends Bytecode {
@@ -34,6 +36,8 @@ object CodeGenerationUtils {
 
   implicit class BytecodeOpcode(val t: (PyOpcode, Byte)) extends Bytecode {
     override val length: Int = 2
+
+    override def toString: String = f"BC(${t._1}, ${t._2})"
   }
 
   object BytecodeOpcode {
@@ -44,6 +48,8 @@ object CodeGenerationUtils {
 
   implicit class BytecodeOpcodeWithMarker(val t: (PyOpcode, BytecodeMarker)) extends Bytecode {
     override val length: Int = 2
+
+    override def toString: String = f"BC(${t._1}, ${t._2})"
   }
 
   object BytecodeOpcodeWithMarker {

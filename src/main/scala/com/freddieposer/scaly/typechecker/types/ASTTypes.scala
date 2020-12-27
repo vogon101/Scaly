@@ -37,13 +37,16 @@ class ScalyASTClassType(
 
     node.body match {
       case Some(ScalyTemplate(stats)) =>
-        buildTypeMap(stats.map { case d: Dcl => d match {
-          case ValDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
-          case VarDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
-          case DefDef(id, params, retType, body) =>
-            id -> convertParams(params, ScalyASTPlaceholderType(retType.get))
-          //TODO: Return could be none - inference
-        }
+        buildTypeMap(stats.flatMap {
+          case d: Dcl => Some(d match {
+            //TODO: declType can be none
+            case ValDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
+            case VarDef(id, declType, rhs) => id -> ScalyASTPlaceholderType(declType.get)
+            case DefDef(id, params, retType, body) =>
+              id -> convertParams(params, ScalyASTPlaceholderType(retType.get))
+            //TODO: Return could be none - inference
+          })
+          case _: Expr => None
         }.toMap, SymbolSource.MEMBER)
       case None => Map()
     }

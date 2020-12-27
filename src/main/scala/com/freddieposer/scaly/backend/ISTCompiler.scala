@@ -3,7 +3,8 @@ package com.freddieposer.scaly.backend
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.POP_TOP
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{POP_TOP, STORE_FAST, STORE_NAME}
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyUnitType
 
 class ISTCompiler(_filename: String) {
 
@@ -11,7 +12,7 @@ class ISTCompiler(_filename: String) {
 
   private val filename = _filename.toPy
 
-  val THIS_NAME = "_this"
+  val THIS_NAME = "this".toPy
 
   private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
     val ctx = new CompilationContext
@@ -66,23 +67,21 @@ class ISTCompiler(_filename: String) {
   }
 
   def compileClass(istClass: IST_Class, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
-
     val stackSize: Int = 10 // ???
 
-    val tmp: Map[String, IST_Def] = istClass.members.flatMap {
-      case d: (String, IST_Def) => Some(d)
-      case _ => None
-    }
 
+    //    val varMembers = istClass.members.filterNot(t => defMembers.contains(t._1))
+
+    val constructor = compileConstructor(istClass.stats)
 
     val functions = {
       //TODO: Actual objects
       if (istClass.name == "Main")
-        tmp.map(t => compileFunction(t._1, t._2.func, ctx))
+        istClass.defs.map(t => compileFunction(t._1, t._2.func, ctx))
       else ctx.withClass {
-        tmp.map(t => compileFunction(t._1, t._2.func, ctx))
+        istClass.defs.map(t => compileFunction(t._1, t._2.func, ctx))
       }
-    }
+    } ++ (if (istClass.name != "Main") constructor :: Nil else Nil)
 
     val code: BytecodeList = {
       import PyOpcodes._
@@ -106,23 +105,52 @@ class ISTCompiler(_filename: String) {
 
   }
 
+  //TODO: constructor args
+  def compileConstructor(statements: List[IST_Statement]): PyCodeObject = withContext { ctx =>
+    import PyOpcodes._
+
+    val name = "__init__"
+    val stackSize = 10
+
+    val nargs = 1
+    val localNames = THIS_NAME :: Nil
+
+    localNames.foreach(n => ctx.varname(n))
+
+    val bcStatements: List[BytecodeList] = statements.map {
+      case IST_Member(id, expr) =>
+        println(compileExpression(expr, ctx))
+        compileExpression(expr, ctx) -->
+          BytecodeList(
+            (LOAD_FAST, ctx.varname(THIS_NAME)),
+            (STORE_ATTR, ctx.name(id.toPy))
+          )
+
+      case expression: IST_Expression =>
+        compileExpression(expression, ctx) --> (~POP_TOP).toBCL
+    }
+    val code = bcStatements.foldLeft(BytecodeList.empty)(_ --> _) -->
+      BytecodeList((LOAD_CONST, ctx.const(PyNone)), ~RETURN_VALUE)
+
+    PyCodeObject(ctx, code.compile, name.toPy, filename, nargs, nargs, nargs, stackSize, 67)
+
+  }
+
   //Context should track max stack size
   def compileFunction(_name: String, istFunction: IST_Function, outerContext: CompilationContext): PyCodeObject =
     withContext { ctx =>
       import PyOpcodes.RETURN_VALUE
       val name = nameMangler.getOrElse(_name, _name)
 
-      val (nOtherLocals, nargs, localNames) = if (outerContext.inClass) (
-        0,
+      val (nargs, localNames) = if (outerContext.inClass) (
         istFunction.args.length + 1,
-        THIS_NAME :: istFunction.args
+        THIS_NAME :: istFunction.args.map(_.toPy)
       ) else (
-        0,
         istFunction.args.length,
-        istFunction.args
+        istFunction.args.map(_.toPy)
       )
 
-      localNames.foreach(n => ctx.varname(n.toPy))
+      localNames.foreach(n => ctx.varname(n))
 
       val stackSize = 10
       // TODO: + number of other locals
@@ -132,8 +160,8 @@ class ISTCompiler(_filename: String) {
 
       //TODO: Understand flags
       PyCodeObject(
-        ctx, code.compile, name.toPy, filename, nargs, istFunction.args.length,
-        nOtherLocals + nargs, stackSize, 67, varnames = PyTuple(localNames.map(_.toPy))
+        ctx, code.compile, name.toPy, filename, nargs, nargs,
+        ctx.varnames.length, stackSize, 67
       )
     }
 
@@ -183,13 +211,13 @@ class ISTCompiler(_filename: String) {
             BytecodeList((LOAD_FAST, ctx.varname(name.toPy)))
           case MEMBER =>
             BytecodeList(
-              (LOAD_FAST, ctx.varname(THIS_NAME.toPy)),
+              (LOAD_FAST, ctx.varname(THIS_NAME)),
               (LOAD_ATTR, ctx.name(name.toPy))
             )
           case GLOBAL =>
             BytecodeList((LOAD_GLOBAL, ctx.name(name.toPy)))
           case THIS =>
-            BytecodeList((LOAD_NAME, ctx.varname(THIS_NAME.toPy)))
+            BytecodeList((LOAD_NAME, ctx.varname(THIS_NAME)))
 
         }
       //TODO: This could simply be rewritten to be a function application?
@@ -202,17 +230,27 @@ class ISTCompiler(_filename: String) {
   }
 
   //Currently doesn't return - should be managed by compileFunction
-  def compileBlock(block: IST_Block, ctx: CompilationContext): BytecodeList =
-    block.statements.map {
-      case expr: IST_Expression => compileExpression(expr, ctx)
+  def compileBlock(block: IST_Block, ctx: CompilationContext): BytecodeList = {
+    println(block.typ)
+    val toDrop = if (block.typ equals ScalyUnitType) 0 else 1
+    new BytecodeList(block.statements.map {
+      case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
       //TODO: Blocks can contain statements
-      case _ => ???
+      case m: IST_Member => m match {
+        case IST_Def(id, params, expr, typ) => ???
+        case IST_Val(id, expr, typ) =>
+          compileExpression(expr, ctx) --> (STORE_FAST, ctx.varname(id.toPy))
+        case IST_Var(id, expr, typ) =>
+          compileExpression(expr, ctx) --> (STORE_FAST, ctx.varname(id.toPy))
+      }
       //    }.foldRight(BytecodeList.empty)(_ --> _)
 
       //TODO: We need to be popping items off the stack here but we can only do this IF they add things
       // thus all functions NEED to return a PY_NONE if they don't return something else!
-    }.flatMap(_ :: (~POP_TOP).toBCL :: Nil)
-      .dropRight(1).foldLeft(BytecodeList.empty)(_ --> _)
+    }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(toDrop).toList)
+  }
+
+
 
 
   private def TestCaddy(ctx: CompilationContext): BytecodeList = {

@@ -8,6 +8,7 @@ import com.freddieposer.scaly.typechecker.Variance.Variance
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, buildTypeMap}
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
 import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, ThisTypeContext, TypeContext}
+import com.freddieposer.scaly.typechecker.types.SymbolSource.SymbolSource
 import com.freddieposer.scaly.typechecker.types._
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyUnitType}
@@ -17,7 +18,7 @@ class TypeChecker(
                  ) {
 
 
-  def addToError[T <: IST](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
+  def addToError[T](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
     f.left.map(new TypeErrorContext(_, node)(context))
 
   def typeCheck(): TCR[IST_CompilationUnit] = {
@@ -35,12 +36,13 @@ class TypeChecker(
       //TODO: Parents
       case ScalyClassDef(id, parents, body, params) =>
         val ctx = new ThisTypeContext(types(id), Some(globalContext))
-        body.map(template =>
+        body.map { template =>
+          println(template.stats)
           template.stats.map(stat =>
-            typeCheck(stat)(ctx, Variance.IN)
-          ).collapse)
-          .getOrElse(Right(Nil))
-          .map(stats => ISTBuilder.buildISTClass(id, stats, types(id)))
+            typeCheck(stat, SymbolSource.MEMBER)(ctx, Variance.IN)
+          ).collapse
+        }.getOrElse(Right(Nil))
+          .map(stats => ISTBuilder.buildISTClass(id, stats.map(_._1), types(id)))
       case ScalyObjectDef(id, parents, body) => ???
     }.collapse.map(new IST_CompilationUnit(_))
   }
@@ -80,72 +82,92 @@ class TypeChecker(
   }
 
 
-  def typeCheck(stat: Statement)(implicit ctx: TypeContext, variance: Variance): TCR[IST_Statement] = addToError(stat, ctx) {
-    stat match {
-      case e: Expr => typeCheck_Expr(e)
+  def typeCheck(stat: Statement, source: SymbolSource)(implicit ctx: TypeContext, variance: Variance): TCR[(IST_Statement, TypeContext)] =
+    addToError(stat, ctx) {
+      stat match {
+        case e: Expr => typeCheck_Expr(e).map(t => (t, ctx))
 
-      case d: Dcl => d match {
-        case DefDef(id, params, retType, body) =>
-          val paramResults = params.map(ps =>
-            ps.map(p => p.name -> convertType(p.pType))
-          )
-          val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
-            .collect { case xs@_ :: _ => xs }.flatten.map(_.value)
-          errors match {
-            case Nil =>
-              val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
-              val ptList = paramTypes.map(_.values.toList)
-              retType match {
-                //Return type is specified
-                case Some(rt) => convertType(rt).flatMap { declaredRT =>
-                  val extendedContext = ctx.extend(
-                    Map(),
-                    buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)
-                      + (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER))
-                  )
-                  typeCheck_Expr(body)(extendedContext, variance)
-                    .flatMap { actualRetType =>
-                      doesUnify(actualRetType.typ, declaredRT)(ctx, Variance.CO)
-                        .mapError(stat)
-                        .map { _ =>
-                          IST_Def(id, paramTypes, actualRetType, ScalyFunctionType.build(actualRetType.typ, ptList))
-                        }
-                    }
+        case d: Dcl => d match {
+          case DefDef(id, params, retType, body) =>
+            val paramResults = params.map(ps =>
+              ps.map(p => p.name -> convertType(p.pType))
+            )
+            val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
+              .collect { case xs@_ :: _ => xs }.flatten.map(_.value)
+            errors match {
+              case Nil =>
+                val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
+                val ptList = paramTypes.map(_.values.toList)
+                retType match {
+                  //Return type is specified
+                  case Some(rt) => convertType(rt).flatMap { declaredRT =>
+                    val extendedContext = ctx.extend(
+                      Map(),
+                      buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)
+                        + (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER))
+                    )
+                    typeCheck_Expr(body)(extendedContext, variance)
+                      .flatMap { actualRetType =>
+                        doesUnify(actualRetType.typ, declaredRT)(ctx, Variance.CO)
+                          .mapError(stat)
+                          .map { _ =>
+                            val fType = ScalyFunctionType.build(actualRetType.typ, ptList)
+                            (
+                              IST_Def(id, paramTypes, actualRetType, fType),
+                              ctx.addVar(id -> Location(fType, source)) //FIXME
+                            )
+                          }
+                      }
+                  }
+                  //No return type declared - infer it. Cannot be recursive
+                  case None =>
+                    typeCheck_Expr(body)(ctx.addVars(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)), variance)
+                      .map { bodyExpr =>
+                        val fType = ScalyFunctionType.build(bodyExpr.typ, ptList)
+                        (
+                          IST_Def(id, paramTypes, bodyExpr, fType),
+                          ctx.addVar(id -> Location(fType, source))
+                        )
+                      }
+
+                  //TODO: Update the type in the context?
+
                 }
-                //No return type declared - infer it. Cannot be recursive
-                case None =>
-                  typeCheck_Expr(body)(ctx.addVars(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)), variance)
-                    .map(bodyExpr => IST_Def(id, paramTypes, bodyExpr, ScalyFunctionType.build(bodyExpr.typ, ptList)))
+              //TODO Add info
 
-                //TODO: Update the type in the context?
-
-              }
-            //TODO Add info
-            case es@_ :: _ => Left(TypeError(s"Cannot typecheck parameters for def: $stat", stat))
-          }
+              case es@_ :: _ => Left(TypeError(s"Cannot typecheck parameters for def: $stat", stat))
+            }
 
 
-        case m@MemberDcl(id, typ, rhs) =>
-          typeCheck_Expr(rhs).flatMap { rhsExpr =>
-            typ.map(convertType) match {
-              case Some(dt) => dt.flatMap { declaredType =>
-                doesUnify(rhsExpr.typ, declaredType)(ctx, Variance.CO)
-                  .mapError(stat)
-                  .map(_ => m match {
-                    case _: ValDef => IST_Val(id, rhsExpr, rhsExpr.typ)
-                    case _: VarDef => IST_Var(id, rhsExpr, rhsExpr.typ)
-                  })
-              }
-              case None => m match {
-                case _: ValDef => Right(IST_Val(id, rhsExpr, rhsExpr.typ))
-                case _: VarDef => Right(IST_Var(id, rhsExpr, rhsExpr.typ))
+          case m@MemberDcl(id, typ, rhs) =>
+            typeCheck_Expr(rhs).flatMap { rhsExpr =>
+              typ.map(convertType) match {
+                case Some(dt) => dt.flatMap { declaredType =>
+                  doesUnify(rhsExpr.typ, declaredType)(ctx, Variance.CO)
+                    .mapError(stat)
+                    .map(_ => m match {
+                      case _: ValDef =>
+                        (IST_Val(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
+                      case _: VarDef =>
+                        (IST_Var(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
+                    })
+                }
+                case None => m match {
+                  case _: ValDef =>
+                    Right(
+                      (IST_Val(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
+                    )
+                  case _: VarDef =>
+                    Right(
+                      (IST_Var(id, rhsExpr, rhsExpr.typ), ctx.addVar(id -> Location(rhsExpr.typ, source)))
+                    )
+                }
               }
             }
-          }
 
+        }
       }
     }
-  }
 
   private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext, variance: Variance): TCR[IST_Expression] = addToError(expr, ctx) {
     expr match {
@@ -217,16 +239,18 @@ class TypeChecker(
           }
       case Block(statements) =>
         val res = statements
-          .foldLeft((Right(IST_Literal(PyNone, ScalyUnitType)) :: Nil): List[TCR[IST_Statement]]) {
-            case ((x@Right(_: IST_Statement)) :: xs, stat) =>
+          //TODO: Remove the unnecessary none
+          .foldLeft((Right((IST_Literal(PyNone, ScalyUnitType), ctx)) :: Nil): List[TCR[(IST_Statement, TypeContext)]]) {
+            case ((x@Right((_, nctx))) :: xs, stat) =>
+
               //TODO: Update the context! - here if there is a val or var the context will have changed so
               //  we need to deal with that. Removed contexts from TCR when made it IST so may need to add that in
-              typeCheck(stat)(ctx, variance) :: x :: xs
+              typeCheck(stat, SymbolSource.LOCAL)(nctx, variance) :: x :: xs
             case ((e@Left(_)) :: _, _) => e :: Nil
           }
         res match {
           case Left(e) :: _ => Left(e)
-          case xs@Right(x) :: _ => Right(IST_Block(xs.map { case Right(z) => z }.reverse, x.typ))
+          case xs@Right((x, _)) :: _ => Right(IST_Block(xs.map { case Right(z) => z._1 }.reverse, x.typ))
         }
 
       case NewExpr(astType@AST_ScalyTypeName(name), params) =>
