@@ -9,7 +9,8 @@ object PyOpcodeArgType extends Enumeration {
   IDX_CONST_LIST,
   ADDRESS,
   ADDRESS_DISTANCE,
-  LOCAL_VAR_NUM
+  LOCAL_VAR_NUM,
+  IDX_CELL
   = Value
 
 }

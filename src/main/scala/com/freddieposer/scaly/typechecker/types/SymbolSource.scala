@@ -1,7 +1,5 @@
 package com.freddieposer.scaly.typechecker.types
 
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodeArgType.PyOpcodeArgType
-
 object SymbolSource extends Enumeration {
 
   type SymbolSource = Value

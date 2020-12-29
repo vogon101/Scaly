@@ -1,18 +1,40 @@
-# print("ho ho ho")
-# print("ho ho ho")
-# print("ho ho ho")
-# print("ho ho ho")
-# print("ho ho ho")
-print("ho ho ho")
-print("ho ho ho")
+print("This is the Python code!")
+
+# class Main:
+#     def main():
+#         i = 0
+#         while(i.__lt__(10)):
+#             print(i)
+#             i = i.__add__(1)
+#
+# class A:
+#     def __init__(self):
+#         print("A")
+#
+# class B(A, Main):
+#     def __init__(self):
+#         super().__init__()
+#         print("B")
+#
+#
+# class C(B):
+#     def __init__(self):
+#         super().__init__()
+#         print("C")
 
 
-class Main:
-    def main():
-        i = 0
-        while(i.__lt__(10)):
-            print(i)
-            i = i.__add__(1)
+class A:
+    def foo():
+        print("A")
+class B(A):
+    def __init__(self):
+        print("B init")
+
+    def foo():
+        print("B")
+class C(B):
+    def __init__(self):
+        B.__init__(self)
 
 # class FibGen:
 #     def __init__(self):

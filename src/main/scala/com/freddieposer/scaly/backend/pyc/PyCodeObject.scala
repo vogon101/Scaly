@@ -75,6 +75,11 @@ class PyCodeObject(
               f"$arg%-2d - ${getName(arg).shortName}"
             case Some(PyOpcodeArgType.LOCAL_VAR_NUM) =>
               f"$arg%-2d - ${varnames.objects(arg).shortName}"
+            case Some(PyOpcodeArgType.IDX_CELL) =>
+              f"$arg%-2d - " +
+                (if (arg < cellVars.length)
+                  f"${cellVars.objects(arg).shortName} [CV]"
+                else f"${freeVars.objects(arg).shortName} [FV]")
             case _ => f"$arg%-2d"
           } else "")
     }.toList

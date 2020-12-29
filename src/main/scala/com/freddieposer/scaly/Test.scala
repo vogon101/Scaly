@@ -21,9 +21,9 @@ object Test {
 
   def test_pyc(): Unit = {
     import sys.process._
-    var bytes1 = Files.readAllBytes(Paths.get(COMPILED_OUTPUT_FILE))
-    val pyobj1 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes1))
-    println(pyobj1)
+    //    var bytes1 = Files.readAllBytes(Paths.get(COMPILED_OUTPUT_FILE))
+    //    val pyobj1 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes1))
+    //    println(pyobj1)
 
     s"bash test_files/compile.sh $Q$DUMP_PYTHON_FILE$Q $Q$DUMP_INPUT_FILE$Q".!
 
@@ -77,7 +77,9 @@ object Test {
       printError(context.inner)
     case failure: TypeErrorFromUnificationFailure =>
       println(failure)
-    case _ => println(error)
+    case _ =>
+      println(error)
+      println(error.ctx)
   }
 
   def test_tc(): Unit = {

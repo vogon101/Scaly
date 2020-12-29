@@ -16,6 +16,8 @@ class UnificationSuccess(override val t1: ScalyType,
   override def map(f: UnificationSuccess => _UnificationResult): _UnificationResult = f(this)
 }
 
+object EmptyUS extends UnificationSuccess(null, null)(null)
+
 object UnificationSuccess {
 
   def apply(t1: ScalyType, t2: ScalyType)(implicit _ctx: TypeContext): UnificationSuccess =

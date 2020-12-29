@@ -4,7 +4,6 @@ import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{POP_TOP, STORE_FAST}
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyUnitType
 
 class ISTCompiler(_filename: String) {
 
@@ -82,6 +81,10 @@ class ISTCompiler(_filename: String) {
         istClass.defs.map(t => compileFunction(t._1, t._2.func, ctx))
       }
     } ++ (if (istClass.name != "Main") constructor :: Nil else Nil)
+
+    val parentCode = istClass.typ.parent.map { parent =>
+
+    }.getOrElse(BytecodeList.empty)
 
     val code: BytecodeList = {
       import PyOpcodes._

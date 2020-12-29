@@ -110,7 +110,7 @@ object PyOpcodes extends Enumeration {
   val CALL_FUNCTION: Val = Val(131)
   val MAKE_FUNCTION: Val = Val(132)
   val BUILD_SLICE: Val = Val(133)
-  val LOAD_CLOSURE: Val = Val(135)
+  val LOAD_CLOSURE: Val = Val(135, Some(PyOpcodeArgType.IDX_CELL))
   val LOAD_DEREF: Val = Val(136)
   val STORE_DEREF: Val = Val(137)
   val DELETE_DEREF: Val = Val(138)

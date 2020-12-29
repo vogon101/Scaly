@@ -46,14 +46,6 @@ class TypeChecker(
     }.collapse.map(new IST_CompilationUnit(_))
   }
 
-  //TODO: Passing the context with the IST? - see block
-  //  def updateContext[T <: IST](id: String)
-  //                             (f: () => TCR[T])
-  //                             (implicit context: TypeContext): TCR[T] = {
-  //    f().map { case s@Success(t, n) => Success(t, n)(s.ctx.addVar(id -> t)) }
-  //  }
-
-
   private def convertType(astType: AST_ScalyType)(implicit context: TypeContext): TCR[ScalyType] = addToError(astType, context) {
     astType match {
       case AST_ScalyTypeName(name) =>
@@ -97,44 +89,36 @@ class TypeChecker(
               case Nil =>
                 val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
                 val ptList = paramTypes.map(_.values.toList)
-                retType match {
-                  //Return type is specified
-                  case Some(rt) => convertType(rt).flatMap { declaredRT =>
-                    val extendedContext = ctx.extend(
+                (retType match {
+                  case Some(rt) => convertType(rt).map { declaredRT =>
+                    (ctx.extend(
                       Map(),
                       buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)
                         + (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER))
-                    )
-                    typeCheck_Expr(body)(extendedContext, variance)
-                      .flatMap { actualRetType =>
-                        doesUnify(actualRetType.typ, declaredRT)(ctx, Variance.CO)
-                          .mapError(stat)
-                          .map { _ =>
-                            val fType = ScalyFunctionType.build(actualRetType.typ, ptList)
-                            (
-                              IST_Def(id, paramTypes, actualRetType, fType),
-                              ctx.addVar(id -> Location(fType, source)) //FIXME
-                            )
-                          }
-                      }
+                    ), Some(declaredRT))
                   }
-                  //No return type declared - infer it. Cannot be recursive
-                  case None =>
-                    typeCheck_Expr(body)(ctx.addVars(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)), variance)
-                      .map { bodyExpr =>
-                        val fType = ScalyFunctionType.build(bodyExpr.typ, ptList)
+                  case None => Right((ctx.addVars(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)), None))
+                }).flatMap { case (eCtx, rtOpt) =>
+                  typeCheck_Expr(body)(eCtx, variance)
+                    .flatMap { actualRetType =>
+                      (rtOpt match {
+                        case Some(declaredRT) =>
+                          doesUnify(actualRetType.typ, declaredRT)(ctx, Variance.CO)
+                            .mapError(stat)
+                        case None => Right(EmptyUS)
+                      }).map { _ =>
+                        val fType = ScalyFunctionType.build(actualRetType.typ, ptList)
                         (
-                          IST_Def(id, paramTypes, bodyExpr, fType),
+                          IST_Def(id, paramTypes, actualRetType, fType),
                           ctx.addVar(id -> Location(fType, source))
                         )
                       }
-
-                  //TODO: Update the type in the context?
-
+                    }
                 }
-              //TODO Add info
 
-              case es@_ :: _ => Left(TypeError(s"Cannot typecheck parameters for def: $stat", stat))
+              case es@_ :: _ =>
+                Left(new TypeErrorCombination(s"Cannot typecheck parameters for def: $stat", stat, es))
+
             }
 
 
@@ -185,7 +169,7 @@ class TypeChecker(
 
       case IDExpr(name) =>
         ctx.getVarType(name)
-          .toRight(TypeError(s"Cannot find type $name", expr))
+          .toRight(TypeError(s"Cannot find variable $name", expr))
           .map(IST_Name(name, _))
 
       case TupleExpr(elems) =>
@@ -210,7 +194,6 @@ class TypeChecker(
                 }
               }
             case ScalyFunctionType(Some(formalTypes), rType) =>
-              //TODO: formalTypes can be None - this would be invalid?
               actuals
                 .map(typeCheck_Expr).collapse.flatMap { actualTypes =>
                 doesUnify(ScalyTupleType(actualTypes.map(_.typ)), formalTypes)(ctx, Variance.CO)
@@ -218,7 +201,12 @@ class TypeChecker(
                   .map(_ => IST_Application(lhsExpr, actualTypes, rType))
               }
             //TODO: Apply syntax
-            case _ => Left(TypeError("Application of non-functional type", expr))
+            case obj =>
+              obj.getMember("apply") match {
+                case Right(Location(_: ScalyFunctionType, _)) => typeCheck_Expr(Application(SelectExpr(lhs, "apply"), actuals))
+                case Right(Location(typ, _)) => Left(TypeError(s"Cannot apply $actuals to non-functional $typ", expr))
+                case e@Left(_) => Left(TypeError(s"Object $obj doesn't contain an apply member", expr))
+              }
           }
         }
 
@@ -244,9 +232,6 @@ class TypeChecker(
           //TODO: Remove the unnecessary none
           .foldLeft((Right((IST_Literal(PyNone, ScalyUnitType), ctx)) :: Nil): List[TCR[(IST_Statement, TypeContext)]]) {
             case ((x@Right((_, nctx))) :: xs, stat) =>
-
-              //TODO: Update the context! - here if there is a val or var the context will have changed so
-              //  we need to deal with that. Removed contexts from TCR when made it IST so may need to add that in
               typeCheck(stat, SymbolSource.LOCAL)(nctx, variance) :: x :: xs
             case ((e@Left(_)) :: _, _) => e :: Nil
           }

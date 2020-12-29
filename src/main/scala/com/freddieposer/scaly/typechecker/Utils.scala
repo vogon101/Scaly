@@ -1,8 +1,6 @@
 package com.freddieposer.scaly.typechecker
 
 import com.freddieposer.scaly.AST.ScalyAST
-import com.freddieposer.scaly.backend.internal.IST
-import com.freddieposer.scaly.typechecker.context.TypeContext
 import com.freddieposer.scaly.typechecker.types.ScalyType
 
 object Utils {
