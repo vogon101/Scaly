@@ -7,6 +7,11 @@ import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValT
 case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType with PlaceholderType {
   override lazy val memberTypes: TypeMap = ???
   override lazy val parent: Option[ScalyType] = ???
+
+  override def globalName: Option[String] = node match {
+    case AST_ScalyTypeName(name) => Some(name)
+    case _ => None
+  }
 }
 
 class ScalyASTClassType(
@@ -16,6 +21,7 @@ class ScalyASTClassType(
                        ) extends ASTScalyType with PlaceholderType {
 
 
+  override val globalName: Option[String] = Some(name)
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))
 
   override lazy val memberTypes: TypeMap = construct {

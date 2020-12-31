@@ -14,7 +14,7 @@ class ThisTypeContext private(
 
   override def getVarType(name: String): Option[Location] =
     if (name equals "this") Some((owner, SymbolSource.THIS))
-    else owner.getOwnMember(name)
+    else owner.getMember(name)
       .orElse(super.getVarType(name))
 
   override def addTypes(e: List[(String, Location)]): TypeContext =
@@ -22,5 +22,7 @@ class ThisTypeContext private(
 
   override def addVars(es: List[(String, Location)]): TypeContext =
     new ThisTypeContext(owner, parent, types, vars ++ es)
+
+  override def toString: String = s"This = $owner ${super.toString}"
 
 }

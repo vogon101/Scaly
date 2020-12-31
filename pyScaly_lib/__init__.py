@@ -1,0 +1,1 @@
+from pyScaly_lib.ScalyObject import *

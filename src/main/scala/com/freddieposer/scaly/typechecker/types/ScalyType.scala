@@ -24,6 +24,11 @@ sealed abstract class ScalyType extends IST {
   def getOwnMember(id: String): Option[Location] =
     memberTypes.get(id)
 
+  def getMember(id: String): Option[Location] =
+    parent.flatMap(_.getMember(id)).orElse(getOwnMember(id))
+
+  def globalName: Option[String] = None
+
 }
 
 object ScalyType {

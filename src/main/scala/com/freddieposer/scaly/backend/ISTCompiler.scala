@@ -11,7 +11,7 @@ class ISTCompiler(_filename: String) {
 
   private val filename = _filename.toPy
 
-  val THIS_NAME = "this".toPy
+  private val THIS_NAME: PyAscii = "this".toPy
 
   private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
     val ctx = new CompilationContext
@@ -35,43 +35,46 @@ class ISTCompiler(_filename: String) {
 
     val classes = ist.classes.map(compileClass(_, ctx))
 
-    val code: BytecodeList = {
+    val code: BytecodeList = ImportSTDLib(ctx) --> {
       import PyOpcodes._
-      classes.flatMap { c =>
+      classes.zip(ist.classes).flatMap { case (pycode, istClass) =>
+
+        val parent = istClass.typ.parent
+          .map(
+            p => p.globalName.map {
+              name => (LOAD_NAME, ctx.name(name.toPy)).toBCL
+            }.getOrElse(throw new Error(s"Cannot inherit from $p"))
+          )
+
         BytecodeList(
           ~LOAD_BUILD_CLASS,
-          (LOAD_CONST, ctx.const(c)),
-          (LOAD_CONST, ctx.const(c.name)),
+          (LOAD_CONST, ctx.const(pycode)),
+          (LOAD_CONST, ctx.const(pycode.name)),
           ~MAKE_FUNCTION,
-          (LOAD_CONST, ctx.const(c.name)),
-          (CALL_FUNCTION, 2.toByte),
-          (STORE_NAME, ctx.name(c.name))
+          (LOAD_CONST, ctx.const(pycode.name))
+        ) --> parent.getOrElse(BytecodeList.empty) --> BytecodeList(
+          (CALL_FUNCTION, (2 + parent.map(_ => 1).getOrElse(0)).toByte),
+          (STORE_NAME, ctx.name(pycode.name))
         )
       }
     } --> TestCaddy(ctx) --> ReturnNone(ctx)
 
 
-    //    val varnames = ???
-    //    val freeVars = ???
-    //    val cellVars = ???
     val name = "<module>".toPy
-    //    val lnotab = ???
 
     val stackSize: Int = 10 // ???
 
     new PyCodeObject(
       0, 0, 0, 0, stackSize, 64, 1,
-      code.compile, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty, PyTuple.empty, name, filename, new PyString(List())
+      code.compile, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty,
+      PyTuple.empty, name, filename, new PyString(List())
     )
   }
 
   def compileClass(istClass: IST_Class, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
     val stackSize: Int = 10 // ???
 
-
-    //    val varMembers = istClass.members.filterNot(t => defMembers.contains(t._1))
-
-    val constructor = compileConstructor(istClass.stats)
+    val constructor = compileConstructor(istClass.stats, istClass.typ.parent.flatMap(_.globalName))
 
     val functions = {
       //TODO: Actual objects
@@ -82,9 +85,6 @@ class ISTCompiler(_filename: String) {
       }
     } ++ (if (istClass.name != "Main") constructor :: Nil else Nil)
 
-    val parentCode = istClass.typ.parent.map { parent =>
-
-    }.getOrElse(BytecodeList.empty)
 
     val code: BytecodeList = {
       import PyOpcodes._
@@ -103,13 +103,13 @@ class ISTCompiler(_filename: String) {
 
     new PyCodeObject(
       0, 0, 0, 0, stackSize, 64, 1,
-      code.compile, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty, PyTuple.empty, istClass.name.toPy, filename, new PyString(List())
+      code.compile, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty, PyTuple.empty, istClass.name.toPy, filename, PyString.empty
     )
 
   }
 
   //TODO: constructor args
-  def compileConstructor(statements: List[IST_Statement]): PyCodeObject = withContext { ctx =>
+  def compileConstructor(statements: List[IST_Statement], parentName: Option[String]): PyCodeObject = withContext { ctx =>
     import PyOpcodes._
 
     val name = "__init__"
@@ -117,6 +117,16 @@ class ISTCompiler(_filename: String) {
 
     val nargs = 1
     val localNames = THIS_NAME :: Nil
+
+    //TODO: Constructor parameters for parent
+    val parentConstructor = parentName.map { p =>
+      BytecodeList(
+        (LOAD_GLOBAL, ctx.name(p.toPy)),
+        (LOAD_METHOD, ctx.name(name.toPy)),
+        (LOAD_FAST, ctx.name(THIS_NAME)),
+        (CALL_METHOD, 1.toByte)
+      )
+    }
 
     localNames.foreach(n => ctx.varname(n))
 
@@ -131,8 +141,10 @@ class ISTCompiler(_filename: String) {
       case expression: IST_Expression =>
         compileExpression(expression, ctx) --> (~POP_TOP).toBCL
     }
-    val code = bcStatements.foldLeft(BytecodeList.empty)(_ --> _) -->
-      BytecodeList((LOAD_CONST, ctx.const(PyNone)), ~RETURN_VALUE)
+    val code =
+      parentConstructor.getOrElse(BytecodeList.empty) -->
+        bcStatements.foldLeft(BytecodeList.empty)(_ --> _) -->
+        BytecodeList((LOAD_CONST, ctx.const(PyNone)), ~RETURN_VALUE)
 
     PyCodeObject(ctx, code.compile, name.toPy, filename, nargs, nargs, nargs, stackSize, 67)
 
@@ -263,8 +275,6 @@ class ISTCompiler(_filename: String) {
         case IST_Var(id, expr, typ) =>
           compileExpression(expr, ctx) --> (STORE_FAST, ctx.varname(id.toPy))
       }
-      //    }.foldRight(BytecodeList.empty)(_ --> _)
-
       //TODO: We need to be popping items off the stack here but we can only do this IF they add things
       // thus all functions NEED to return a PY_NONE if they don't return something else!
     }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
@@ -280,6 +290,16 @@ class ISTCompiler(_filename: String) {
       (CALL_METHOD, 0.toByte),
       (CALL_FUNCTION, 1.toByte),
       ~POP_TOP
+    )
+  }
+
+  private def ImportSTDLib(ctx: CompilationContext): BytecodeList = {
+    import PyOpcodes._
+    BytecodeList(
+      (LOAD_CONST, ctx.const(0.toPy)),
+      (LOAD_CONST, ctx.const(PyTuple(List("*".toPy)))),
+      (IMPORT_NAME, ctx.name("pyScaly_lib".toPy)),
+      ~IMPORT_STAR
     )
   }
 

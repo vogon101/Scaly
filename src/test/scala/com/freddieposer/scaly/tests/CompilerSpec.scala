@@ -35,7 +35,9 @@ class CompilerSpec(val folder: String, val tmp_file: String) extends TestSpec {
         else {
           Logger.debug(ist.toString)
           Logger.debug(pyCodeObject.toString)
-          Logger.debug(res.toString)
+          Logger.warn(s"Expected:\n$expectation")
+          Logger.warn("Actual:\n" + res.toString)
+
           false
         }
 

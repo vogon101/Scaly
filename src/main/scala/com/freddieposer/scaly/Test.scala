@@ -5,7 +5,9 @@ import com.freddieposer.scaly.backend.ISTCompiler
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
+import com.freddieposer.scaly.utils.Logger
 
+import java.io.{BufferedInputStream, InputStream}
 import java.nio.file.{Files, Paths}
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.ListHasAsScala
@@ -149,9 +151,17 @@ object Test {
   def test_run(): Unit = {
     import sys.process._
     val command = s"bash test_files/run_compiled.sh $Q${COMPILED_OUTPUT_FILE}$Q"
-    val res = command.!!
-    println(command)
-    println(res)
+    try {
+      println(command)
+      val logger = ProcessLogger(
+        println(_), Logger.error
+      )
+      val res = command ! logger
+      println(res)
+    }
+    catch {
+      case e: RuntimeException => println(e)
+    }
   }
 
   def main(args: Array[String]): Unit = {

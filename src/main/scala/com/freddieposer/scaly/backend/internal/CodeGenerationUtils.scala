@@ -2,12 +2,16 @@ package com.freddieposer.scaly.backend.internal
 
 import com.freddieposer.scaly.backend.CompilationContext
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{LOAD_CONST, PyOpcode, RETURN_VALUE}
-import com.freddieposer.scaly.backend.pyc.{PyAscii, PyNone}
+import com.freddieposer.scaly.backend.pyc.{PyAscii, PyInt, PyNone}
 
 object CodeGenerationUtils {
 
   implicit class StringPyConverter(val value: String) {
     def toPy: PyAscii = new PyAscii(value)
+  }
+
+  implicit class IntPyConverter(val value:Int) {
+    def toPy: PyInt = new PyInt(value)
   }
 
   def ReturnNone(ctx: CompilationContext): BytecodeList = BytecodeList(

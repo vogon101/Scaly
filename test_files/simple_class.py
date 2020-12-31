@@ -1,3 +1,4 @@
+from pyScaly_lib import *
 print("This is the Python code!")
 
 # class Main:
@@ -22,19 +23,31 @@ print("This is the Python code!")
 #         super().__init__()
 #         print("C")
 
-
 class A:
+    def __init__(self):
+        print("hi")
+
     def foo():
         print("A")
+
 class B(A):
     def __init__(self):
-        print("B init")
+        A.__init__(self)
 
-    def foo():
-        print("B")
-class C(B):
-    def __init__(self):
-        B.__init__(self)
+
+# class A:
+#     def foo():
+#         print("A")
+# class B(A):
+#     def __init__(self):
+#         A.__init__(self)
+#         print("B init")
+#
+#     def foo():
+#         print("B")
+# class C(B):
+#     def __init__(self):
+#         B.__init__(self)
 
 # class FibGen:
 #     def __init__(self):
