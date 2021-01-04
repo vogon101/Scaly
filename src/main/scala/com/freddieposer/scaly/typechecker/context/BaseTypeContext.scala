@@ -12,7 +12,7 @@ object BaseTypeContext extends TypeContext(
   ),
   buildTypeMap(SymbolSource.GLOBAL)(
     "print" -> (ScalyObject --> ScalyUnitType),
-            "str" -> (ScalyObject --> ScalyStringType)
+    "str" -> (ScalyObject --> ScalyStringType)
   ),
   None
 )

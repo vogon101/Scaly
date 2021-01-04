@@ -1,7 +1,5 @@
 package com.freddieposer.scaly.AST
 
-import com.freddieposer.scaly.typechecker.types.ScalyASTPlaceholderType
-
 import scala.meta._
 
 object ASTBuilder {
@@ -20,7 +18,6 @@ object ASTBuilder {
 
         ScalyClassDef(
           name.value,
-          //TODO: constructors
           templ.inits.map { x: Init => x.toString },
           if (templ.stats.isEmpty) None else Some(ScalyTemplate(templ.stats.map(buildStatement))), classParams
         )

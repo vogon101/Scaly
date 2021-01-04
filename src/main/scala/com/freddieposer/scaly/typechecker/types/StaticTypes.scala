@@ -56,6 +56,7 @@ case class ScalyPlaceholderTypeName(name: String) extends StaticScalyType with P
   override lazy val parent: Option[ScalyType] = None
 
   override def memberTypes: TypeMap = ???
+
   override def constructor: Option[List[ClassParam]] = ???
 
   override val globalName: Option[String] = Some(name)

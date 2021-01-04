@@ -33,7 +33,6 @@ class TypeChecker(
     val globalContext = BaseTypeContext.addTypes(types.map { case (id, typ) => id -> Location(typ, SymbolSource.GLOBAL) }.toList)
 
     ast.statements.map {
-      //TODO: Parents
       //TODO: Parental constructor
       case ScalyClassDef(id, parents, body, params) =>
 
@@ -217,7 +216,6 @@ class TypeChecker(
                   .mapError(expr)
                   .map(_ => IST_Application(lhsExpr, actualTypes, rType))
               }
-            //TODO: Apply syntax
             case obj =>
               obj.getMember("apply") match {
                 case Right(Location(_: ScalyFunctionType, _)) => typeCheck_Expr(Application(SelectExpr(lhs, "apply"), actuals))

@@ -10,7 +10,7 @@ object CodeGenerationUtils {
     def toPy: PyAscii = new PyAscii(value)
   }
 
-  implicit class IntPyConverter(val value:Int) {
+  implicit class IntPyConverter(val value: Int) {
     def toPy: PyInt = new PyInt(value)
   }
 
@@ -73,7 +73,6 @@ object CodeGenerationUtils {
 
   class BytecodeAbsoluteMarker extends BytecodeMarker
 
-  //TODO: Relative forward and backwards?
   class BytecodeRelativeMarker extends BytecodeMarker
 
   object Marker {

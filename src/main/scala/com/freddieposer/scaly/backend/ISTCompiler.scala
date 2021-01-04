@@ -108,7 +108,6 @@ class ISTCompiler(_filename: String) {
 
   }
 
-  //TODO: constructor args
   def compileConstructor(statements: List[IST_Statement], params: List[ClassParam], parentName: Option[String]): PyCodeObject = withContext { ctx =>
     import PyOpcodes._
 
@@ -175,10 +174,10 @@ class ISTCompiler(_filename: String) {
         istFunction.args.map(_.toPy)
       )
 
-      localNames.foreach(n => ctx.varname(n))
-
       val stackSize = 10
+      localNames.foreach(n => ctx.varname(n))
       // TODO: + number of other locals
+
 
       val code: BytecodeList =
         compileExpression(istFunction.body, ctx) --> ~RETURN_VALUE
@@ -279,7 +278,7 @@ class ISTCompiler(_filename: String) {
     //TODO: Currently everything leaves something on the stack - could be more efficient if it didn't
     new BytecodeList(block.statements.map {
       case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
-      //TODO: Blocks can contain defs
+      //TODO: Blocks can contain defs - CLOSURES
       case m: IST_Member => m match {
         case IST_Def(id, params, expr, typ) => ???
         case IST_Val(id, expr, typ) =>
@@ -287,8 +286,8 @@ class ISTCompiler(_filename: String) {
         case IST_Var(id, expr, typ) =>
           compileExpression(expr, ctx) --> (STORE_FAST, ctx.varname(id.toPy))
       }
-      //TODO: We need to be popping items off the stack here but we can only do this IF they add things
-      // thus all functions NEED to return a PY_NONE if they don't return something else!
+      //We need to be popping items off the stack here but we can only do this IF they add things
+      //thus all functions NEED to return a PY_NONE if they don't return something else!
     }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
   }
 

@@ -7,6 +7,7 @@ import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValT
 case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType with PlaceholderType {
   override lazy val memberTypes: TypeMap = ???
   override lazy val parent: Option[ScalyType] = ???
+
   override def constructor: Option[List[ClassParam]] = ???
 
   override def globalName: Option[String] = node match {
@@ -24,9 +25,10 @@ class ScalyASTClassType(
 
   override val globalName: Option[String] = Some(name)
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))
+
   override def constructor: Option[List[ClassParam]] = Some(node.params)
 
-  override lazy val memberTypes: TypeMap = construct ({
+  override lazy val memberTypes: TypeMap = construct({
 
     def convertClause(clause: List[FunParam]): ScalyType =
       clause match {
@@ -56,13 +58,13 @@ class ScalyASTClassType(
         stats.flatMap {
           case d: Dcl => Some(d match {
             //TODO: declType can be none
-            case ValDef(id, declType, rhs) =>
-              id -> Location(ScalyASTPlaceholderType(declType.get), SymbolSource.MEMBER)
-            case VarDef(id, declType, rhs) =>
-              id -> Location(ScalyASTPlaceholderType(declType.get), SymbolSource.MEMBER_WRITABLE)
-            case DefDef(id, params, retType, body) =>
-              id -> Location(convertParams(params, ScalyASTPlaceholderType(retType.get)), SymbolSource.MEMBER)
+            case ValDef(id, Some(declType), _) =>
+              id -> Location(ScalyASTPlaceholderType(declType), SymbolSource.MEMBER)
+            case VarDef(id, Some(declType), _) =>
+              id -> Location(ScalyASTPlaceholderType(declType), SymbolSource.MEMBER_WRITABLE)
             //TODO: Return could be none - inference
+            case DefDef(id, params, Some(retType), _) =>
+              id -> Location(convertParams(params, ScalyASTPlaceholderType(retType)), SymbolSource.MEMBER)
           })
           case _: Expr => None
         }

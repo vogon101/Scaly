@@ -24,7 +24,7 @@ case class IST_Class(
                       name: String,
                       defs: Map[String, IST_Def],
                       stats: List[IST_Statement],
-                        //TODO: should this be ClassParam - it is an AST subtype
+                      //TODO: should this be ClassParam - it is an AST subtype
                       params: List[ClassParam],
                       typ: ScalyASTClassType
                     ) extends IST {
@@ -102,7 +102,6 @@ case class IST_Block(statements: List[IST_Statement], typ: ScalyType) extends IS
 //TODO: defs without application - perhaps could use the @property
 case class IST_Application(lhs: IST_Expression, args: List[IST_Expression], typ: ScalyType) extends IST_Expression
 
-//TODO: Constructor arguments
 case class IST_New(name: String, args: List[IST_Expression], typ: ScalyType) extends IST_Expression
 
 //TODO: This transformation should be used in future for the various types

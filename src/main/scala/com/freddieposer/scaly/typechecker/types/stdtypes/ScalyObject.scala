@@ -22,7 +22,7 @@ object ScalyObject extends StaticScalyType {
 
   override def globalName: Option[String] = Some("ScalyObject")
 
-  //TODO: Constructor for Object
+  //TODO: Constructor for ScalyObject?
   override def constructor: Option[List[ClassParam]] = None
 
 }

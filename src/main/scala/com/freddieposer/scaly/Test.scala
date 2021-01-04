@@ -7,7 +7,6 @@ import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
 import com.freddieposer.scaly.utils.Logger
 
-import java.io.{BufferedInputStream, InputStream}
 import java.nio.file.{Files, Paths}
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters.ListHasAsScala
