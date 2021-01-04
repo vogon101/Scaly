@@ -94,5 +94,9 @@ object CodeGenerationUtils {
     def toBCL: BytecodeList = new BytecodeList(bs.toList)
   }
 
+  implicit class ExtendedListOfBytecodeLists(bcls: List[BytecodeList]) {
+    def flat: BytecodeList = bcls.foldLeft(BytecodeList.empty)(_ --> _)
+  }
+
 
 }

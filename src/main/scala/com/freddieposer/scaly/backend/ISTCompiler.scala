@@ -1,9 +1,9 @@
 package com.freddieposer.scaly.backend
 
+import com.freddieposer.scaly.AST.ClassParam
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{POP_TOP, STORE_FAST}
 
 class ISTCompiler(_filename: String) {
 
@@ -74,7 +74,7 @@ class ISTCompiler(_filename: String) {
   def compileClass(istClass: IST_Class, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
     val stackSize: Int = 10 // ???
 
-    val constructor = compileConstructor(istClass.stats, istClass.typ.parent.flatMap(_.globalName))
+    val constructor = compileConstructor(istClass.stats, istClass.params, istClass.typ.parent.flatMap(_.globalName))
 
     val functions = {
       //TODO: Actual objects
@@ -109,26 +109,34 @@ class ISTCompiler(_filename: String) {
   }
 
   //TODO: constructor args
-  def compileConstructor(statements: List[IST_Statement], parentName: Option[String]): PyCodeObject = withContext { ctx =>
+  def compileConstructor(statements: List[IST_Statement], params: List[ClassParam], parentName: Option[String]): PyCodeObject = withContext { ctx =>
     import PyOpcodes._
 
     val name = "__init__"
     val stackSize = 10
 
-    val nargs = 1
-    val localNames = THIS_NAME :: Nil
+    val nargs = 1 + params.length
+    val localNames = THIS_NAME :: params.map(_.id.toPy)
 
     //TODO: Constructor parameters for parent
     val parentConstructor = parentName.map { p =>
       BytecodeList(
         (LOAD_GLOBAL, ctx.name(p.toPy)),
         (LOAD_METHOD, ctx.name(name.toPy)),
-        (LOAD_FAST, ctx.name(THIS_NAME)),
+        (LOAD_FAST, ctx.varname(THIS_NAME)),
         (CALL_METHOD, 1.toByte)
       )
     }
 
     localNames.foreach(n => ctx.varname(n))
+
+    val paramStatements: List[BytecodeList] = params.map { p =>
+      BytecodeList(
+        (LOAD_FAST, ctx.varname(p.id.toPy)),
+        (LOAD_FAST, ctx.varname(THIS_NAME)),
+        (STORE_ATTR, ctx.name(p.id.toPy))
+      )
+    }
 
     val bcStatements: List[BytecodeList] = statements.map {
       case IST_Member(id, expr) =>
@@ -141,10 +149,13 @@ class ISTCompiler(_filename: String) {
       case expression: IST_Expression =>
         compileExpression(expression, ctx) --> (~POP_TOP).toBCL
     }
-    val code =
-      parentConstructor.getOrElse(BytecodeList.empty) -->
-        bcStatements.foldLeft(BytecodeList.empty)(_ --> _) -->
+
+    val code = {
+      paramStatements.flatten -->
+        parentConstructor.getOrElse(BytecodeList.empty) -->
+        bcStatements.flatten -->
         BytecodeList((LOAD_CONST, ctx.const(PyNone)), ~RETURN_VALUE)
+    }
 
     PyCodeObject(ctx, code.compile, name.toPy, filename, nargs, nargs, nargs, stackSize, 67)
 
@@ -232,10 +243,10 @@ class ISTCompiler(_filename: String) {
 
         }
       //TODO: This could simply be rewritten to be a function application?
-      case IST_New(name, args, typ) => BytecodeList(
-        (LOAD_GLOBAL, ctx.name(name.toPy)),
-        (CALL_FUNCTION, 0.toByte)
-      )
+      case IST_New(name, args, typ) =>
+        (LOAD_GLOBAL, ctx.name(name.toPy)).toBCL -->
+          args.map(compileExpression(_, ctx)).flat -->
+          (CALL_FUNCTION, args.length.toByte).toBCL
 
       case IST_Assignment(_name, location, rhs) =>
         val name = nameMangler.getOrElse(_name, _name)
@@ -264,6 +275,7 @@ class ISTCompiler(_filename: String) {
 
   //Currently doesn't return - should be managed by compileFunction
   def compileBlock(block: IST_Block, ctx: CompilationContext): BytecodeList = {
+    import PyOpcodes._
     //TODO: Currently everything leaves something on the stack - could be more efficient if it didn't
     new BytecodeList(block.statements.map {
       case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL

@@ -63,7 +63,7 @@ class PyCodeObject(
     sb.toString()
   }
 
-  def formatCode(): List[String] = {
+  def formatCode(): List[String] =
     code.as_ints.zipWithIndex.grouped(2).map {
       case List((op, i), (arg, _)) =>
         val opcode = PyOpcodes.opcodeMap(op)
@@ -83,7 +83,6 @@ class PyCodeObject(
             case _ => f"$arg%-2d"
           } else "")
     }.toList
-  }
 
   def toBytes: ByteArrayStream = {
 

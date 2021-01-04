@@ -15,6 +15,7 @@ object ISTBuilder {
         case _ => false
       }.map { case m: IST_Def => m.id -> m }.toMap,
       stats.filterNot(_.isInstanceOf[IST_Def]),
+      typ.node.params,
       typ
     )
 

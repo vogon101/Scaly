@@ -1,5 +1,6 @@
 package com.freddieposer.scaly.backend.internal
 
+import com.freddieposer.scaly.AST.ClassParam
 import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
@@ -23,6 +24,8 @@ case class IST_Class(
                       name: String,
                       defs: Map[String, IST_Def],
                       stats: List[IST_Statement],
+                        //TODO: should this be ClassParam - it is an AST subtype
+                      params: List[ClassParam],
                       typ: ScalyASTClassType
                     ) extends IST {
 

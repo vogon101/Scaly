@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.typechecker.types
 
-import com.freddieposer.scaly.AST.ScalyAST
+import com.freddieposer.scaly.AST.{ClassParam, ScalyAST}
 import com.freddieposer.scaly.backend.internal.IST
 import com.freddieposer.scaly.typechecker.context.TypeContext._
 import com.freddieposer.scaly.typechecker.types.ScalyType._
@@ -21,13 +21,15 @@ sealed abstract class ScalyType extends IST {
 
   def visited: Boolean
 
-  def getOwnMember(id: String): Option[Location] =
+  def getOwnMemberLocation(id: String): Option[Location] =
     memberTypes.get(id)
 
-  def getMember(id: String): Option[Location] =
-    parent.flatMap(_.getMember(id)).orElse(getOwnMember(id))
+  def getMemberLocation(id: String): Option[Location] =
+    parent.flatMap(_.getMemberLocation(id)).orElse(getOwnMemberLocation(id))
 
   def globalName: Option[String] = None
+
+  def constructor: Option[List[ClassParam]]
 
 }
 

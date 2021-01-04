@@ -29,7 +29,7 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
   }
 
   private def getMemberOfWellFormedType(typ: ScalyType, memberName: String): Either[String, Location] =
-    typ.getOwnMember(memberName)
+    typ.getOwnMemberLocation(memberName)
       .orElse(typ.parent.flatMap(p => TypeInterpretation(p).getMember(memberName).toOption))
       .toRight(s"Type $typ does not have member $memberName")
 

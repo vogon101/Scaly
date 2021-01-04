@@ -24,7 +24,8 @@ case class ScalyClassDef(
                           id: String,
                           parents: List[String],
                           body: Option[ScalyTemplate],
-                          params: List[List[ClassParam]]
+                          //TODO: Multiple sets of class params
+                          params: List[ClassParam]
                         ) extends ScalyAST with TopLevelStatement
 
 case class ScalyObjectDef(
@@ -35,13 +36,18 @@ case class ScalyObjectDef(
 
 case class ScalyTemplate(stats: List[Statement]) extends ScalyAST
 
-case class ClassParam(
-                       modifiers: List[String],
-                       memberType: String,
-                       id: String,
-                       paramType: AST_ScalyType,
-                       defaultValue: Option[Expr]
-                     )
+sealed abstract class ClassParam {
+  val modifiers: List[String]
+  val id: String
+  val paramType: AST_ScalyType
+  val defaultValue: Option[Expr]
+}
+
+case class ValClassParam(modifiers: List[String], id: String, paramType: AST_ScalyType, defaultValue: Option[Expr]) extends ClassParam
+
+case class VarClassParam(modifiers: List[String], id: String, paramType: AST_ScalyType, defaultValue: Option[Expr]) extends ClassParam
+
+case class NonMemberClassParam(modifiers: List[String], id: String, paramType: AST_ScalyType, defaultValue: Option[Expr]) extends ClassParam
 
 sealed abstract class Statement extends ScalyAST
 

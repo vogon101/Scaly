@@ -34,14 +34,31 @@ class TypeChecker(
 
     ast.statements.map {
       //TODO: Parents
+      //TODO: Parental constructor
       case ScalyClassDef(id, parents, body, params) =>
+
+        // TODO: Typecheck default constructor expressions
+
         val ctx = new ThisTypeContext(types(id), Some(globalContext))
-        body.map { template =>
-          template.stats.map(stat =>
-            typeCheck(stat, SymbolSource.MEMBER)(ctx, Variance.IN)
-          ).collapse
-        }.getOrElse(Right(Nil))
-          .map(stats => ISTBuilder.buildISTClass(id, stats.map(_._1), types(id)))
+
+        params.map(p => convertType(p.paramType)(globalContext)).collapse.flatMap { paramTypes =>
+          //TODO: Add constructor params - currently they show up as members in the context but not
+          //  in the class members - _should_ mean that they cannot be accessed from outside but this
+          //  is a bit of a hack until public/private is working
+          val constructorContext = ctx.addVars(params.zip(paramTypes).map {
+            case (p: VarClassParam, pt) => p.id -> Location(pt, SymbolSource.MEMBER)
+            case (p, pt) => p.id -> Location(pt, SymbolSource.MEMBER)
+          })
+
+          body.map { template =>
+            template.stats.map(stat =>
+              typeCheck(stat, SymbolSource.MEMBER)(constructorContext, Variance.IN)
+            ).collapse
+          }.getOrElse(Right(Nil))
+            .map(stats => ISTBuilder.buildISTClass(id, stats.map(_._1), types(id)))
+        }
+
+
       case ScalyObjectDef(id, parents, body) => ???
     }.collapse.map(new IST_CompilationUnit(_))
   }
@@ -241,10 +258,21 @@ class TypeChecker(
         }
 
       case NewExpr(astType@AST_ScalyTypeName(name), params) =>
-        convertType(astType).map { typ =>
-          params.map(typeCheck_Expr)
-          if (params.nonEmpty) ???
-          else IST_New(name, Nil, typ)
+        convertType(astType).flatMap { typ =>
+          typ.constructor.map(constructor => {
+            if (constructor.length == params.length) {
+              params.map(typeCheck_Expr).collapse.flatMap { actualsExpressions =>
+                constructor.map(p => convertType(p.paramType)).collapse.flatMap { formalTypes =>
+                  actualsExpressions.zip(formalTypes)
+                    .map { case (a, f) => doesUnify(a.typ, f).mapError(expr) }
+                    .collapse
+                    .map(_ => IST_New(name, actualsExpressions, typ))
+                }
+              }
+            } else {
+              Left(TypeError(s"${constructor.length} params required for $typ constructor but got ${params.length}", expr))
+            }
+          }).getOrElse(Left(TypeError(s"Cannot construct $typ", expr)))
         }
 
       case AssignExpr(lhs, rhs) => lhs match {
@@ -254,7 +282,7 @@ class TypeChecker(
               typeCheck_Expr(rhs).flatMap { ist =>
                 doesUnify(ist.typ, location.typ)(ctx, Variance.CO).mapError(expr).map(_ => IST_Assignment(name, location, ist))
               }
-            else Left(TypeError(s"Cannot assign to location $location", expr))
+            else Left(TypeError(s"Cannot assign to $name [location $location]", expr))
         }
         case _ => ???
       }

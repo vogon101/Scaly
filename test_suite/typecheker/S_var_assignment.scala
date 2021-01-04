@@ -15,6 +15,8 @@ class Foo {
     myA = new C
     myB = new C
 
+    (new MyThing("Name1")).rename("This is a new name")
+
     x
   }
 
@@ -23,3 +25,9 @@ class Foo {
 class A
 class B extends A
 class C extends B
+
+class MyThing (var name: String) {
+
+  def rename(newName: String): Unit = name = newName
+
+}

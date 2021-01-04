@@ -1,5 +1,7 @@
 package com.freddieposer.scaly.AST
 
+import com.freddieposer.scaly.typechecker.types.ScalyASTPlaceholderType
+
 import scala.meta._
 
 object ASTBuilder {
@@ -10,12 +12,17 @@ object ASTBuilder {
   private def buildTopLevel(stat: Stat): TopLevelStatement =
     stat match {
       case Defn.Class(mods, name, tparams, ctor, templ) =>
+        val classParams = ctor.paramss match {
+          case Nil => Nil
+          case ps :: Nil => ps.map(buildClassParam)
+          case _ => ???
+        }
+
         ScalyClassDef(
           name.value,
           //TODO: constructors
           templ.inits.map { x: Init => x.toString },
-          if (templ.stats.isEmpty) None else Some(ScalyTemplate(templ.stats.map(buildStatement))),
-          ctor.paramss.map(_.map(buildClassParam))
+          if (templ.stats.isEmpty) None else Some(ScalyTemplate(templ.stats.map(buildStatement))), classParams
         )
       case Defn.Object(mods, name, templ) =>
         ScalyObjectDef(
@@ -26,7 +33,26 @@ object ASTBuilder {
 
     }
 
-  private def buildClassParam(param: Term.Param): ClassParam = ???
+  private def buildClassParam(param: Term.Param): ClassParam = {
+
+    //TODO: Assuming that val/var is always last mod if it exists
+    //TODO: Default values
+
+    val mods = param.mods.map(_.toString)
+    val declType = buildScalyType(param.decltpe.get)
+
+    param.mods match {
+      case Nil =>
+        NonMemberClassParam(mods, param.name.value, declType, None)
+      case Mod.ValParam() :: Nil =>
+        ValClassParam(mods, param.name.value, declType, None)
+      case Mod.VarParam() :: Nil =>
+        VarClassParam(mods, param.name.value, declType, None)
+      case _ => ???
+    }
+
+
+  }
 
   private def buildStatement(stat: Stat): Statement =
     stat match {

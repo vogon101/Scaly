@@ -7,6 +7,7 @@ import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValT
 case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType with PlaceholderType {
   override lazy val memberTypes: TypeMap = ???
   override lazy val parent: Option[ScalyType] = ???
+  override def constructor: Option[List[ClassParam]] = ???
 
   override def globalName: Option[String] = node match {
     case AST_ScalyTypeName(name) => Some(name)
@@ -23,8 +24,9 @@ class ScalyASTClassType(
 
   override val globalName: Option[String] = Some(name)
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))
+  override def constructor: Option[List[ClassParam]] = Some(node.params)
 
-  override lazy val memberTypes: TypeMap = construct {
+  override lazy val memberTypes: TypeMap = construct ({
 
     def convertClause(clause: List[FunParam]): ScalyType =
       clause match {
@@ -41,7 +43,15 @@ class ScalyASTClassType(
       }
     }
 
-    node.body match {
+    val constructorMembers = node.params.flatMap {
+      case ValClassParam(_, id, typ, _) =>
+        Some(id -> Location(ScalyASTPlaceholderType(typ), SymbolSource.MEMBER))
+      case VarClassParam(_, id, typ, _) =>
+        Some(id -> Location(ScalyASTPlaceholderType(typ), SymbolSource.MEMBER_WRITABLE))
+      case _ => None
+    }
+
+    (node.body match {
       case Some(ScalyTemplate(stats)) =>
         stats.flatMap {
           case d: Dcl => Some(d match {
@@ -55,10 +65,10 @@ class ScalyASTClassType(
             //TODO: Return could be none - inference
           })
           case _: Expr => None
-        }.toMap
-      case None => Map()
-    }
-  }
+        }
+      case None => List()
+    }) ++ constructorMembers
+  }.toMap)
 
   private val _visited: Boolean = false
 

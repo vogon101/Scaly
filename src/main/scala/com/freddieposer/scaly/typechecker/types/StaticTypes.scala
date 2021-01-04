@@ -1,20 +1,17 @@
 package com.freddieposer.scaly.typechecker.types
 
+import com.freddieposer.scaly.AST.ClassParam
 import com.freddieposer.scaly.typechecker.context.TypeContext.{TypeMap, buildTypeMap}
 import com.freddieposer.scaly.typechecker.types.ScalyType.defaultMembers
 import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValType}
-
-case class ScalyClassType(name: String, override val parent: Option[ScalyType], myMembers: TypeMap) extends StaticScalyType {
-
-  override val memberTypes: TypeMap = defaultMembers ++ myMembers
-
-}
 
 case class ScalyFunctionType(from: Option[ScalyType], to: ScalyType) extends StaticScalyType {
 
   override lazy val parent: Option[ScalyType] = Some(ScalyObject)
 
   override val memberTypes: TypeMap = defaultMembers ++ Map()
+
+  override def constructor: Option[List[ClassParam]] = None
 
 }
 
@@ -38,6 +35,8 @@ class ScalyTupleType private(val elems: List[ScalyType]) extends StaticScalyType
 
   override def toString: String = s"TupleType(${elems.mkString(", ")})"
 
+  override def constructor: Option[List[ClassParam]] = None
+
 }
 
 object ScalyTupleType {
@@ -52,16 +51,12 @@ object ScalyTupleType {
 
 }
 
-case class ScalyPlaceholderType() extends StaticScalyType with PlaceholderType {
-  override lazy val parent: Option[ScalyType] = None
-
-  override lazy val memberTypes: TypeMap = ???
-}
 
 case class ScalyPlaceholderTypeName(name: String) extends StaticScalyType with PlaceholderType {
   override lazy val parent: Option[ScalyType] = None
 
   override def memberTypes: TypeMap = ???
+  override def constructor: Option[List[ClassParam]] = ???
 
   override val globalName: Option[String] = Some(name)
 }
