@@ -5,6 +5,7 @@ class Main {
     print(dog)
     dog.getOlder()
     dog
+    new Puppy(0)
   }
 
 }
@@ -15,10 +16,10 @@ class Dog(val name: String, var age: Int, otherThing: String) {
   print(name)
   print(age)
 
-  name = "Name"
-
   override def toString: String = "I am a dog called " + name + " aged " + str(age)
 
   def getOlder(): Unit = age = age + 1
 
 }
+
+class Puppy (_a: Int) extends Dog("Puppy", _a, "")

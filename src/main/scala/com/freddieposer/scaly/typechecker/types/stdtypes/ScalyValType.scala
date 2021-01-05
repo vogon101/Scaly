@@ -7,10 +7,9 @@ import com.freddieposer.scaly.typechecker.types.{ScalyType, StaticScalyType, Sym
 
 sealed abstract case class ScalyValType(name: String) extends StaticScalyType {
 
-
   override protected def memberTypes: TypeMap = Map()
 
-  override val parent: Option[ScalyType] = Some(ScalyObject)
+  override val parent: Option[ScalyType] = Some(ScalyAny)
 
   override def constructor: Option[List[ClassParam]] = None
 }

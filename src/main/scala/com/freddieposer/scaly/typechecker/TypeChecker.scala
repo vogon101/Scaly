@@ -25,8 +25,11 @@ class TypeChecker(
 
     val types: Map[String, ScalyASTClassType] =
       ast.statements.map {
-        case c@ScalyClassDef(id, parents, _, _) =>
-          id -> ScalyASTClassType(id, parents.headOption.map(ScalyPlaceholderTypeName), c)
+        case c@ScalyClassDef(id, Nil, _, _) =>
+          id -> ScalyASTClassType(id, None, c)
+        //TODO: Multiple parents
+        case c@ScalyClassDef(id, (parent, _) :: Nil, _, _) =>
+          id -> ScalyASTClassType(id, Some(ScalyPlaceholderTypeName(parent.name)), c)
         case ScalyObjectDef(id, parents, body) => ???
       }.toMap
 
@@ -34,27 +37,57 @@ class TypeChecker(
 
     ast.statements.map {
       //TODO: Parental constructor
-      case ScalyClassDef(id, parents, body, params) =>
+      case stat@ScalyClassDef(id, parents, body, params) =>
 
         // TODO: Typecheck default constructor expressions
 
         val ctx = new ThisTypeContext(types(id), Some(globalContext))
 
+
         params.map(p => convertType(p.paramType)(globalContext)).collapse.flatMap { paramTypes =>
           //TODO: Add constructor params - currently they show up as members in the context but not
           //  in the class members - _should_ mean that they cannot be accessed from outside but this
           //  is a bit of a hack until public/private is working
-          val constructorContext = ctx.addVars(params.zip(paramTypes).map {
+          val constructorParams = params.zip(paramTypes).map {
             case (p: VarClassParam, pt) => p.id -> Location(pt, SymbolSource.MEMBER)
             case (p, pt) => p.id -> Location(pt, SymbolSource.MEMBER)
-          })
+          }
 
-          body.map { template =>
-            template.stats.map(stat =>
-              typeCheck(stat, SymbolSource.MEMBER)(constructorContext, Variance.IN)
-            ).collapse
+          //Typecheck the application of the parent if it exists
+          val parentResult: TCR[List[IST_Expression]] = parents.headOption.map { case (p, pActualParams) =>
+            implicit val parentConsCtx = globalContext.addVars(constructorParams)
+            convertType(p).flatMap { parent =>
+              (parent.constructor, pActualParams) match {
+                case (None, Nil) => Right(Nil)
+                case (None, _ :: _) =>
+                  Left(TypeError(s"Parent ${p.name} of $id does not take construcor parameters", stat))
+                case (Some(formalParams), actualParams) =>
+                  if (formalParams.length != actualParams.length)
+                    Left(TypeError(s"Parent ${p.name} of $id expects ${formalParams.length} constructor params, got ${actualParams.length}", stat))
+                  else
+                    actualParams.map(typeCheck_Expr(_)(parentConsCtx, Variance.IN)).collapse.flatMap { actualsTypes =>
+                      formalParams.map(fp => convertType(fp.paramType)).collapse.flatMap { formalsTypes =>
+                        actualsTypes.zip(formalsTypes)
+                          .map { case (t1, t2) => doesUnify(t1.typ, t2)(parentConsCtx, Variance.CO).mapError(stat) }
+                          .collapse.map(_ => actualsTypes)
+                      }
+                    }
+                case _ =>
+                  Left(TypeError(s"Params for parent ${p.name} of class $id do not match", stat))
+              }
+            }
           }.getOrElse(Right(Nil))
-            .map(stats => ISTBuilder.buildISTClass(id, stats.map(_._1), types(id)))
+
+          //Typecheck the body of the class
+          parentResult.flatMap(pr => {
+            val consCtx = ctx.addVars(constructorParams)
+            body.map { template =>
+              template.stats.map(stat =>
+                typeCheck(stat, SymbolSource.MEMBER)(consCtx, Variance.IN)
+              ).collapse
+            }.getOrElse(Right(Nil))
+              .map(stats => ISTBuilder.buildISTClass(id, pr, stats.map(_._1), types(id)))
+          })
         }
 
 

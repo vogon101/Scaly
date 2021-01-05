@@ -4,7 +4,8 @@ class Test {
   def bar(z: String): Int = foo(101)
 
   def callMe(z: Int): Int = z + 100
-  def caller: String = callMe(100).toString
+  //TODO: Autoboxing (or equiv) to allow value types to have .toString etc
+  def caller: String = str(callMe(100))
 
   def withBlock: String = {
     100

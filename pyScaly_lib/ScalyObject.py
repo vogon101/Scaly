@@ -1,6 +1,3 @@
-#TODO: Currently value types are conceptually subtypes of ScalyObject but
-#   not actually in python
-
 class ScalyObject(object):
     def toString(self):
         return "ScalyObject @ " + str(super.__str__(self))

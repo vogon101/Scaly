@@ -22,7 +22,8 @@ abstract class Literal extends Expr
 
 case class ScalyClassDef(
                           id: String,
-                          parents: List[String],
+                          //TODO: Good god this is horrible
+                          parents: List[(AST_ScalyTypeName, List[Expr])],
                           body: Option[ScalyTemplate],
                           //TODO: Multiple sets of class params
                           params: List[ClassParam]

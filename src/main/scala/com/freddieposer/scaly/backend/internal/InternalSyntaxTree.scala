@@ -22,10 +22,12 @@ class IST_CompilationUnit(val classes: List[IST_Class]) extends IST {
 //TODO: Parents
 case class IST_Class(
                       name: String,
-                      defs: Map[String, IST_Def],
-                      stats: List[IST_Statement],
-                      //TODO: should this be ClassParam - it is an AST subtype
                       params: List[ClassParam],
+                      parent: Option[String],
+                      parentParams: List[IST_Expression],
+                      defs: Map[String, IST_Def],
+                      statements: List[IST_Statement],
+                      //TODO: should this be ClassParam - it is an AST subtype
                       typ: ScalyASTClassType
                     ) extends IST {
 

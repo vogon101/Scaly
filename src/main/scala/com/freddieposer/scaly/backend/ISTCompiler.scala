@@ -1,6 +1,5 @@
 package com.freddieposer.scaly.backend
 
-import com.freddieposer.scaly.AST.ClassParam
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
@@ -74,7 +73,7 @@ class ISTCompiler(_filename: String) {
   def compileClass(istClass: IST_Class, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
     val stackSize: Int = 10 // ???
 
-    val constructor = compileConstructor(istClass.stats, istClass.params, istClass.typ.parent.flatMap(_.globalName))
+    val constructor = compileConstructor(istClass)
 
     val functions = {
       //TODO: Actual objects
@@ -108,28 +107,32 @@ class ISTCompiler(_filename: String) {
 
   }
 
-  def compileConstructor(statements: List[IST_Statement], params: List[ClassParam], parentName: Option[String]): PyCodeObject = withContext { ctx =>
+  def compileConstructor(istClass: IST_Class): PyCodeObject = withContext { ctx =>
+
     import PyOpcodes._
 
-    val name = "__init__"
+    val constructorName = "__init__".toPy
     val stackSize = 10
 
-    val nargs = 1 + params.length
-    val localNames = THIS_NAME :: params.map(_.id.toPy)
+    val nargs = 1 + istClass.params.length
+    val localNames = THIS_NAME :: istClass.params.map(_.id.toPy)
 
     //TODO: Constructor parameters for parent
-    val parentConstructor = parentName.map { p =>
+    val parentConstructor = istClass.parent.map { p =>
+
+      val paramCode = istClass.parentParams.map(compileExpression(_, ctx)).flat
+
       BytecodeList(
         (LOAD_GLOBAL, ctx.name(p.toPy)),
-        (LOAD_METHOD, ctx.name(name.toPy)),
-        (LOAD_FAST, ctx.varname(THIS_NAME)),
-        (CALL_METHOD, 1.toByte)
-      )
+        (LOAD_METHOD, ctx.name(constructorName)),
+        (LOAD_FAST, ctx.varname(THIS_NAME))
+      ) --> paramCode -->
+        (CALL_METHOD, (1 + istClass.parentParams.length).toByte).toBCL
     }
 
     localNames.foreach(n => ctx.varname(n))
 
-    val paramStatements: List[BytecodeList] = params.map { p =>
+    val paramStatements: List[BytecodeList] = istClass.params.map { p =>
       BytecodeList(
         (LOAD_FAST, ctx.varname(p.id.toPy)),
         (LOAD_FAST, ctx.varname(THIS_NAME)),
@@ -137,7 +140,7 @@ class ISTCompiler(_filename: String) {
       )
     }
 
-    val bcStatements: List[BytecodeList] = statements.map {
+    val bcStatements: List[BytecodeList] = istClass.statements.map {
       case IST_Member(id, expr) =>
         compileExpression(expr, ctx) -->
           BytecodeList(
@@ -156,7 +159,7 @@ class ISTCompiler(_filename: String) {
         BytecodeList((LOAD_CONST, ctx.const(PyNone)), ~RETURN_VALUE)
     }
 
-    PyCodeObject(ctx, code.compile, name.toPy, filename, nargs, nargs, nargs, stackSize, 67)
+    PyCodeObject(ctx, code.compile, constructorName, filename, nargs, nargs, nargs, stackSize, 67)
 
   }
 

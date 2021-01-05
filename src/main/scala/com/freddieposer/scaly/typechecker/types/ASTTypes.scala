@@ -25,6 +25,7 @@ class ScalyASTClassType(
 
   override val globalName: Option[String] = Some(name)
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))
+  lazy val parentConstructor: Option[List[Expr]] = node.parents.headOption.map(_._2)
 
   override def constructor: Option[List[ClassParam]] = Some(node.params)
 

@@ -4,15 +4,16 @@ import com.freddieposer.scaly.typechecker.context.TypeContext.buildTypeMap
 import com.freddieposer.scaly.typechecker.types.SymbolSource
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyObjectUtils._
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyStringType, ScalyUnitType}
-import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValType}
+import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyAny, ScalyObject, ScalyValType}
 
 object BaseTypeContext extends TypeContext(
   ScalyValType.valTypes ++ buildTypeMap(SymbolSource.GLOBAL)(
-    "Object" -> ScalyObject
+    "Object" -> ScalyObject,
+    "Any" -> ScalyAny
   ),
   buildTypeMap(SymbolSource.GLOBAL)(
-    "print" -> (ScalyObject --> ScalyUnitType),
-    "str" -> (ScalyObject --> ScalyStringType)
+    "print" -> (ScalyAny --> ScalyUnitType),
+    "str" -> (ScalyAny --> ScalyStringType)
   ),
   None
 )

@@ -5,23 +5,23 @@ import com.freddieposer.scaly.typechecker.context.TypeContext.{TypeMap, buildTyp
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyStringType}
 import com.freddieposer.scaly.typechecker.types.{ScalyType, StaticScalyType, SymbolSource}
 
-object ScalyObject extends StaticScalyType {
+object ScalyAny extends StaticScalyType {
 
-  override lazy val parent: Option[ScalyType] = Some(ScalyAny)
+  override lazy val parent: Option[ScalyType] = None
 
   import ScalyObjectUtils._
 
   override protected lazy val memberTypes: TypeMap = buildTypeMap(Map(
-    "toString" -> (O --> ScalyStringType),
-    "equals" -> (ScalyObject --> ScalyBooleanType)
+    "==" -> (ScalyAny --> ScalyBooleanType),
+    "__bases__" -> (O --> ScalyObject),
+    "__str__" -> (O --> ScalyStringType),
+    "__eq__" -> (O --> ScalyStringType)
   ), SymbolSource.MEMBER)
 
-  override def toString: String = "ScalyObject"
+  override def toString: String = "ScalyAny"
 
-  override def globalName: Option[String] = Some("ScalyObject")
+  override def globalName: Option[String] = Some("ScalyAny")
 
-  //TODO: Constructor for ScalyObject?
   override def constructor: Option[List[ClassParam]] = None
 
 }
-

@@ -7,15 +7,18 @@ import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 
 object ISTBuilder {
 
-  def buildISTClass(id: String, stats: List[IST_Statement], typ: ScalyASTClassType): IST_Class =
+  def buildISTClass(id: String, parentConstructor: List[IST_Expression], stats: List[IST_Statement], typ: ScalyASTClassType): IST_Class =
     IST_Class(
       id,
+      typ.node.params,
+      //TODO: Error on extending from no-name class
+      typ.parent.flatMap(_.globalName),
+      parentConstructor,
       stats.filter {
         case _: IST_Def => true
         case _ => false
       }.map { case m: IST_Def => m.id -> m }.toMap,
       stats.filterNot(_.isInstanceOf[IST_Def]),
-      typ.node.params,
       typ
     )
 
