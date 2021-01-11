@@ -1,7 +1,7 @@
 package com.freddieposer.scaly.typechecker.context
 
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap}
-import com.freddieposer.scaly.typechecker.types.ScalyType
+import com.freddieposer.scaly.typechecker.types.{ScalyType, SymbolSource}
 import com.freddieposer.scaly.typechecker.types.SymbolSource.SymbolSource
 
 import scala.collection.mutable
@@ -14,13 +14,15 @@ class TypeContext(
 
   private type MMap[K, V] = mutable.Map[K, V]
 
+  def escalateVar(name: String): Option[Location] = getVarType(name)
+
   def getWellFormedType(name: String): Option[Location] =
     if (types isDefinedAt name) types get name
     else parent.flatMap(_ getWellFormedType name)
 
   def getVarType(name: String): Option[Location] =
     if (vars isDefinedAt name) vars get name
-    else parent.flatMap(_ getVarType name)
+    else parent.flatMap(_ escalateVar name)
 
   final def addType(e: (String, Location)): TypeContext = addTypes(List(e))
 
@@ -50,7 +52,9 @@ class TypeContext(
 
 object TypeContext {
 
-  case class Location(typ: ScalyType, source: SymbolSource)
+  case class Location(typ: ScalyType, source: SymbolSource) {
+    def writable: Option[Location] = SymbolSource.writable(source).map(Location(typ, _))
+  }
 
   implicit def WrapLocation(t: (ScalyType, SymbolSource)) = Location(t._1, t._2)
 

@@ -79,7 +79,7 @@ class PyCodeObject(
               f"$arg%-2d - " +
                 (if (arg < cellVars.length)
                   f"${cellVars.objects(arg).shortName} [CV]"
-                else f"${freeVars.objects(arg).shortName} [FV]")
+                else f"${freeVars.objects(arg - cellVars.length).shortName} [FV]")
             case _ => f"$arg%-2d"
           } else "")
     }.toList

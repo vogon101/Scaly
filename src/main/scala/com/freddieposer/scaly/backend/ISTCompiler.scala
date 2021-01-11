@@ -4,6 +4,7 @@ import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
 
+
 class ISTCompiler(_filename: String) {
 
   import CodeGenerationUtils._
@@ -169,6 +170,9 @@ class ISTCompiler(_filename: String) {
       import PyOpcodes.RETURN_VALUE
       val name = nameMangler.getOrElse(_name, _name)
 
+      istFunction.closedVars.foreach(c => ctx.cell(c._1.toPy))
+      istFunction.freeVars.foreach(c => ctx.free(c._1.toPy))
+
       val (nargs, localNames) = if (outerContext.inClass) (
         istFunction.args.length + 1,
         THIS_NAME :: istFunction.args.map(_.toPy)
@@ -188,14 +192,14 @@ class ISTCompiler(_filename: String) {
       //TODO: Understand flags
       PyCodeObject(
         ctx, code.compile, name.toPy, filename, nargs, nargs,
-        ctx.varnames.length, stackSize, 67
+        ctx.varnames.length, stackSize, 67, ctx.freevars, ctx.cellvars
       )
     }
 
   def compileExpression(expression: IST_Expression, ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
     expression match {
-      case IST_Function(args, body, typ) => ???
+      case f: IST_Function => ???
       case IST_If(cond, tBranch, Some(fBranch), typ) =>
         val falseMarker = Marker.absolute
         val endMarker = Marker.relative
@@ -231,17 +235,21 @@ class ISTCompiler(_filename: String) {
         val name = nameMangler.getOrElse(_name, _name)
         import com.freddieposer.scaly.typechecker.types.SymbolSource._
         location.source match {
+          case LOCAL | LOCAL_WRITABLE if ctx.isCellVar(name) =>
+            (LOAD_DEREF, ctx.cell(name.toPy)).toBCL
           case LOCAL | LOCAL_WRITABLE =>
-            BytecodeList((LOAD_FAST, ctx.varname(name.toPy)))
+            (LOAD_FAST, ctx.varname(name.toPy)).toBCL
+          case CLOSURE | CLOSURE_WRITABLE =>
+            (LOAD_DEREF, ctx.free(name.toPy)).toBCL
           case MEMBER | MEMBER_WRITABLE =>
             BytecodeList(
               (LOAD_FAST, ctx.varname(THIS_NAME)),
               (LOAD_ATTR, ctx.name(name.toPy))
             )
           case GLOBAL =>
-            BytecodeList((LOAD_GLOBAL, ctx.name(name.toPy)))
+            (LOAD_GLOBAL, ctx.name(name.toPy)).toBCL
           case THIS =>
-            BytecodeList((LOAD_NAME, ctx.varname(THIS_NAME)))
+            (LOAD_NAME, ctx.varname(THIS_NAME)).toBCL
 
         }
       //TODO: This could simply be rewritten to be a function application?
@@ -254,7 +262,12 @@ class ISTCompiler(_filename: String) {
         val name = nameMangler.getOrElse(_name, _name)
         import com.freddieposer.scaly.typechecker.types.SymbolSource._
         compileExpression(rhs, ctx) --> (location.source match {
-          case LOCAL_WRITABLE => (STORE_FAST, ctx.varname(name.toPy)).toBCL
+          case LOCAL_WRITABLE if ctx.isCellVar(name) =>
+            (STORE_DEREF, ctx.cell(name.toPy)).toBCL
+          case LOCAL_WRITABLE =>
+            (STORE_FAST, ctx.varname(name.toPy)).toBCL
+          case CLOSURE_WRITABLE =>
+            (STORE_DEREF, ctx.free(name.toPy)).toBCL
           case MEMBER_WRITABLE => BytecodeList(
             (LOAD_FAST, ctx.varname(THIS_NAME)),
             (STORE_ATTR, ctx.name(name.toPy))
@@ -283,11 +296,22 @@ class ISTCompiler(_filename: String) {
       case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
       //TODO: Blocks can contain defs - CLOSURES
       case m: IST_Member => m match {
-        case IST_Def(id, params, expr, typ) => ???
-        case IST_Val(id, expr, typ) =>
-          compileExpression(expr, ctx) --> (STORE_FAST, ctx.varname(id.toPy))
-        case IST_Var(id, expr, typ) =>
-          compileExpression(expr, ctx) --> (STORE_FAST, ctx.varname(id.toPy))
+        case d @ IST_Def(id, _, _, _, _, freeVars) =>
+          (if (freeVars.nonEmpty)
+            freeVars.map { case (n, l) => IST_Name(n, l) }
+              .map(n => (LOAD_CLOSURE, ctx.freeOrCell(n.name)).toBCL)
+              .toList.flat --> (BUILD_TUPLE, freeVars.size.toByte)
+          else BytecodeList.empty) --> BytecodeList(
+          (LOAD_CONST, ctx.const(compileFunction(id, d.func, ctx))),
+          (LOAD_CONST, ctx.const(id.toPy)),
+          (MAKE_FUNCTION, (if (freeVars.nonEmpty) 8 else 0).toByte),
+          (STORE_FAST, ctx.varname(id.toPy))
+        )
+
+        case IST_Val(id, expr, location) =>
+          compileExpression(IST_Assignment(id, location.writable.get, expr), ctx)
+        case IST_Var(id, expr, location) =>
+          compileExpression(IST_Assignment(id, location.writable.get, expr), ctx)
       }
       //We need to be popping items off the stack here but we can only do this IF they add things
       //thus all functions NEED to return a PY_NONE if they don't return something else!

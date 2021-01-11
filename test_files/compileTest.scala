@@ -1,25 +1,50 @@
 class Main {
 
-  def main(): Dog = {
-    val dog = new Dog("Doggo", 10, "other")
-    print(dog)
-    dog.getOlder()
-    dog
-    new Puppy(0)
+  def main(): Unit = {
+
+    val p: String = "String here"
+    var barCounter: Int = 0
+
+    def x(param1: String): String => String => Unit = {
+      print("X: " + param1)
+      def y(param2: String): String => Unit = {
+        print("Y: " + param2)
+        def z(param3: String): Unit = {
+          print("Z: " + param3)
+          print(">> " + p)
+          print(param1 + param2 + param3)
+
+        }
+
+        z
+
+      }
+
+      y
+
+    }
+
+    def foo(z: Int): Int = {
+      print(p)
+      z + 1
+    }
+
+    def bar(): Unit = {
+      barCounter = barCounter + 1
+      print(barCounter)
+    }
+
+    while(barCounter < 10)
+      bar()
+
+    val curried = x("Hello ")("Mr ")
+    print("==")
+    curried("Poser")
+
+
+    print(foo(100))
+
   }
 
 }
 
-class Dog(val name: String, var age: Int, otherThing: String) {
-
-  print("Dog")
-  print(name)
-  print(age)
-
-  override def toString: String = "I am a dog called " + name + " aged " + str(age)
-
-  def getOlder(): Unit = age = age + 1
-
-}
-
-class Puppy (_a: Int) extends Dog("Puppy", _a, "")
