@@ -86,15 +86,15 @@ object Test {
   def test_tc(): Unit = {
 
     val lines = Files.readAllLines(Paths.get(SCALA_INPUT_FILE)).asScala.mkString("\n")
-    println(lines)
+    //    println(lines)
 
     import scala.meta._
 
     val x = lines.parse[scala.meta.Source].get
 
-    println(x.structure)
-    println(x.stats.head.children.map(_.structure).mkString("\n"))
-    printAST(x.stats.head, 0)
+    //    println(x.structure)
+    //    println(x.stats.head.children.map(_.structure).mkString("\n"))
+    //    printAST(x.stats.head, 0)
     val ast = ASTBuilder.fromScalaMeta(x)
     val tc = new TypeChecker(ast)
 
@@ -164,7 +164,7 @@ object Test {
   }
 
   def main(args: Array[String]): Unit = {
-    test_tc()
+    //    test_tc()
     test_pyc()
     test_compile()
     test_run()

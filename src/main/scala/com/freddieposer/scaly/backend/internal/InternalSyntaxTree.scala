@@ -51,16 +51,22 @@ case class IST_Def(
                     id: String,
                     params: List[Map[String, ScalyType]],
                     expr: IST_Expression,
-                    typ: ScalyType
+                    typ: ScalyType,
+                    closedVars: Map[String, Location],
+                    freeVars: Map[String, Location]
                   ) extends IST_Member {
 
-  def func: IST_Function = IST_Function.build(params, expr, typ)
+  def func: IST_Function = IST_Function.build(params, expr, typ, closedVars, freeVars)
 
 }
 
-case class IST_Val(id: String, expr: IST_Expression, typ: ScalyType) extends IST_Member
+case class IST_Val(id: String, expr: IST_Expression, location: Location) extends IST_Member {
+  override val typ: ScalyType = location.typ
+}
 
-case class IST_Var(id: String, expr: IST_Expression, typ: ScalyType) extends IST_Member
+case class IST_Var(id: String, expr: IST_Expression, location: Location) extends IST_Member {
+  override val typ: ScalyType = location.typ
+}
 
 
 sealed abstract class IST_Expression extends IST_Statement
@@ -68,22 +74,27 @@ sealed abstract class IST_Expression extends IST_Statement
 case class IST_Function(
                          args: List[String],
                          body: IST_Expression,
-                         typ: ScalyFunctionType
+                         typ: ScalyFunctionType,
+                         closedVars: Map[String, Location],
+                         freeVars: Map[String, Location]
                        ) extends IST_Expression
 
 object IST_Function {
 
-  def build(params: List[Map[String, ScalyType]], expr: IST_Expression, returnType: ScalyType): IST_Function =
+  def build(params: List[Map[String, ScalyType]], expr: IST_Expression, returnType: ScalyType, closedVars: Map[String, Location],
+            freeVars: Map[String, Location]): IST_Function =
     params match {
-      case Nil => IST_Function(Nil, expr, ScalyFunctionType(None, returnType))
+      case Nil => IST_Function(Nil, expr, ScalyFunctionType(None, returnType), closedVars, freeVars)
       case ps :: Nil =>
-        IST_Function(ps.keys.toList, expr, ScalyFunctionType(Some(ScalyTupleType(ps.values.toList)), returnType))
+        IST_Function(ps.keys.toList, expr, ScalyFunctionType(Some(ScalyTupleType(ps.values.toList)), returnType), closedVars, freeVars)
       case ps :: pss =>
         IST_Function(
           ps.keys.toList,
-          build(pss, expr, returnType),
+          build(pss, expr, returnType, closedVars, freeVars),
           //FIXME
-          ScalyFunctionType.build(returnType, params.map(_.values.toList)).asInstanceOf[ScalyFunctionType]
+          ScalyFunctionType.build(returnType, params.map(_.values.toList)).asInstanceOf[ScalyFunctionType],
+          closedVars,
+          freeVars
         )
     }
 

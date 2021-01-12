@@ -7,6 +7,7 @@ import com.freddieposer.scaly.typechecker.Utils.TCR
 import com.freddieposer.scaly.utils.Logger
 
 import java.nio.file.{Files, Path, Paths}
+import java.util.NoSuchElementException
 
 class CompilerSpec(val folder: Path, val tmp_file: String) extends TestSpec {
 
@@ -25,23 +26,40 @@ class CompilerSpec(val folder: Path, val tmp_file: String) extends TestSpec {
       case Right(ist) =>
 
         val regex = "\\/\\*\n((.|\n)+)\n \\*\\/".r
-        //TODO: Make robust
-        val expectation = regex.findFirstMatchIn(text).get.group(1)
+        val expectation = try {
+          regex.findFirstMatchIn(text).get.group(1)
+        } catch {
+          case e: NoSuchElementException => return (false, () => {
+            Logger.error(s"Compiler test $filename did not have expectation")
+          })
+        }
 
         val pyCodeObject = new ISTCompiler("placeholder").compile(ist)
         val f = PycFile(pyCodeObject)
         Files.write(tmpFile, f.toBytes.bytes)
         import sys.process._
         val command = s"bash test_files/run_compiled.sh ${'"'}${tmp_file}${'"'}"
-        val res = command.!!
-        if (res.dropRight(2).replace("\r\n", "\n") == expectation) (true, () => {})
-        else {
-          (false, () => {
-            Logger.debug(ist.toString)
-            Logger.debug(pyCodeObject.toString)
-            Logger.warn(s"Expected:\n$expectation")
-            Logger.warn("Actual:\n" + res.toString)
-          })
+        try {
+          val res = command.!!
+          if (res.dropRight(2).replace("\r\n", "\n") == expectation) (true, () => {})
+          else {
+            (false, () => {
+              Logger.debug(ist.toString)
+              Logger.debug(pyCodeObject.toString)
+              Logger.warn(s"Expected:\n$expectation")
+              Logger.warn("Actual:\n" + res.toString)
+            })
+          }
+        } catch {
+          case e: RuntimeException =>
+            (false, () => {
+              Logger.warn("Runtime exception")
+              Logger.warn(e.toString)
+              Logger.debug(ist.toString)
+              Logger.debug(pyCodeObject.toString)
+              Logger.debug(s"Expected:\n$expectation")
+
+            })
         }
 
     }

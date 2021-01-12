@@ -1,22 +1,7 @@
 /*
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-X: Hello
-Y: Mr
-==
-Z: Poser
->> String here
-Hello Mr Poser
-String here
-101
+Making printer with [Printer]
+[Printer] Warning | This is a test
+[Printer] Warning | This is another test
 None
  */
 class Main {
@@ -45,7 +30,7 @@ class Printer(val prefix: String) {
     print("Making printer with " + prefix)
 
     def _print(s: String): Unit =
-      print(prefix + " " + level + " " + s)
+      print(prefix + " " + level + " | " + s)
 
     _print
 
