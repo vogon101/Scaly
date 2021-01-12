@@ -199,7 +199,8 @@ class ISTCompiler(_filename: String) {
   def compileExpression(expression: IST_Expression, ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
     expression match {
-      case f: IST_Function => ???
+      case f: IST_Function =>
+        makeFunction("<anon>", f, ctx)
       case IST_If(cond, tBranch, Some(fBranch), _) =>
         val falseMarker = Marker.absolute
         val endMarker = Marker.relative
@@ -294,19 +295,8 @@ class ISTCompiler(_filename: String) {
       case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
       case m: IST_Member => m match {
         case d@IST_Def(id, _, _, _, _, freeVars) =>
-          ctx.withoutClass {
-            (if (freeVars.nonEmpty)
-              freeVars
-                .map(n => (LOAD_CLOSURE, ctx.freeOrCell(n._1.toPy)).toBCL)
-                .toList.flat --> (BUILD_TUPLE, freeVars.size.toByte)
-            else BytecodeList.empty) --> BytecodeList(
-              (LOAD_CONST, ctx.const(compileFunction(id, d.func, ctx))),
-              (LOAD_CONST, ctx.const(id.toPy)),
-              (MAKE_FUNCTION, (if (freeVars.nonEmpty) 8 else 0).toByte),
-              (STORE_FAST, ctx.varname(id.toPy))
-            )
-          }
-
+          makeFunction(id, d.func, ctx) -->
+            (STORE_FAST, ctx.varname(id.toPy))
         case IST_Val(id, expr, location) =>
           compileExpression(IST_Assignment(id, location.writable.get, expr), ctx)
         case IST_Var(id, expr, location) =>
@@ -315,6 +305,22 @@ class ISTCompiler(_filename: String) {
       //We need to be popping items off the stack here but we can only do this IF they add things
       //thus all functions NEED to return a PY_NONE if they don't return something else!
     }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
+  }
+
+  def makeFunction(id: String, func: IST_Function, ctx: CompilationContext): BytecodeList = {
+    import PyOpcodes._
+    ctx.withoutClass {
+      (if (func.freeVars.nonEmpty)
+        func.freeVars
+          .map(n => (LOAD_CLOSURE, ctx.freeOrCell(n._1.toPy)).toBCL)
+          .toList.flat --> (BUILD_TUPLE, func.freeVars.size.toByte)
+      else BytecodeList.empty) --> BytecodeList(
+        (LOAD_CONST, ctx.const(compileFunction(id, func, ctx))),
+        (LOAD_CONST, ctx.const(id.toPy)),
+        (MAKE_FUNCTION, (if (func.freeVars.nonEmpty) 8 else 0).toByte),
+      )
+    }
+
   }
 
   private def loadThis(ctx: CompilationContext): Bytecode = {

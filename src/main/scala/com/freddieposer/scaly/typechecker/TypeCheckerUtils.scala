@@ -41,13 +41,6 @@ object TypeCheckerUtils {
     def mapError(t1: ScalyType, t2: ScalyType): Either[UnificationFailure, T] =
       tcr.left.map(e => new UnificationFailureFromTypeCheck(t1, t2, e)(e.ctx))
 
-    //    def collect[T](f: (T, TypeCheckSuccess) => TCR)(xs: List[T]): TCR =
-    //      xs.foldLeft(tcr) {
-    //        case (e@Left(_), _) => e
-    //        case (Right(s), x) =>
-    //          f(x, s).map { case s2@Success(typ, node) => Successes(typ, node, List(s))(s2.ctx) }
-    //      }
-
   }
 
   implicit class ExtendedUR(ur: UR) {
@@ -56,12 +49,5 @@ object TypeCheckerUtils {
       ur.left.map(e => new TypeErrorFromUnificationFailure(e, node)(e.ctx))
 
   }
-
-
-  //  implicit class ExtendedTypeSuccessList(tcrs: List[TypeCheckSuccess]) {
-  //
-  //    def toTypes: List[ScalyType] = tcrs.map(_.typ)
-  //
-  //  }
 
 }

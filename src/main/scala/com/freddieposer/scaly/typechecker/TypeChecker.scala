@@ -175,12 +175,8 @@ class TypeChecker(
                 case None => Right(EmptyUS)
               }).map { _ =>
                 val fType = ScalyFunctionType.build(actualRetType.typ, ptList)
-                val freeVars = eCtx.freeVars.map(x => x -> ctx.getVarType(x)).map {
-                  case (_, None) => ???
-                  case (n, Some(l)) => n -> l
-                }.toMap
                 (
-                  IST_Def(id, paramTypes, actualRetType, fType, eCtx.closedVars, freeVars),
+                  IST_Def(id, paramTypes, actualRetType, fType, eCtx.closedVars, eCtx.freeVars(ctx)),
                   ctx.addVar(id -> Location(fType, source))
                 )
               }
@@ -233,7 +229,6 @@ class TypeChecker(
                 }
               }
             case ScalyFunctionType(Some(formalTypes), rType) =>
-              //TODO: Use canApply
               canApply(formalTypes, actuals, expr)
                 .map(exprs => IST_Application(lhsExpr, exprs, rType))
             case obj =>
@@ -303,6 +298,21 @@ class TypeChecker(
             typeCheck_Expr(body).map { bodyIST => IST_While(condIST, bodyIST) }
           }
       }
+
+      case FunctionExpr(params, body) =>
+        params.map(p => convertType(p.pType)
+          .map(p.name -> Location(_, SymbolSource.LOCAL)))
+          .collapse
+          .flatMap { paramTypes =>
+            val eCtx = MutableClosureContext(paramTypes.toMap, ctx)
+            typeCheck_Expr(body)(eCtx).map { bodyIST =>
+              IST_Function.build(
+                List(paramTypes.map { case (n, l) => n -> l.typ }.toMap),
+                bodyIST, bodyIST.typ,
+                eCtx.closedVars, eCtx.freeVars(ctx)
+              )
+            }
+          }
 
 
     }

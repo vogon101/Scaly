@@ -17,3 +17,5 @@ case class NewExpr(typ: AST_ScalyType, params: List[Expr]) extends Expr
 case class AssignExpr(lhs: Expr, rhs: Expr) extends Expr
 
 case class WhileExpr(cond: Expr, body: Expr) extends Expr
+
+case class FunctionExpr(params: List[FunParam], body: Expr) extends Expr

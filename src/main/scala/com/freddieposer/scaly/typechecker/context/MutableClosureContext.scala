@@ -75,6 +75,12 @@ class MutableClosureContext private(
    */
   def freeVars: List[String] = _freeVars.toList
 
+  def freeVars(outerContext: TypeContext): immutable.Map[String, Location] =
+    freeVars.map(x => x -> outerContext.getVarType(x)).map {
+      case (_, None) => ???
+      case (n, Some(l)) => n -> l
+    }.toMap
+
   /**
    * Variables of this function that are accessed by inner functions as part of a closure
    *

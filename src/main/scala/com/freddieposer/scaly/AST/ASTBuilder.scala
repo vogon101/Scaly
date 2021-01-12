@@ -107,6 +107,7 @@ object ASTBuilder {
       case Term.New(Init(tpe, name, args :: Nil)) => NewExpr(buildScalyType(tpe), args.map(buildExpr))
       case Term.Assign(lhs, rhs) => AssignExpr(buildExpr(lhs), buildExpr(rhs))
       case Term.While(cond, body) => WhileExpr(buildExpr(cond), buildExpr(body))
+      case Term.Function(params, body) => FunctionExpr(params.map(buildParam), buildExpr(body))
     }
 
   private def buildLiteral(lit: Lit): Literal =
