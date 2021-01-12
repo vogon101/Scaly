@@ -36,7 +36,6 @@ class TypeChecker(
     val globalContext = BaseTypeContext.addTypes(types.map { case (id, typ) => id -> Location(typ, SymbolSource.GLOBAL) }.toList)
 
     ast.statements.map {
-      //TODO: Parental constructor
       case stat@ScalyClassDef(id, parents, body, params) =>
 
         // TODO: Typecheck default constructor expressions
@@ -162,15 +161,9 @@ class TypeChecker(
                 (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER)),
               ctx
             ), Some(declaredRT))
-            //            (ctx.extend(
-            //              Map(),
-            //              buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)
-            //                + (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER))
-            //            ), Some(declaredRT))
           }
           case None =>
             Right((MutableClosureContext(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL), ctx), None))
-          //            Right((ctx.addVars(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL)), None))
         }).flatMap { case (eCtx, rtOpt) =>
           typeCheck_Expr(body)(eCtx, variance)
             .flatMap { actualRetType =>
@@ -258,23 +251,20 @@ class TypeChecker(
         typeCheck_Expr(cond)
           .flatMap { condExpr =>
             doesUnify(condExpr.typ, ScalyBooleanType)(ctx, Variance.CO)
-              .mapError(cond)
-              .flatMap(_ => typeCheck_Expr(tBranch).flatMap(
-                tBranchExpr => typeCheck_Expr(fBranch).flatMap(
-                  fBranchExpr => doesUnify(tBranchExpr.typ, fBranchExpr.typ)(ctx, Variance.IN)
-                    .mapError(expr)
-                    .flatMap {
-                      //TODO: Common parent - the return type may not be tBranchExpr if they are not the same
-                      //TODO: No false branch
-                      _ => Right(IST_If(condExpr, tBranchExpr, Some(fBranchExpr), tBranchExpr.typ))
-                    }
-                )
-              ))
+              .mapError(cond).flatMap(_ => typeCheck_Expr(tBranch).flatMap(
+              tBranchExpr => typeCheck_Expr(fBranch).flatMap(
+                fBranchExpr => doesUnify(tBranchExpr.typ, fBranchExpr.typ)(ctx, Variance.IN)
+                  .mapError(expr).flatMap {
+                  //TODO: Common parent - the return type may not be tBranchExpr if they are not the same
+                  //TODO: No false branch
+                  _ => Right(IST_If(condExpr, tBranchExpr, Some(fBranchExpr), tBranchExpr.typ))
+                }
+              )
+            ))
           }
 
       case Block(statements) =>
         val res = statements
-          //TODO: Remove the unnecessary none
           .foldLeft((Right((IST_Literal(PyNone, ScalyUnitType), ctx)) :: Nil): List[TCR[(IST_Statement, TypeContext)]]) {
             case ((x@Right((_, nctx))) :: xs, stat) =>
               typeCheck(stat, SymbolSource.LOCAL)(nctx, variance) :: x :: xs
@@ -282,7 +272,9 @@ class TypeChecker(
           }
         res match {
           case Left(e) :: _ => Left(e)
-          case xs@Right((x, _)) :: _ => Right(IST_Block(xs.map { case Right(z) => z._1 }.reverse, x.typ))
+          case xs@Right((x, _)) :: _ =>
+            //Drop the first element which is a simple PyNone literal
+            Right(IST_Block(xs.map { case Right(z) => z._1 }.reverse.tail, x.typ))
         }
 
       case NewExpr(astType@AST_ScalyTypeName(name), params) =>

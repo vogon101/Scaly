@@ -290,12 +290,10 @@ class ISTCompiler(_filename: String) {
   //Currently doesn't return - should be managed by compileFunction
   def compileBlock(block: IST_Block, ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
-    //TODO: Currently everything leaves something on the stack - could be more efficient if it didn't
     new BytecodeList(block.statements.map {
       case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
-      //TODO: Blocks can contain defs - CLOSURES
       case m: IST_Member => m match {
-        case d @ IST_Def(id, _, _, _, _, freeVars) =>
+        case d@IST_Def(id, _, _, _, _, freeVars) =>
           ctx.withoutClass {
             (if (freeVars.nonEmpty)
               freeVars

@@ -1,8 +1,8 @@
 package com.freddieposer.scaly.typechecker.context
 
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap}
-import com.freddieposer.scaly.typechecker.types.{ScalyType, SymbolSource}
 import com.freddieposer.scaly.typechecker.types.SymbolSource.SymbolSource
+import com.freddieposer.scaly.typechecker.types.{ScalyType, SymbolSource}
 
 import scala.collection.mutable
 
@@ -14,6 +14,12 @@ class TypeContext(
 
   private type MMap[K, V] = mutable.Map[K, V]
 
+  /**
+   * Used only within TypeContext.getVarType - Assumed that this is coming from an another context for the purpose of
+   * calculating closures.
+   * @param name Name of variable to look for
+   * @return
+   */
   def escalateVar(name: String): Option[Location] = getVarType(name)
 
   def getWellFormedType(name: String): Option[Location] =

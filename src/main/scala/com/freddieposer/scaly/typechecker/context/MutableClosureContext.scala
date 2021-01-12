@@ -3,10 +3,10 @@ package com.freddieposer.scaly.typechecker.context
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap}
 import com.freddieposer.scaly.typechecker.types.SymbolSource
 
-import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ListBuffer
+import scala.collection.{immutable, mutable}
 
-class MutableClosureContext(
+class MutableClosureContext private (
                              override val types: TypeMap,
                              override val vars: TypeMap,
                              val outer: TypeContext,
@@ -23,10 +23,10 @@ class MutableClosureContext(
   override def getVarType(name: String): Option[Location] =
     if (vars isDefinedAt name) vars get name
     else outer.escalateVar(name).map { //Add to free vars
-      case l @ Location(_, SymbolSource.CLOSURE | SymbolSource.CLOSURE_WRITABLE) =>
+      case l@Location(_, SymbolSource.CLOSURE | SymbolSource.CLOSURE_WRITABLE) =>
         addFreeVar(name)
         l
-      case l @ Location(_, SymbolSource.CLOSURE_MEMBER_WRITABLE | SymbolSource.CLOSURE_MEMBER) =>
+      case l@Location(_, SymbolSource.CLOSURE_MEMBER_WRITABLE | SymbolSource.CLOSURE_MEMBER) =>
         addFreeVar("this")
         l
       case x => x
@@ -35,16 +35,16 @@ class MutableClosureContext(
   override def escalateVar(name: String): Option[Location] =
     if (vars.isDefinedAt(name)) vars.get(name).map {
       //Add to cell vars, return closure
-      case l @ Location(t, SymbolSource.LOCAL) =>
+      case l@Location(t, SymbolSource.LOCAL) =>
         addClosedVar(name, l)
         Location(t, SymbolSource.CLOSURE)
-      case l @ Location(t, SymbolSource.LOCAL_WRITABLE) =>
+      case l@Location(t, SymbolSource.LOCAL_WRITABLE) =>
         addClosedVar(name, l)
         Location(t, SymbolSource.CLOSURE_WRITABLE)
       case x => x
     }
     else outer.escalateVar(name).map {
-      case l @ Location(t, SymbolSource.THIS) =>
+      case l@Location(t, SymbolSource.THIS) =>
         addClosedVar(name, l)
         Location(t, SymbolSource.CLOSURE)
       case Location(t, SymbolSource.MEMBER) =>
