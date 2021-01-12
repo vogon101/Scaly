@@ -1,8 +1,8 @@
 package com.freddieposer.scaly.typechecker.context
 
-import com.freddieposer.scaly.AST.AST_ScalyTypeName
+import com.freddieposer.scaly.AST.AST_ScalyType
 import com.freddieposer.scaly.typechecker.context.TypeContext._
-import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
+import com.freddieposer.scaly.typechecker.context.TypeInterpretation.{ASTTypeToInterpretation, TypeToInterpretation}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType._
 import com.freddieposer.scaly.typechecker.types.{ScalyType, _}
@@ -19,6 +19,7 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
    * @return
    */
   def getMember(memberName: String): Either[String, Location] = subject match {
+    //TODO: Members of special objects - eg Functions.toString
     case staticType: StaticScalyType => staticType match {
       case ScalyPlaceholderTypeName(name) =>
         context.getWellFormedType(name)
@@ -28,10 +29,10 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
     }
     case astType: ASTScalyType => astType match {
       case classType: ScalyASTClassType => getMemberOfWellFormedType(classType, memberName)
-      case ScalyASTPlaceholderType(AST_ScalyTypeName(name)) =>
-        context.getWellFormedType(name)
-          .toRight(s"Cannot convert type $name under $context")
-          .flatMap(getMemberOfWellFormedType(_, memberName))
+      case ScalyASTPlaceholderType(astTyp) =>
+        astTyp.fromAST
+          .left.map(e => e.message)
+          .flatMap(typ => getMemberOfWellFormedType(typ, memberName))
       case _ => ???
     }
   }
@@ -61,7 +62,6 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
 
     case (t1, t2) => (t1 equals t2) || (t1.parent.exists(_.isSubtypeOf(t2)))
   }
-
 }
 
 object TypeInterpretation {
@@ -71,4 +71,13 @@ object TypeInterpretation {
 
   implicit def TypeToInterpretation(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
     TypeInterpretation(subject)
+
+  implicit def ASTTypeToInterpretation(subject: AST_ScalyType)(implicit context: TypeContext): ASTTypeInterpretation =
+    ASTTypeInterpretation(subject)
+
+
+  def interpret(subject: ScalyType, context: TypeContext): TypeInterpretation = TypeInterpretation(subject)(context)
+
+  def interpret(subject: AST_ScalyType, context: TypeContext): ASTTypeInterpretation = ASTTypeInterpretation(subject)(context)
+
 }

@@ -6,7 +6,7 @@ import com.freddieposer.scaly.backend.pyc.PyNone
 import com.freddieposer.scaly.typechecker.TypeCheckerUtils._
 import com.freddieposer.scaly.typechecker.Variance.Variance
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, buildTypeMap}
-import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
+import com.freddieposer.scaly.typechecker.context.TypeInterpretation._
 import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, MutableClosureContext, ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.types.SymbolSource.SymbolSource
 import com.freddieposer.scaly.typechecker.types._
@@ -51,7 +51,7 @@ class TypeChecker(
 
         val ctx = new ThisTypeContext(types(id), Some(globalContext))
 
-        params.map(p => convertType(p.paramType)(globalContext)).collapse.flatMap { paramTypes =>
+        params.map(p => interpret(p.paramType, globalContext).fromAST).collapse.flatMap { paramTypes =>
           //TODO: Add constructor params - currently they show up as members in the context but not
           //  in the class members - _should_ mean that they cannot be accessed from outside but this
           //  is a bit of a hack until public/private is working
@@ -63,13 +63,13 @@ class TypeChecker(
           //Typecheck the application of the parent if it exists
           val parentResult: TCR[List[IST_Expression]] = parents.headOption.map { case (p, pActualParams) =>
             implicit val parentConsCtx: TypeContext = globalContext.addVars(constructorParams)
-            convertType(p).flatMap { parent =>
+            p.fromAST.flatMap { parent =>
               (parent.constructor, pActualParams) match {
                 case (None, Nil) => Right(Nil)
                 case (None, _ :: _) =>
                   Left(TypeError(s"Parent ${p.name} of $id does not take construcor parameters", stat))
                 case (Some(formalParams), actualParams) =>
-                  formalParams.map(fp => convertType(fp.paramType))
+                  formalParams.map(fp => fp.paramType.fromAST)
                     .collapse.flatMap { formalsTypes =>
                     canApply(formalsTypes, actualParams, stat)
                   }
@@ -106,7 +106,7 @@ class TypeChecker(
           case d: DefDef => typeCheck_def(d, source)
           case m@MemberDcl(id, typ, rhs) =>
             typeCheck_Expr(rhs).flatMap { rhsExpr =>
-              typ.map(convertType) match {
+              typ.map(_.fromAST) match {
                 case Some(dt) => dt.flatMap { declaredType =>
                   doesUnify(rhsExpr.typ, declaredType)(ctx, Variance.CO)
                     .mapError(stat)
@@ -144,7 +144,7 @@ class TypeChecker(
     defDef match {
       case DefDef(id, params, retType, body) =>
         val paramResults = params.map(ps =>
-          ps.map(p => p.name -> convertType(p.pType))
+          ps.map(p => p.name -> p.pType.fromAST)
         )
 
         val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
@@ -156,7 +156,7 @@ class TypeChecker(
         val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
         val ptList = paramTypes.map(_.values.toList)
         (retType match {
-          case Some(rt) => convertType(rt).map { declaredRT =>
+          case Some(rt) => rt.fromAST.map { declaredRT =>
             (MutableClosureContext(
               buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL) +
                 (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER)),
@@ -216,7 +216,7 @@ class TypeChecker(
       case Application(lhs, actuals) =>
         typeCheck_Expr(lhs).flatMap { lhsExpr =>
           val lhsTyp = lhsExpr.typ match {
-            case scalyType: ScalyASTPlaceholderType => convertType(scalyType.node)
+            case scalyType: ScalyASTPlaceholderType => scalyType.node.fromAST
             case x => Right(x)
           }
           lhsTyp.flatMap {
@@ -271,9 +271,9 @@ class TypeChecker(
         }
 
       case NewExpr(astType@AST_ScalyTypeName(name), params) =>
-        convertType(astType).flatMap { typ =>
+        astType.fromAST.flatMap { typ =>
           typ.constructor.map(constructor => {
-            constructor.map(p => convertType(p.paramType)).collapse.flatMap { formals =>
+            constructor.map(p => p.paramType.fromAST).collapse.flatMap { formals =>
               canApply(formals, params, expr)
             }.map(actuals => IST_New(name, actuals, typ))
           }).getOrElse(Left(TypeError(s"Cannot construct $typ", expr)))
@@ -300,7 +300,7 @@ class TypeChecker(
       }
 
       case FunctionExpr(params, body) =>
-        params.map(p => convertType(p.pType)
+        params.map(p => p.pType.fromAST
           .map(p.name -> Location(_, SymbolSource.LOCAL)))
           .collapse
           .flatMap { paramTypes =>
@@ -333,11 +333,11 @@ class TypeChecker(
     (t1, t2) match {
       case _ if variance == Variance.CONTRA => doesUnify(t2, t1)(ctx, Variance.CO)
       case (x: ScalyASTPlaceholderType, _) =>
-        convertType(x.node)
+        x.node.fromAST
           .mapError(t1, t2)
           .flatMap { t => doesUnify(t.typ, t2) }
       case (_, x: ScalyASTPlaceholderType) =>
-        convertType(x.node)
+        x.node.fromAST
           .mapError(t1, t2)
           .map { t => doesUnify(t1, t.typ) }.collapse
 
@@ -418,36 +418,4 @@ class TypeChecker(
   }
 
 
-  /**
-   * Convert a type from an AST node to an actual type
-   *
-   * @param astType Type to be converted
-   * @param context Type context at point of conversion
-   * @return
-   */
-  private def convertType(astType: AST_ScalyType)(implicit context: TypeContext): TCR[ScalyType] = addToError(astType, context) {
-    astType match {
-      case AST_ScalyTypeName(name) =>
-        context.getWellFormedType(name)
-          .toRight(TypeError(s"Cannot find type name $name", astType))
-          .map(l => l.typ)
-      case AST_ScalyTypeSelect(lhs, rhs) => ???
-      case AST_TupleScalyType(types) =>
-        types
-          .map(convertType)
-          .collapse
-          .map(res => ScalyTupleType(res))
-      case AST_FunctionScalyType(arguments, returnType) =>
-        (arguments.map(convertType).collapse, convertType(returnType)) match {
-          case (Left(e), _) => Left(e)
-          case (_, Left(e)) => Left(e)
-          case (Right(Nil), Right(ret)) =>
-            Right(ScalyFunctionType(Some(ScalyValType.ScalyUnitType), ret.typ))
-          case (Right(arg :: Nil), Right(ret)) =>
-            Right(ScalyFunctionType(Some(arg.typ), ret.typ))
-          case (Right(args), Right(ret)) =>
-            Right(ScalyFunctionType(Some(ScalyTupleType(args)), ret.typ))
-        }
-    }
-  }
 }

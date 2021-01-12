@@ -201,6 +201,11 @@ class ISTCompiler(_filename: String) {
     expression match {
       case f: IST_Function =>
         makeFunction("<anon>", f, ctx)
+      case IST_TupleExpr(elems, _) =>
+        (LOAD_GLOBAL, ctx.name("ScalyTuple".toPy)).toBCL -->
+          elems.map(compileExpression(_, ctx)).flat -->
+          (BUILD_TUPLE, elems.length.toByte) -->
+          (CALL_FUNCTION, 1.toByte).toBCL
       case IST_If(cond, tBranch, Some(fBranch), _) =>
         val falseMarker = Marker.absolute
         val endMarker = Marker.relative

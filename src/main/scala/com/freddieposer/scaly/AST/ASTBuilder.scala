@@ -87,6 +87,7 @@ object ASTBuilder {
       case Type.Select(lhs, rhs) => AST_ScalyTypeSelect(buildExpr(lhs), rhs.value)
       case Type.Function(params, res) =>
         AST_FunctionScalyType(params.map(buildScalyType), buildScalyType(res))
+      case Lit.Unit() => AST_ScalyTypeName("Unit")
     }
 
   private def buildExpr(term: Term): Expr =

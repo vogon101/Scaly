@@ -30,7 +30,7 @@ class ScalyTupleType private(val elems: List[ScalyType]) extends StaticScalyType
   override lazy val parent: Option[ScalyType] = Some(ScalyObject)
 
   override lazy val memberTypes: TypeMap = defaultMembers ++ buildTypeMap(Map(
-    elems.zipWithIndex.map { case (e, i) => f"_$i" -> e }: _*
+    elems.zipWithIndex.map { case (e, i) => f"_${i + 1}" -> e }: _*
   ), SymbolSource.MEMBER)
 
   override def toString: String = s"TupleType(${elems.mkString(", ")})"
