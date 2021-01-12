@@ -182,7 +182,7 @@ class ISTCompiler(_filename: String) {
       )
 
       val stackSize = 10
-      localNames.foreach(n => ctx.varname(n))
+      localNames.foreach(ctx.varname)
       // TODO: + number of other locals
 
 
@@ -235,21 +235,20 @@ class ISTCompiler(_filename: String) {
         val name = nameMangler.getOrElse(_name, _name)
         import com.freddieposer.scaly.typechecker.types.SymbolSource._
         location.source match {
-          case LOCAL | LOCAL_WRITABLE if ctx.isCellVar(name) =>
-            (LOAD_DEREF, ctx.cell(name.toPy)).toBCL
+          case LOCAL | LOCAL_WRITABLE if ctx.isBoxed(name) =>
+            (LOAD_DEREF, ctx.freeOrCell(name.toPy)).toBCL
           case LOCAL | LOCAL_WRITABLE =>
             (LOAD_FAST, ctx.varname(name.toPy)).toBCL
           case CLOSURE | CLOSURE_WRITABLE =>
             (LOAD_DEREF, ctx.free(name.toPy)).toBCL
-          case MEMBER | MEMBER_WRITABLE =>
+          case MEMBER | MEMBER_WRITABLE | CLOSURE_MEMBER | CLOSURE_MEMBER_WRITABLE =>
             BytecodeList(
-              (LOAD_FAST, ctx.varname(THIS_NAME)),
+              loadThis(ctx),
               (LOAD_ATTR, ctx.name(name.toPy))
             )
           case GLOBAL =>
             (LOAD_GLOBAL, ctx.name(name.toPy)).toBCL
-          case THIS =>
-            (LOAD_NAME, ctx.varname(THIS_NAME)).toBCL
+          case THIS => loadThis(ctx).toBCL
 
         }
       //TODO: This could simply be rewritten to be a function application?
@@ -262,14 +261,14 @@ class ISTCompiler(_filename: String) {
         val name = nameMangler.getOrElse(_name, _name)
         import com.freddieposer.scaly.typechecker.types.SymbolSource._
         compileExpression(rhs, ctx) --> (location.source match {
-          case LOCAL_WRITABLE if ctx.isCellVar(name) =>
-            (STORE_DEREF, ctx.cell(name.toPy)).toBCL
+          case LOCAL_WRITABLE if ctx.isBoxed(name) =>
+            (STORE_DEREF, ctx.freeOrCell(name.toPy)).toBCL
           case LOCAL_WRITABLE =>
             (STORE_FAST, ctx.varname(name.toPy)).toBCL
           case CLOSURE_WRITABLE =>
             (STORE_DEREF, ctx.free(name.toPy)).toBCL
-          case MEMBER_WRITABLE => BytecodeList(
-            (LOAD_FAST, ctx.varname(THIS_NAME)),
+          case MEMBER_WRITABLE | CLOSURE_MEMBER_WRITABLE => BytecodeList(
+            loadThis(ctx),
             (STORE_ATTR, ctx.name(name.toPy))
           )
           case _ => throw new Exception(s"Cannot assign to $location ($name)")
@@ -297,16 +296,18 @@ class ISTCompiler(_filename: String) {
       //TODO: Blocks can contain defs - CLOSURES
       case m: IST_Member => m match {
         case d @ IST_Def(id, _, _, _, _, freeVars) =>
-          (if (freeVars.nonEmpty)
-            freeVars.map { case (n, l) => IST_Name(n, l) }
-              .map(n => (LOAD_CLOSURE, ctx.freeOrCell(n.name)).toBCL)
-              .toList.flat --> (BUILD_TUPLE, freeVars.size.toByte)
-          else BytecodeList.empty) --> BytecodeList(
-          (LOAD_CONST, ctx.const(compileFunction(id, d.func, ctx))),
-          (LOAD_CONST, ctx.const(id.toPy)),
-          (MAKE_FUNCTION, (if (freeVars.nonEmpty) 8 else 0).toByte),
-          (STORE_FAST, ctx.varname(id.toPy))
-        )
+          ctx.withoutClass {
+            (if (freeVars.nonEmpty)
+              freeVars
+                .map(n => (LOAD_CLOSURE, ctx.freeOrCell(n._1.toPy)).toBCL)
+                .toList.flat --> (BUILD_TUPLE, freeVars.size.toByte)
+            else BytecodeList.empty) --> BytecodeList(
+              (LOAD_CONST, ctx.const(compileFunction(id, d.func, ctx))),
+              (LOAD_CONST, ctx.const(id.toPy)),
+              (MAKE_FUNCTION, (if (freeVars.nonEmpty) 8 else 0).toByte),
+              (STORE_FAST, ctx.varname(id.toPy))
+            )
+          }
 
         case IST_Val(id, expr, location) =>
           compileExpression(IST_Assignment(id, location.writable.get, expr), ctx)
@@ -316,6 +317,12 @@ class ISTCompiler(_filename: String) {
       //We need to be popping items off the stack here but we can only do this IF they add things
       //thus all functions NEED to return a PY_NONE if they don't return something else!
     }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
+  }
+
+  private def loadThis(ctx: CompilationContext): Bytecode = {
+    import PyOpcodes.{LOAD_DEREF, LOAD_FAST}
+    if (ctx.isBoxed(THIS_NAME.text)) (LOAD_DEREF, ctx.freeOrCell(THIS_NAME))
+    else (LOAD_FAST, ctx.varname(THIS_NAME))
   }
 
 

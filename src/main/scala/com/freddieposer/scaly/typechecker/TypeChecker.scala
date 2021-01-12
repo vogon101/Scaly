@@ -225,7 +225,11 @@ class TypeChecker(
 
       case Application(lhs, actuals) =>
         typeCheck_Expr(lhs).flatMap { lhsExpr =>
-          lhsExpr.typ match {
+          val lhsTyp = lhsExpr.typ match {
+            case scalyType: ScalyASTPlaceholderType => convertType(scalyType.node)
+            case x => Right(x)
+          }
+          lhsTyp.flatMap {
             case ScalyFunctionType(None, rType) =>
               actuals match {
                 case Nil => Right(IST_Application(lhsExpr, Nil, rType))

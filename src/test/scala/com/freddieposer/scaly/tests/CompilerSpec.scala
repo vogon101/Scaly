@@ -33,15 +33,27 @@ class CompilerSpec(val folder: Path, val tmp_file: String) extends TestSpec {
         Files.write(tmpFile, f.toBytes.bytes)
         import sys.process._
         val command = s"bash test_files/run_compiled.sh ${'"'}${tmp_file}${'"'}"
-        val res = command.!!
-        if (res.dropRight(2).replace("\r\n", "\n") == expectation) (true, () => {})
-        else {
-          (false, () => {
-            Logger.debug(ist.toString)
-            Logger.debug(pyCodeObject.toString)
-            Logger.warn(s"Expected:\n$expectation")
-            Logger.warn("Actual:\n" + res.toString)
-          })
+        try {
+          val res = command.!!
+          if (res.dropRight(2).replace("\r\n", "\n") == expectation) (true, () => {})
+          else {
+            (false, () => {
+              Logger.debug(ist.toString)
+              Logger.debug(pyCodeObject.toString)
+              Logger.warn(s"Expected:\n$expectation")
+              Logger.warn("Actual:\n" + res.toString)
+            })
+          }
+        } catch {
+          case e: RuntimeException =>
+            (false, () => {
+              Logger.warn("Runtime exception")
+              Logger.warn(e.toString)
+              Logger.debug(ist.toString)
+              Logger.debug(pyCodeObject.toString)
+              Logger.debug(s"Expected:\n$expectation")
+
+            })
         }
 
     }

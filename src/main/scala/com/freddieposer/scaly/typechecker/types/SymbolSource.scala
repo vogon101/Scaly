@@ -5,7 +5,11 @@ object SymbolSource extends Enumeration {
   type SymbolSource = Value
 
   //Globals assumed to be non-writable
-  val LOCAL, LOCAL_WRITABLE, MEMBER, MEMBER_WRITABLE, GLOBAL, THIS, CLOSURE, CLOSURE_WRITABLE = Value
+  val LOCAL, LOCAL_WRITABLE,
+  MEMBER, MEMBER_WRITABLE,
+  GLOBAL, THIS,
+  CLOSURE, CLOSURE_WRITABLE,
+  CLOSURE_MEMBER, CLOSURE_MEMBER_WRITABLE = Value
 
   def isWritable(ss: SymbolSource): Boolean = ss match {
     case LOCAL_WRITABLE | MEMBER_WRITABLE | CLOSURE_WRITABLE => true

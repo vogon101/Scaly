@@ -18,9 +18,18 @@ class CompilationContext {
   def inClass: Boolean = _inClass
 
   def withClass[T](f: => T): T = {
+    val _old = _inClass
     _inClass = true
     val res = f
+    _inClass = _old
+    res
+  }
+
+  def withoutClass[T](f: => T): T = {
+    val _old = _inClass
     _inClass = false
+    val res = f
+    _inClass = _old
     res
   }
 
@@ -57,8 +66,12 @@ class CompilationContext {
 
   def isCellVar(n: String): Boolean = _cellvars.contains(n.toPy)
 
-  def freeOrCell(n: String): Byte =
-    if (isCellVar(n)) cell(n.toPy)
-    else free(n.toPy)
+  def isFreeVar(n: String): Boolean = _freevars.contains(n.toPy)
+
+  def isBoxed(n: String): Boolean = isCellVar(n) || isFreeVar(n)
+
+  def freeOrCell(n: PyAscii): Byte =
+    if (isCellVar(n.text)) cell(n)
+    else free(n)
 
 }

@@ -22,10 +22,13 @@ class MutableClosureContext(
 
   override def getVarType(name: String): Option[Location] =
     if (vars isDefinedAt name) vars get name
-    else outer.escalateVar(name) match { //Add to free vars
-      case lopt @ Some(l @ Location(_, SymbolSource.CLOSURE | SymbolSource.CLOSURE_WRITABLE)) =>
+    else outer.escalateVar(name).map { //Add to free vars
+      case l @ Location(_, SymbolSource.CLOSURE | SymbolSource.CLOSURE_WRITABLE) =>
         addFreeVar(name)
-        lopt
+        l
+      case l @ Location(_, SymbolSource.CLOSURE_MEMBER_WRITABLE | SymbolSource.CLOSURE_MEMBER) =>
+        addFreeVar("this")
+        l
       case x => x
     }
 
@@ -40,7 +43,18 @@ class MutableClosureContext(
         Location(t, SymbolSource.CLOSURE_WRITABLE)
       case x => x
     }
-    else outer.escalateVar(name)
+    else outer.escalateVar(name).map {
+      case l @ Location(t, SymbolSource.THIS) =>
+        addClosedVar(name, l)
+        Location(t, SymbolSource.CLOSURE)
+      case Location(t, SymbolSource.MEMBER) =>
+        escalateVar("this")
+        Location(t, SymbolSource.CLOSURE_MEMBER)
+      case Location(t, SymbolSource.MEMBER) =>
+        escalateVar("this")
+        Location(t, SymbolSource.CLOSURE_MEMBER_WRITABLE)
+      case x => x
+    }
 
   override def addVars(es: List[(String, Location)]): TypeContext =
     new MutableClosureContext(types, vars ++ es, outer, _freeVars, _closedVars)
