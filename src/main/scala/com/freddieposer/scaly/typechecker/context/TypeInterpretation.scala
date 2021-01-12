@@ -7,9 +7,16 @@ import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType._
 import com.freddieposer.scaly.typechecker.types.{ScalyType, _}
 
+/**
+ * A TypeInterpretation provides methods on `ScalyType` that are interpreted under a `TypeContext`
+ */
 class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeContext) {
 
-
+  /**
+   * Get a member of the type `subject`, interpreting the type if it is an AST
+   * @param memberName Member name to look for
+   * @return
+   */
   def getMember(memberName: String): Either[String, Location] = subject match {
     case staticType: StaticScalyType => staticType match {
       case ScalyPlaceholderTypeName(name) =>
@@ -33,6 +40,11 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
       .orElse(typ.parent.flatMap(p => TypeInterpretation(p).getMember(memberName).toOption))
       .toRight(s"Type $typ does not have member $memberName")
 
+  /**
+   * Returns true if `subject` < `obj`
+   * @param obj
+   * @return
+   */
   def isSubtypeOf(obj: ScalyType): Boolean = (subject, obj) match {
     case (ScalyPlaceholderTypeName(name), t2) =>
       context.getWellFormedType(name).exists(_.typ isSubtypeOf t2)

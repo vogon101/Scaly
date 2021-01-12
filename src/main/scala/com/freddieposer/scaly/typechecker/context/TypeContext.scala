@@ -15,7 +15,7 @@ class TypeContext(
   private type MMap[K, V] = mutable.Map[K, V]
 
   /**
-   * Used only within TypeContext.getVarType - Assumed that this is coming from an another context for the purpose of
+   * Used only within `TypeContext.getVarType` - Assumed that this is coming from an another context for the purpose of
    * calculating closures.
    * @param name Name of variable to look for
    * @return

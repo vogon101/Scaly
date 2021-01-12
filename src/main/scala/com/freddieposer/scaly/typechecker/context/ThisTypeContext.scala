@@ -3,6 +3,10 @@ package com.freddieposer.scaly.typechecker.context
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap}
 import com.freddieposer.scaly.typechecker.types.{ScalyType, SymbolSource}
 
+/**
+ * Type context that represents a Class for the purpose of the typechecker. Provides access to the
+ * "this" special variable and members of the class.
+ */
 class ThisTypeContext private(
                                val owner: ScalyType,
                                val _p: Option[TypeContext],

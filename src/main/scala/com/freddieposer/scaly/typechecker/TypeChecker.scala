@@ -3,7 +3,7 @@ package com.freddieposer.scaly.typechecker
 import com.freddieposer.scaly.AST._
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc.PyNone
-import com.freddieposer.scaly.typechecker.Utils._
+import com.freddieposer.scaly.typechecker.TypeCheckerUtils._
 import com.freddieposer.scaly.typechecker.Variance.Variance
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, buildTypeMap}
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation.TypeToInterpretation
@@ -18,8 +18,15 @@ class TypeChecker(
                  ) {
 
 
-  def addToError[T](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
+  private def addToError[T](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
     f.left.map(new TypeErrorContext(_, node)(context))
+
+  //TODO: Clean up this code
+  //  Ideas:  - Helper function for checking parameter types
+  //            - And if they unify with actuals
+  //          - Remove UnificationSuccess
+
+  //TODO: Better errors with line numbers
 
   def typeCheck(): TCR[IST_CompilationUnit] = {
 
@@ -64,7 +71,7 @@ class TypeChecker(
                   if (formalParams.length != actualParams.length)
                     Left(TypeError(s"Parent ${p.name} of $id expects ${formalParams.length} constructor params, got ${actualParams.length}", stat))
                   else
-                    actualParams.map(typeCheck_Expr(_)(parentConsCtx, Variance.IN)).collapse.flatMap { actualsTypes =>
+                    actualParams.map(typeCheck_Expr(_)(parentConsCtx)).collapse.flatMap { actualsTypes =>
                       formalParams.map(fp => convertType(fp.paramType)).collapse.flatMap { formalsTypes =>
                         actualsTypes.zip(formalsTypes)
                           .map { case (t1, t2) => doesUnify(t1.typ, t2)(parentConsCtx, Variance.CO).mapError(stat) }
@@ -82,7 +89,7 @@ class TypeChecker(
             val consCtx = ctx.addVars(constructorParams)
             body.map { template =>
               template.stats.map(stat =>
-                typeCheck(stat, SymbolSource.MEMBER)(consCtx, Variance.IN)
+                typeCheck(stat, SymbolSource.MEMBER)(consCtx)
               ).collapse
             }.getOrElse(Right(Nil))
               .map(stats => ISTBuilder.buildISTClass(id, pr, stats.map(_._1), types(id)))
@@ -95,7 +102,7 @@ class TypeChecker(
   }
 
 
-  def typeCheck(stat: Statement, source: SymbolSource)(implicit ctx: TypeContext, variance: Variance): TCR[(IST_Statement, TypeContext)] =
+  def typeCheck(stat: Statement, source: SymbolSource)(implicit ctx: TypeContext): TCR[(IST_Statement, TypeContext)] =
     addToError(stat, ctx) {
       stat match {
         case e: Expr => typeCheck_Expr(e).map(t => (t, ctx))
@@ -138,7 +145,7 @@ class TypeChecker(
       }
     }
 
-  def typeCheck_def(defDef: DefDef, source: SymbolSource)(implicit ctx: TypeContext, variance: Variance): TCR[(IST_Def, TypeContext)] = addToError(defDef, ctx) {
+  def typeCheck_def(defDef: DefDef, source: SymbolSource)(implicit ctx: TypeContext): TCR[(IST_Def, TypeContext)] = addToError(defDef, ctx) {
     defDef match {
       case DefDef(id, params, retType, body) =>
         val paramResults = params.map(ps =>
@@ -165,7 +172,7 @@ class TypeChecker(
           case None =>
             Right((MutableClosureContext(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL), ctx), None))
         }).flatMap { case (eCtx, rtOpt) =>
-          typeCheck_Expr(body)(eCtx, variance)
+          typeCheck_Expr(body)(eCtx)
             .flatMap { actualRetType =>
               (rtOpt match {
                 case Some(declaredRT) =>
@@ -189,7 +196,7 @@ class TypeChecker(
     }
   }
 
-  private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext, variance: Variance): TCR[IST_Expression] = addToError(expr, ctx) {
+  private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext): TCR[IST_Expression] = addToError(expr, ctx) {
     expr match {
       case l: Literal =>
         Right(ISTBuilder.buildLiteral(l, ScalyValType.literalType(l)))
@@ -267,7 +274,7 @@ class TypeChecker(
         val res = statements
           .foldLeft((Right((IST_Literal(PyNone, ScalyUnitType), ctx)) :: Nil): List[TCR[(IST_Statement, TypeContext)]]) {
             case ((x@Right((_, nctx))) :: xs, stat) =>
-              typeCheck(stat, SymbolSource.LOCAL)(nctx, variance) :: x :: xs
+              typeCheck(stat, SymbolSource.LOCAL)(nctx) :: x :: xs
             case ((e@Left(_)) :: _, _) => e :: Nil
           }
         res match {
@@ -284,7 +291,7 @@ class TypeChecker(
               params.map(typeCheck_Expr).collapse.flatMap { actualsExpressions =>
                 constructor.map(p => convertType(p.paramType)).collapse.flatMap { formalTypes =>
                   actualsExpressions.zip(formalTypes)
-                    .map { case (a, f) => doesUnify(a.typ, f).mapError(expr) }
+                    .map { case (a, f) => doesUnify(a.typ, f)(ctx, Variance.CO).mapError(expr) }
                     .collapse
                     .map(_ => IST_New(name, actualsExpressions, typ))
                 }

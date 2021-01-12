@@ -12,6 +12,6 @@ object Variance extends Enumeration {
 
   type Variance = Val
 
-
   val IN, CO, CONTRA = Val()
+
 }

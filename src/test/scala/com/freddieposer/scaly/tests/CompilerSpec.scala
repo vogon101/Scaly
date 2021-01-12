@@ -3,7 +3,7 @@ package com.freddieposer.scaly.tests
 import com.freddieposer.scaly.backend.ISTCompiler
 import com.freddieposer.scaly.backend.internal.IST_CompilationUnit
 import com.freddieposer.scaly.backend.pyc.PycFile
-import com.freddieposer.scaly.typechecker.Utils.TCR
+import com.freddieposer.scaly.typechecker.TypeCheckerUtils.TCR
 import com.freddieposer.scaly.utils.Logger
 
 import java.nio.file.{Files, Path, Paths}

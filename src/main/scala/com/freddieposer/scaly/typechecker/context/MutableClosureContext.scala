@@ -6,6 +6,9 @@ import com.freddieposer.scaly.typechecker.types.SymbolSource
 import scala.collection.mutable.ListBuffer
 import scala.collection.{immutable, mutable}
 
+/**
+ * Context for a function used to track which variables are accessed for closures. This is a mutable datastructure.
+ */
 class MutableClosureContext private (
                              override val types: TypeMap,
                              override val vars: TypeMap,
@@ -65,8 +68,16 @@ class MutableClosureContext private (
   override def addTypes(es: List[(String, Location)]): TypeContext =
     new MutableClosureContext(types ++ es, vars, outer, _freeVars, _closedVars)
 
+  /**
+   * Variables that the function this represents access from an outer closure
+   * @return
+   */
   def freeVars: List[String] = _freeVars.toList
 
+  /**
+   * Variables of this function that are accessed by inner functions as part of a closure
+   * @return
+   */
   def closedVars: immutable.Map[String, Location] = _closedVars.toMap
 
 }
