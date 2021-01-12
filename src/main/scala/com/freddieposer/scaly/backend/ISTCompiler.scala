@@ -200,7 +200,7 @@ class ISTCompiler(_filename: String) {
     import PyOpcodes._
     expression match {
       case f: IST_Function => ???
-      case IST_If(cond, tBranch, Some(fBranch), typ) =>
+      case IST_If(cond, tBranch, Some(fBranch), _) =>
         val falseMarker = Marker.absolute
         val endMarker = Marker.relative
         compileExpression(cond, ctx) -->
@@ -209,19 +209,19 @@ class ISTCompiler(_filename: String) {
           (JUMP_FORWARD, endMarker) -->
           falseMarker -->
           compileExpression(fBranch, ctx) --> endMarker
-      case IST_If(cond, tBranch, None, typ) =>
+      case IST_If(cond, tBranch, None, _) =>
         val endMarker = Marker.absolute
         compileExpression(cond, ctx) -->
           (POP_JUMP_IF_FALSE, endMarker) -->
           compileExpression(tBranch, ctx) -->
           endMarker
 
-      case IST_Select(lhs, rhs, typ) =>
+      case IST_Select(lhs, rhs, _) =>
         val name = nameMangler.getOrElse(rhs, rhs)
         compileExpression(lhs, ctx) -->
           (LOAD_ATTR, ctx.name(name.toPy))
 
-      case IST_Application(lhs, args, typ) =>
+      case IST_Application(lhs, args, _) =>
         compileExpression(lhs, ctx) -->
           args.flatMap(arg => compileExpression(arg, ctx)) -->
           (CALL_FUNCTION, args.length.toByte)
@@ -329,7 +329,7 @@ class ISTCompiler(_filename: String) {
     BytecodeList(
       (LOAD_NAME, ctx.name("print".toPy)),
       (LOAD_NAME, ctx.name("Main".toPy)),
-      (LOAD_METHOD, ctx.name("main".toPy).toByte),
+      (LOAD_METHOD, ctx.name("main".toPy)),
       (CALL_METHOD, 0.toByte),
       (CALL_FUNCTION, 1.toByte),
       ~POP_TOP
@@ -345,6 +345,5 @@ class ISTCompiler(_filename: String) {
       ~IMPORT_STAR
     )
   }
-
 
 }

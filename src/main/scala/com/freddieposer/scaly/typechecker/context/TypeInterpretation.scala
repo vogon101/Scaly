@@ -14,6 +14,7 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
 
   /**
    * Get a member of the type `subject`, interpreting the type if it is an AST
+   *
    * @param memberName Member name to look for
    * @return
    */
@@ -42,6 +43,7 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
 
   /**
    * Returns true if `subject` < `obj`
+   *
    * @param obj
    * @return
    */

@@ -7,3 +7,5 @@ class ScalyObject(object):
 
     def equals(self, obj):
         return self.__eq__(obj)
+
+    #TODO: isInstanceOf?

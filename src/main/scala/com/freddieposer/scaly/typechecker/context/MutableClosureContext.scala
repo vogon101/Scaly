@@ -9,13 +9,13 @@ import scala.collection.{immutable, mutable}
 /**
  * Context for a function used to track which variables are accessed for closures. This is a mutable datastructure.
  */
-class MutableClosureContext private (
-                             override val types: TypeMap,
-                             override val vars: TypeMap,
-                             val outer: TypeContext,
-                             private val _freeVars: ListBuffer[String],
-                             private val _closedVars: mutable.Map[String, Location]
-                           ) extends TypeContext(types, vars, Some(outer)) {
+class MutableClosureContext private(
+                                     override val types: TypeMap,
+                                     override val vars: TypeMap,
+                                     val outer: TypeContext,
+                                     private val _freeVars: ListBuffer[String],
+                                     private val _closedVars: mutable.Map[String, Location]
+                                   ) extends TypeContext(types, vars, Some(outer)) {
 
   private def addFreeVar(name: String): Unit =
     if (!_freeVars.contains(name)) _freeVars.addOne(name)
@@ -70,12 +70,14 @@ class MutableClosureContext private (
 
   /**
    * Variables that the function this represents access from an outer closure
+   *
    * @return
    */
   def freeVars: List[String] = _freeVars.toList
 
   /**
    * Variables of this function that are accessed by inner functions as part of a closure
+   *
    * @return
    */
   def closedVars: immutable.Map[String, Location] = _closedVars.toMap

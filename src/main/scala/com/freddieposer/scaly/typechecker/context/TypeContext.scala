@@ -17,6 +17,7 @@ class TypeContext(
   /**
    * Used only within `TypeContext.getVarType` - Assumed that this is coming from an another context for the purpose of
    * calculating closures.
+   *
    * @param name Name of variable to look for
    * @return
    */

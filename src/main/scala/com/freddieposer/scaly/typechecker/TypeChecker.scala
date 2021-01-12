@@ -13,6 +13,8 @@ import com.freddieposer.scaly.typechecker.types._
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyUnitType}
 
+import scala.annotation.tailrec
+
 class TypeChecker(
                    val ast: CompilationUnit
                  ) {
@@ -49,7 +51,6 @@ class TypeChecker(
 
         val ctx = new ThisTypeContext(types(id), Some(globalContext))
 
-
         params.map(p => convertType(p.paramType)(globalContext)).collapse.flatMap { paramTypes =>
           //TODO: Add constructor params - currently they show up as members in the context but not
           //  in the class members - _should_ mean that they cannot be accessed from outside but this
@@ -61,23 +62,17 @@ class TypeChecker(
 
           //Typecheck the application of the parent if it exists
           val parentResult: TCR[List[IST_Expression]] = parents.headOption.map { case (p, pActualParams) =>
-            implicit val parentConsCtx = globalContext.addVars(constructorParams)
+            implicit val parentConsCtx: TypeContext = globalContext.addVars(constructorParams)
             convertType(p).flatMap { parent =>
               (parent.constructor, pActualParams) match {
                 case (None, Nil) => Right(Nil)
                 case (None, _ :: _) =>
                   Left(TypeError(s"Parent ${p.name} of $id does not take construcor parameters", stat))
                 case (Some(formalParams), actualParams) =>
-                  if (formalParams.length != actualParams.length)
-                    Left(TypeError(s"Parent ${p.name} of $id expects ${formalParams.length} constructor params, got ${actualParams.length}", stat))
-                  else
-                    actualParams.map(typeCheck_Expr(_)(parentConsCtx)).collapse.flatMap { actualsTypes =>
-                      formalParams.map(fp => convertType(fp.paramType)).collapse.flatMap { formalsTypes =>
-                        actualsTypes.zip(formalsTypes)
-                          .map { case (t1, t2) => doesUnify(t1.typ, t2)(parentConsCtx, Variance.CO).mapError(stat) }
-                          .collapse.map(_ => actualsTypes)
-                      }
-                    }
+                  formalParams.map(fp => convertType(fp.paramType))
+                    .collapse.flatMap { formalsTypes =>
+                    canApply(formalsTypes, actualParams, stat)
+                  }
                 case _ =>
                   Left(TypeError(s"Params for parent ${p.name} of class $id do not match", stat))
               }
@@ -155,9 +150,8 @@ class TypeChecker(
         val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
           .collect { case xs@_ :: _ => xs }.flatten.map(_.value)
 
-
         if (errors.nonEmpty)
-          return Left(new TypeErrorCombination(s"Cannot typecheck parameters for def: $defDef", defDef, errors))
+          return Left(new TypeErrorCombination(s"Cannot typecheck parameter types for def: $defDef", defDef, errors))
 
         val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
         val ptList = paramTypes.map(_.values.toList)
@@ -239,12 +233,9 @@ class TypeChecker(
                 }
               }
             case ScalyFunctionType(Some(formalTypes), rType) =>
-              actuals
-                .map(typeCheck_Expr).collapse.flatMap { actualTypes =>
-                doesUnify(ScalyTupleType(actualTypes.map(_.typ)), formalTypes)(ctx, Variance.CO)
-                  .mapError(expr)
-                  .map(_ => IST_Application(lhsExpr, actualTypes, rType))
-              }
+              //TODO: Use canApply
+              canApply(formalTypes, actuals, expr)
+                .map(exprs => IST_Application(lhsExpr, exprs, rType))
             case obj =>
               obj.getMember("apply") match {
                 case Right(Location(_: ScalyFunctionType, _)) => typeCheck_Expr(Application(SelectExpr(lhs, "apply"), actuals))
@@ -287,18 +278,9 @@ class TypeChecker(
       case NewExpr(astType@AST_ScalyTypeName(name), params) =>
         convertType(astType).flatMap { typ =>
           typ.constructor.map(constructor => {
-            if (constructor.length == params.length) {
-              params.map(typeCheck_Expr).collapse.flatMap { actualsExpressions =>
-                constructor.map(p => convertType(p.paramType)).collapse.flatMap { formalTypes =>
-                  actualsExpressions.zip(formalTypes)
-                    .map { case (a, f) => doesUnify(a.typ, f)(ctx, Variance.CO).mapError(expr) }
-                    .collapse
-                    .map(_ => IST_New(name, actualsExpressions, typ))
-                }
-              }
-            } else {
-              Left(TypeError(s"${constructor.length} params required for $typ constructor but got ${params.length}", expr))
-            }
+            constructor.map(p => convertType(p.paramType)).collapse.flatMap { formals =>
+              canApply(formals, params, expr)
+            }.map(actuals => IST_New(name, actuals, typ))
           }).getOrElse(Left(TypeError(s"Cannot construct $typ", expr)))
         }
 
@@ -326,8 +308,6 @@ class TypeChecker(
     }
   }
 
-  //
-
   /**
    * Does t1 unify with t2 under the given variance
    * Unifies if:
@@ -337,10 +317,6 @@ class TypeChecker(
    *
    * NOTE: For variance we need to be incredibly careful with the order of these types
    *
-   * @param t1
-   * @param t2
-   * @param ctx
-   * @param variance
    * @return
    */
   private def doesUnify(t1: ScalyType, t2: ScalyType)(implicit ctx: TypeContext, variance: Variance): UR =
@@ -372,7 +348,32 @@ class TypeChecker(
 
     }
 
-  def doesUnify_static(t1: StaticScalyType, t2: StaticScalyType)(implicit ctx: TypeContext, variance: Variance): UR = {
+  private def canApply(formals: ScalyType, actuals: List[Expr], node: ScalyAST)(implicit ctx: TypeContext): TCR[List[IST_Expression]] =
+    formals match {
+      case ScalyUnitType =>
+        if (actuals.isEmpty) Right(Nil)
+        else Left(TypeError(s"Expected no params, got ${actuals.length} for $node", node))
+      case ScalyTupleType(elems) => canApply(elems, actuals, node)
+      case _ => canApply(List(formals), actuals, node)
+    }
+
+  private def canApply(formals: List[ScalyType], actuals: List[Expr], node: ScalyAST)(implicit ctx: TypeContext): TCR[List[IST_Expression]] = {
+    if (formals.length != actuals.length)
+      return Left(TypeError(s"Expected ${formals.length} params got ${actuals.length} params for $node", node))
+
+    actuals.map(typeCheck_Expr)
+      .collapse
+      .flatMap { actualsIST =>
+        actualsIST
+          .zip(formals)
+          .map { case (a, f) => doesUnify(a.typ, f)(ctx, Variance.CO).mapError(node) }
+          .collapse
+          .map(_ => actualsIST)
+      }
+  }
+
+  @tailrec
+  private def doesUnify_static(t1: StaticScalyType, t2: StaticScalyType)(implicit ctx: TypeContext, variance: Variance): UR = {
     (t1, t2) match {
       case _ if variance == Variance.CONTRA => doesUnify(t2, t1)(ctx, Variance.CO)
       case (ScalyFunctionType(from1, to1), ScalyFunctionType(from2, to2)) =>
@@ -439,5 +440,4 @@ class TypeChecker(
         }
     }
   }
-
 }
