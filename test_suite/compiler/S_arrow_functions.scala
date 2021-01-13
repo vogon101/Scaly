@@ -3,7 +3,7 @@
 10
 None
  */
-class Main {
+object Main {
 
   def main(): Unit = {
     val f:(() => (), () => Int) = (new Container).getFunctions()

@@ -28,7 +28,7 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
       case x: ScalyType => getMemberOfWellFormedType(x, memberName)
     }
     case astType: ASTScalyType => astType match {
-      case classType: ScalyASTClassType => getMemberOfWellFormedType(classType, memberName)
+      case templateType: ScalyASTTemplateType => getMemberOfWellFormedType(templateType, memberName)
       case ScalyASTPlaceholderType(astTyp) =>
         astTyp.fromAST
           .left.map(e => e.message)

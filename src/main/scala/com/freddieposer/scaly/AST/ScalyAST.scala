@@ -20,6 +20,21 @@ abstract class Expr extends Statement
 
 abstract class Literal extends Expr
 
+sealed abstract class TemplateDef extends TopLevelStatement {
+
+  val id: String
+  val parents: List[(AST_ScalyTypeName, List[Expr])]
+  val body: Option[ScalyTemplate]
+
+}
+
+object TemplateDef {
+
+  def unapply(arg: TemplateDef): Option[(String, List[(AST_ScalyTypeName, List[Expr])], Option[ScalyTemplate])] =
+    Some(arg.id, arg.parents, arg.body)
+
+}
+
 case class ScalyClassDef(
                           id: String,
                           //TODO: Good god this is horrible
@@ -27,13 +42,13 @@ case class ScalyClassDef(
                           body: Option[ScalyTemplate],
                           //TODO: Multiple sets of class params
                           params: List[ClassParam]
-                        ) extends ScalyAST with TopLevelStatement
+                        ) extends TemplateDef
 
 case class ScalyObjectDef(
                            id: String,
-                           parents: List[String],
+                           parents: List[(AST_ScalyTypeName, List[Expr])],
                            body: Option[ScalyTemplate]
-                         ) extends ScalyAST with TopLevelStatement
+                         ) extends TemplateDef
 
 case class ScalyTemplate(stats: List[Statement]) extends ScalyAST
 

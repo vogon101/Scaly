@@ -59,6 +59,7 @@ class ScalyTuple(tuple):
     @property
     def _20(self): return self[19]
 
+    #TODO: Replace this with __getattr__ call!
     @property
     def _21(self): return self[20]
 

@@ -2,7 +2,7 @@
 Hello World
  */
 
-class Main {
+object Main {
 
   def main(): String = "Hello World"
 

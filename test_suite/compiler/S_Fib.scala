@@ -9,7 +9,7 @@
 13
  */
 
-class Main {
+object Main {
 
   def main(): Int = {
 

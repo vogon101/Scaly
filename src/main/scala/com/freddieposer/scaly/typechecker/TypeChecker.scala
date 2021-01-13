@@ -32,34 +32,43 @@ class TypeChecker(
 
   def typeCheck(): TCR[IST_CompilationUnit] = {
 
-    val types: Map[String, ScalyASTClassType] =
+    val types: Map[String, ScalyASTTemplateType] =
       ast.statements.map {
         case c@ScalyClassDef(id, Nil, _, _) =>
           id -> ScalyASTClassType(id, None, c)
         //TODO: Multiple parents
         case c@ScalyClassDef(id, (parent, _) :: Nil, _, _) =>
           id -> ScalyASTClassType(id, Some(ScalyPlaceholderTypeName(parent.name)), c)
-        case ScalyObjectDef(id, parents, body) => ???
+        case o@ScalyObjectDef(id, Nil, _) =>
+          id -> ScalyASTObjectType(id, None, o)
+        case o@ScalyObjectDef(id, (parent, _) :: Nil, _) =>
+          id -> ScalyASTObjectType(id, Some(ScalyPlaceholderTypeName(parent.name)), o)
       }.toMap
 
-    val globalContext = BaseTypeContext.addTypes(types.map { case (id, typ) => id -> Location(typ, SymbolSource.GLOBAL) }.toList)
+    val globalObjects: Map[String, Location] =
+      types.flatMap {
+        case id -> (t@ScalyASTObjectType(_, _, _)) => Some(id -> Location(t, SymbolSource.GLOBAL_LAZY))
+        case _ => None
+      }
 
-    ast.statements.map {
-      case stat@ScalyClassDef(id, parents, body, params) =>
+    val globalContext = BaseTypeContext
+      .addTypes(types.map { case (id, typ) => id -> Location(typ, SymbolSource.GLOBAL) }.toList)
+      .addVars(globalObjects)
 
-        // TODO: Typecheck default constructor expressions
+    def checkBody(stat: TemplateDef, params: TCR[List[(ClassParam, ScalyType)]]): TCR[IST_Template] = params.flatMap { paramTypes =>
+      stat match {
+        case TemplateDef(id, parents, body) =>
+          val ctx = new ThisTypeContext(types(id), Some(globalContext))
 
-        val ctx = new ThisTypeContext(types(id), Some(globalContext))
-
-        params.map(p => interpret(p.paramType, globalContext).fromAST).collapse.flatMap { paramTypes =>
-          //TODO: Add constructor params - currently they show up as members in the context but not
-          //  in the class members - _should_ mean that they cannot be accessed from outside but this
-          //  is a bit of a hack until public/private is working
-          val constructorParams = params.zip(paramTypes).map {
+          val constructorParams = paramTypes.map {
             case (p: VarClassParam, pt) => p.id -> Location(pt, SymbolSource.MEMBER)
             case (p, pt) => p.id -> Location(pt, SymbolSource.MEMBER)
           }
 
+          // TODO: Typecheck default constructor expressions
+          //TODO: Add constructor params - currently they show up as members in the context but not
+          //  in the class members - _should_ mean that they cannot be accessed from outside but this
+          //  is a bit of a hack until public/private is working
           //Typecheck the application of the parent if it exists
           val parentResult: TCR[List[IST_Expression]] = parents.headOption.map { case (p, pActualParams) =>
             implicit val parentConsCtx: TypeContext = globalContext.addVars(constructorParams)
@@ -87,12 +96,24 @@ class TypeChecker(
                 typeCheck(stat, SymbolSource.MEMBER)(consCtx)
               ).collapse
             }.getOrElse(Right(Nil))
-              .map(stats => ISTBuilder.buildISTClass(id, pr, stats.map(_._1), types(id)))
+              .map(stats => stat match {
+                case _: ScalyClassDef => ISTBuilder.buildISTClass(id, pr, stats.map(_._1), types(id))
+                case _: ScalyObjectDef => ISTBuilder.buildISTObject(id, pr, stats.map(_._1), types(id))
+              })
           })
-        }
+
+      }
+    }
 
 
-      case ScalyObjectDef(id, parents, body) => ???
+    ast.statements.map {
+      case stat@ScalyClassDef(_, _, _, params) =>
+        val paramTypes = params.map(p => interpret(p.paramType, globalContext).fromAST)
+          .collapse
+          .map { paramTypes => params.zip(paramTypes) }
+        checkBody(stat, paramTypes)
+
+      case stat: ScalyObjectDef => checkBody(stat, Right(Nil))
     }.collapse.map(new IST_CompilationUnit(_))
   }
 

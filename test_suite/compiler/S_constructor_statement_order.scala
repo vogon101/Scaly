@@ -4,7 +4,7 @@ General
 Kenobi
 10
  */
-class Main {
+object Main {
 
   def main(): Int = {
 

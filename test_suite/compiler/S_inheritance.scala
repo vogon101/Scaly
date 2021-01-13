@@ -9,7 +9,7 @@ I am puppy
 None
  */
 
-class Main {
+object Main {
 
   def main(): Unit = {
 

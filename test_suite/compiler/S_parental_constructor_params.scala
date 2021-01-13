@@ -11,7 +11,7 @@ Yap
 Yap
 None
  */
-class Main {
+object Main {
 
   def main(): Unit = {
     val a = new Animal("James")

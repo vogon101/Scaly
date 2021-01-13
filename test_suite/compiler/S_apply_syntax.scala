@@ -3,7 +3,7 @@ This is A
 This is A
 None
  */
-class Main {
+object Main {
 
   def main(): Unit = {
 

@@ -27,7 +27,9 @@ object ASTBuilder {
       case Defn.Object(mods, name, templ) =>
         ScalyObjectDef(
           name.value,
-          templ.inits.map { x: Init => x.name.value },
+          templ.inits.map { init: Init =>
+            (AST_ScalyTypeName(init.tpe.toString), init.argss.headOption.map(_.map(buildExpr)).getOrElse(Nil))
+          },
           if (templ.stats.isEmpty) None else Some(ScalyTemplate(templ.stats.map(buildStatement))),
         )
 

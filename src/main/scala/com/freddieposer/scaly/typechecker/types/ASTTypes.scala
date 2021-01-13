@@ -16,18 +16,15 @@ case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType wit
   }
 }
 
-class ScalyASTClassType(
-                         val name: String,
-                         private val _parent: Option[ScalyType],
-                         val node: ScalyClassDef
-                       ) extends ASTScalyType with PlaceholderType {
+abstract class ScalyASTTemplateType extends ASTScalyType with PlaceholderType{
 
+  val name: String
+  protected val _parent: Option[ScalyType]
+  val node: TemplateDef
 
   override val globalName: Option[String] = Some(name)
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))
   lazy val parentConstructor: Option[List[Expr]] = node.parents.headOption.map(_._2)
-
-  override def constructor: Option[List[ClassParam]] = Some(node.params)
 
   override lazy val memberTypes: TypeMap = construct({
 
@@ -46,13 +43,13 @@ class ScalyASTClassType(
       }
     }
 
-    val constructorMembers = node.params.flatMap {
+    val constructorMembers = constructor.map(_.flatMap {
       case ValClassParam(_, id, typ, _) =>
         Some(id -> Location(ScalyASTPlaceholderType(typ), SymbolSource.MEMBER))
       case VarClassParam(_, id, typ, _) =>
         Some(id -> Location(ScalyASTPlaceholderType(typ), SymbolSource.MEMBER_WRITABLE))
       case _ => None
-    }
+    })
 
     (node.body match {
       case Some(ScalyTemplate(stats)) =>
@@ -70,12 +67,23 @@ class ScalyASTClassType(
           case _: Expr => None
         }
       case None => List()
-    }) ++ constructorMembers
+    }) ++ constructorMembers.getOrElse(Nil)
   }.toMap)
 
   private val _visited: Boolean = false
 
   override def visited: Boolean = _visited
+
+}
+
+class ScalyASTClassType (
+                         val name: String,
+                         protected val _parent: Option[ScalyType],
+                         val node: ScalyClassDef
+                       ) extends ScalyASTTemplateType {
+
+
+  override def constructor: Option[List[ClassParam]] = Some(node.params)
 
   override def equals(obj: Any): Boolean = obj match {
     case that: ScalyASTClassType =>
@@ -87,12 +95,41 @@ class ScalyASTClassType(
 
 }
 
+class ScalyASTObjectType (
+                         val name: String,
+                         protected val _parent: Option[ScalyType],
+                         val node: ScalyObjectDef
+                         ) extends ScalyASTTemplateType {
+
+  override def constructor: Option[List[ClassParam]] = Some(Nil)
+
+  override def equals(obj: Any): Boolean = obj match {
+    case that: ScalyASTObjectType =>
+      (that.name == name) && (that.node equals node) && (that.parent equals parent)
+    case _ => false
+  }
+
+  override def toString: String = s"ObjectType($name < $parent)"
+
+}
+
 object ScalyASTClassType {
 
   def apply(name: String, _parent: Option[ScalyType], node: ScalyClassDef): ScalyASTClassType =
     new ScalyASTClassType(name, _parent, node)
 
   def unapply(arg: ScalyASTClassType): Option[(String, Option[ScalyType], ScalyClassDef)] =
+    Some((arg.name, arg.parent, arg.node))
+
+
+}
+
+object ScalyASTObjectType {
+
+  def apply(name: String, _parent: Option[ScalyType], node: ScalyObjectDef): ScalyASTObjectType =
+    new ScalyASTObjectType(name, _parent, node)
+
+  def unapply(arg: ScalyASTObjectType): Option[(String, Option[ScalyType], ScalyObjectDef)] =
     Some((arg.name, arg.parent, arg.node))
 
 

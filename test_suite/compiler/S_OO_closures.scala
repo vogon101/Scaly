@@ -4,7 +4,7 @@ Making printer with [Printer]
 [Printer] Warning | This is another test
 None
  */
-class Main {
+object Main {
 
   def main(): Unit = {
 

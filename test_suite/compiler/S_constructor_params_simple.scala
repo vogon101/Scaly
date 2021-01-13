@@ -6,7 +6,7 @@ woof
 I am a dog called Doggo aged 10
 I am a dog called Doggo aged 11
  */
-class Main {
+object Main {
 
   def main(): Dog = {
     val dog = new Dog("Doggo", 10, "woof")

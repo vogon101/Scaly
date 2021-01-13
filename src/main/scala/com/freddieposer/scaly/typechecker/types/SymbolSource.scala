@@ -7,7 +7,7 @@ object SymbolSource extends Enumeration {
   //Globals assumed to be non-writable
   val LOCAL, LOCAL_WRITABLE,
   MEMBER, MEMBER_WRITABLE,
-  GLOBAL, THIS,
+  GLOBAL, GLOBAL_LAZY, THIS,
   CLOSURE, CLOSURE_WRITABLE,
   CLOSURE_MEMBER, CLOSURE_MEMBER_WRITABLE = Value
 

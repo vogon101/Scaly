@@ -3,6 +3,9 @@ package com.freddieposer.scaly.backend
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
+import com.freddieposer.scaly.typechecker.context.TypeContext.Location
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyUnitType
+import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyType, SymbolSource}
 
 
 class ISTCompiler(_filename: String) {
@@ -12,6 +15,7 @@ class ISTCompiler(_filename: String) {
   private val filename = _filename.toPy
 
   private val THIS_NAME: PyAscii = "this".toPy
+  private val GLOBAL_LAZY_PREFIX: String = "__global__lazyImpl_"
 
   private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
     val ctx = new CompilationContext
@@ -46,6 +50,20 @@ class ISTCompiler(_filename: String) {
             }.getOrElse(throw new Error(s"Cannot inherit from $p"))
           )
 
+        //        val objectCode = istClass match {
+        //          case _: IST_Class => BytecodeList.empty
+        //          case IST_Object(name, parent, parentParams, defs, statements, typ) =>
+        //            compileExpression(
+        //              IST_Function(Nil, IST_New(name, Nil, typ), ScalyFunctionType(Some(ScalyUnitType), typ), Map(), Map()),
+        //              ctx
+        //            ) --> (STORE_NAME, ctx.name((GLOBAL_LAZY_PREFIX + name).toPy)).toBCL
+        //        }
+        val objectCode = istClass match {
+          case _: IST_Class => BytecodeList.empty
+          case IST_Object(name, _, _, _, _, typ) =>
+            BuildGlobalLazy(GLOBAL_LAZY_PREFIX + name, name, ctx, typ) -->
+              (STORE_NAME, ctx.name((GLOBAL_LAZY_PREFIX + name).toPy)).toBCL
+        }
         BytecodeList(
           ~LOAD_BUILD_CLASS,
           (LOAD_CONST, ctx.const(pycode)),
@@ -55,7 +73,7 @@ class ISTCompiler(_filename: String) {
         ) --> parent.getOrElse(BytecodeList.empty) --> BytecodeList(
           (CALL_FUNCTION, (2 + parent.map(_ => 1).getOrElse(0)).toByte),
           (STORE_NAME, ctx.name(pycode.name))
-        )
+        ) --> objectCode
       }
     } --> TestCaddy(ctx) --> ReturnNone(ctx)
 
@@ -71,20 +89,14 @@ class ISTCompiler(_filename: String) {
     )
   }
 
-  def compileClass(istClass: IST_Class, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
+  def compileClass(istClass: IST_Template, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
     val stackSize: Int = 10 // ???
 
     val constructor = compileConstructor(istClass)
 
-    val functions = {
-      //TODO: Actual objects
-      if (istClass.name == "Main")
-        istClass.defs.map(t => compileFunction(t._1, t._2.func, ctx))
-      else ctx.withClass {
-        istClass.defs.map(t => compileFunction(t._1, t._2.func, ctx))
-      }
-    } ++ (if (istClass.name != "Main") constructor :: Nil else Nil)
-
+    val functions = constructor :: ctx.withClass {
+      istClass.defs.map(t => compileFunction(t._1, t._2.func, ctx))
+    }.toList
 
     val code: BytecodeList = {
       import PyOpcodes._
@@ -108,7 +120,7 @@ class ISTCompiler(_filename: String) {
 
   }
 
-  def compileConstructor(istClass: IST_Class): PyCodeObject = withContext { ctx =>
+  def compileConstructor(istClass: IST_Template): PyCodeObject = withContext { ctx =>
 
     import PyOpcodes._
 
@@ -254,6 +266,10 @@ class ISTCompiler(_filename: String) {
             )
           case GLOBAL =>
             (LOAD_GLOBAL, ctx.name(name.toPy)).toBCL
+          case GLOBAL_LAZY => BytecodeList(
+            (LOAD_GLOBAL, ctx.name((GLOBAL_LAZY_PREFIX + name).toPy)),
+            (CALL_FUNCTION, 0.toByte)
+          )
           case THIS => loadThis(ctx).toBCL
 
         }
@@ -277,6 +293,8 @@ class ISTCompiler(_filename: String) {
             loadThis(ctx),
             (STORE_ATTR, ctx.name(name.toPy))
           )
+          case GLOBAL =>
+            (STORE_GLOBAL, ctx.name(name.toPy)).toBCL
           case _ => throw new Exception(s"Cannot assign to $location ($name)")
         }) --> (LOAD_CONST, ctx.const(PyNone))
 
@@ -290,6 +308,12 @@ class ISTCompiler(_filename: String) {
           ~POP_TOP --> //Removes result of expression
           (JUMP_ABSOLUTE, condMarker) -->
           endMarker --> (LOAD_CONST, ctx.const(PyNone))
+
+      case IST_IsNone(lhs) =>
+        compileExpression(lhs, ctx) --> BytecodeList(
+          (LOAD_CONST, ctx.const(PyNone)),
+          (COMPARE_OP, 8.toByte)
+        )
     }
   }
 
@@ -339,7 +363,8 @@ class ISTCompiler(_filename: String) {
     import PyOpcodes._
     BytecodeList(
       (LOAD_NAME, ctx.name("print".toPy)),
-      (LOAD_NAME, ctx.name("Main".toPy)),
+      (LOAD_NAME, ctx.name((GLOBAL_LAZY_PREFIX + "Main").toPy)),
+      (CALL_FUNCTION, 0.toByte),
       (LOAD_METHOD, ctx.name("main".toPy)),
       (CALL_METHOD, 0.toByte),
       (CALL_FUNCTION, 1.toByte),
@@ -354,6 +379,32 @@ class ISTCompiler(_filename: String) {
       (LOAD_CONST, ctx.const(PyTuple(List("*".toPy)))),
       (IMPORT_NAME, ctx.name("pyScaly_lib".toPy)),
       ~IMPORT_STAR
+    )
+  }
+
+  //TODO: Clean this up
+  //TODO: Make this more efficient (overwrite function?)
+  private def BuildGlobalLazy(name: String, constructorName: String, ctx: CompilationContext, typ: ScalyType): BytecodeList = {
+
+    val location = Location(typ, SymbolSource.GLOBAL)
+    val locationName = name + "_loc"
+
+    compileExpression(
+      IST_Block(List(
+        IST_Assignment(locationName, location, IST_Literal(PyNone, ScalyUnitType)),
+        IST_Function(
+          Nil,
+          IST_Block(List(
+            IST_If(
+              IST_IsNone(IST_Name(locationName, location)),
+              IST_Assignment(locationName, location, IST_New(constructorName, Nil, typ)),
+              Some(IST_Literal(PyNone, ScalyUnitType)),
+              ScalyUnitType
+            ), IST_Name(locationName, location)
+          ), typ),
+          ScalyFunctionType(Some(ScalyUnitType), typ), Map(), Map()
+        )
+      ), ScalyFunctionType(Some(ScalyUnitType), typ)), ctx
     )
   }
 

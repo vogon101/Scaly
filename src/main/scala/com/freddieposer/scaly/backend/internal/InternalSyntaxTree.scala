@@ -4,8 +4,8 @@ import com.freddieposer.scaly.AST.ClassParam
 import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyNothingType, ScalyUnitType}
-import com.freddieposer.scaly.typechecker.types.{ScalyASTClassType, ScalyFunctionType, ScalyTupleType, ScalyType}
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyNothingType, ScalyUnitType}
+import com.freddieposer.scaly.typechecker.types.{ScalyASTClassType, ScalyASTTemplateType, ScalyFunctionType, ScalyTupleType, ScalyType}
 
 abstract class IST extends {
 
@@ -13,9 +13,21 @@ abstract class IST extends {
 
 }
 
-class IST_CompilationUnit(val classes: List[IST_Class]) extends IST {
+class IST_CompilationUnit(val classes: List[IST_Template]) extends IST {
 
   val typ: ScalyType = ScalyNothingType
+
+}
+
+sealed abstract class IST_Template extends IST {
+
+  val name: String
+  val parent: Option[String]
+  val parentParams: List[IST_Expression]
+  val defs: Map[String, IST_Def]
+  val statements: List[IST_Statement]
+  val params: List[ClassParam]
+
 
 }
 
@@ -28,9 +40,19 @@ case class IST_Class(
                       defs: Map[String, IST_Def],
                       statements: List[IST_Statement],
                       //TODO: should this be ClassParam - it is an AST subtype
-                      typ: ScalyASTClassType
-                    ) extends IST {
+                      typ: ScalyASTTemplateType
+                    ) extends IST_Template
 
+case class IST_Object(
+                       name: String,
+                       parent: Option[String],
+                       parentParams: List[IST_Expression],
+                       defs: Map[String, IST_Def],
+                       statements: List[IST_Statement],
+                       typ: ScalyASTTemplateType
+                     ) extends IST_Template {
+
+  val params: List[ClassParam] = Nil
 
 }
 
@@ -140,4 +162,8 @@ case class IST_While(cond: IST_Expression, body: IST_Expression) extends IST_Exp
 
   override val typ: ScalyType = ScalyUnitType
 
+}
+
+case class IST_IsNone(lhs: IST_Expression) extends IST_Expression {
+  override val typ: ScalyType = ScalyBooleanType
 }

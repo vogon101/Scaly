@@ -5,7 +5,7 @@ This is another member
 This is a member
 109
  */
-class Main {
+object Main {
 
   def main(): Int = {
 
