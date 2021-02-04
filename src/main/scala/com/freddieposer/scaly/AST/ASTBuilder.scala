@@ -79,7 +79,6 @@ object ASTBuilder {
     }
 
   private def buildParam(param: Term.Param): FunParam =
-  //TODO: this is an option - why?
     FunParam(param.name.value, param.decltpe.map(buildScalyType).get)
 
   private def buildScalyType(typ: Type): AST_ScalyType =

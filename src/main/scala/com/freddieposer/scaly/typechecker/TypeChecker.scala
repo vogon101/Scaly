@@ -7,7 +7,7 @@ import com.freddieposer.scaly.typechecker.TypeCheckerUtils._
 import com.freddieposer.scaly.typechecker.Variance.Variance
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, buildTypeMap}
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation._
-import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, MutableClosureContext, ThisTypeContext, TypeContext}
+import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, EmptyContext, MutableClosureContext, ThisTypeContext, TypeContext}
 import com.freddieposer.scaly.typechecker.types.SymbolSource.SymbolSource
 import com.freddieposer.scaly.typechecker.types._
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
@@ -30,7 +30,16 @@ class TypeChecker(
 
   //TODO: Better errors with line numbers
 
+  //TODO: This is a hack - remove
   def typeCheck(): TCR[IST_CompilationUnit] = {
+    try {
+      _typeCheck()
+    } catch {
+      case e @ InferenceError(node) => Left(TypeError(e.getMessage, node)(EmptyContext))
+    }
+  }
+
+  private def _typeCheck(): TCR[IST_CompilationUnit] = {
 
     val types: Map[String, ScalyASTTemplateType] =
       ast.statements.map {
@@ -127,39 +136,32 @@ class TypeChecker(
           case d: DefDef => typeCheck_def(d, source)
           case m@MemberDcl(id, typ, rhs) =>
             typeCheck_Expr(rhs).flatMap { rhsExpr =>
-              typ.map(_.fromAST) match {
+              (typ.map(_.fromAST) match {
                 case Some(dt) => dt.flatMap { declaredType =>
                   doesUnify(rhsExpr.typ, declaredType)(ctx, Variance.CO)
                     .mapError(stat)
-                    .map(_ => m match {
-                      case _: ValDef => (
-                        IST_Val(id, rhsExpr, Location(rhsExpr.typ, SymbolSource.LOCAL)),
-                        ctx.addVar(id -> Location(rhsExpr.typ, source))
-                      )
-                      case _: VarDef => (
-                        IST_Var(id, rhsExpr, Location(rhsExpr.typ, SymbolSource.LOCAL_WRITABLE)),
-                        ctx.addVar(id -> Location(rhsExpr.typ, SymbolSource.writable(source).get))
-                      )
-                    })
                 }
-                case None => m match {
+                case None => Right(EmptyUS)
+              }).map { _ =>
+                m match {
                   case _: ValDef =>
-                    Right((
-                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, SymbolSource.LOCAL)),
+                    (
+                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, source)),
                       ctx.addVar(id -> Location(rhsExpr.typ, source))
-                    ))
+                    )
                   case _: VarDef =>
-                    Right((
-                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, SymbolSource.LOCAL)),
+                    (
+                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, SymbolSource.writable(source).get)),
                       ctx.addVar(id -> Location(rhsExpr.typ, SymbolSource.writable(source).get))
-                    ))
+                    )
                 }
               }
             }
-
         }
+
       }
     }
+
 
   def typeCheck_def(defDef: DefDef, source: SymbolSource)(implicit ctx: TypeContext): TCR[(IST_Def, TypeContext)] = addToError(defDef, ctx) {
     defDef match {
@@ -180,7 +182,7 @@ class TypeChecker(
           case Some(rt) => rt.fromAST.map { declaredRT =>
             (MutableClosureContext(
               buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL) +
-                (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.MEMBER)),
+                (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.nonWritable(source))),
               ctx
             ), Some(declaredRT))
           }

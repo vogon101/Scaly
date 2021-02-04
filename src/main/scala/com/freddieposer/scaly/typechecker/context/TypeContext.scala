@@ -79,3 +79,8 @@ object TypeContext {
 
 }
 
+final object EmptyContext extends TypeContext(Map(), Map(), None) {
+
+
+}
+

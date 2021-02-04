@@ -1,23 +1,36 @@
 object Main {
 
-  val x: String = "Thing"
+  val member = "thing"
+
+  val otherMember = ("thing", 2)
+
+  val thirdMember = 1 + 2
 
   def main(): Unit = {
 
-    print(x)
-    print(Main.x)
-    print(StaticThing.foo("WOWW"))
-    print(StaticThing.foo("WOWW"))
-    print("Hello")
+    val a = "Hello world"
+
+    def rec(x : Int):Int = if (x == 0) 1 else x + rec(x - 1)
+
+    def innerFunction(x: String) = x + a
+
+    print(innerFunction(a))
+
+    print(a)
+
+    def innerFunction (x: String) = new Wrapper(x + a)
+
+    print(innerFunction("Thing"))
+
+    print(thirdMember)
+
 
   }
 
 }
 
-object StaticThing {
+class Wrapper(val x: String) {
 
-  print("Constructor!")
-
-  def foo(x: String): String = "!" + x + "!"
+  override def toString: String = "Wrapper(" + x + ")"
 
 }

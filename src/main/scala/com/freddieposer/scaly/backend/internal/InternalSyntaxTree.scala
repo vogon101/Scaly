@@ -56,7 +56,9 @@ case class IST_Object(
 
 }
 
-sealed abstract class IST_Statement extends IST
+sealed abstract class IST_Statement extends IST {
+  val maxStack: Int
+}
 
 sealed abstract class IST_Member extends IST_Statement {
   val id: String
@@ -78,20 +80,24 @@ case class IST_Def(
                     freeVars: Map[String, Location]
                   ) extends IST_Member {
 
-  def func: IST_Function = IST_Function.build(params, expr, typ, closedVars, freeVars)
-
+  lazy val func: IST_Function = IST_Function.build(params, expr, typ, closedVars, freeVars)
+  override lazy val maxStack: Int = func.maxStack
 }
 
 case class IST_Val(id: String, expr: IST_Expression, location: Location) extends IST_Member {
   override val typ: ScalyType = location.typ
+  override lazy val maxStack: Int = expr.maxStack + 2
 }
 
 case class IST_Var(id: String, expr: IST_Expression, location: Location) extends IST_Member {
   override val typ: ScalyType = location.typ
+  override lazy val maxStack: Int = expr.maxStack + 2
 }
 
 
-sealed abstract class IST_Expression extends IST_Statement
+sealed abstract class IST_Expression extends IST_Statement {
+  val maxStack: Int
+}
 
 case class IST_Function(
                          args: List[String],
@@ -99,7 +105,12 @@ case class IST_Function(
                          typ: ScalyFunctionType,
                          closedVars: Map[String, Location],
                          freeVars: Map[String, Location]
-                       ) extends IST_Expression
+                       ) extends IST_Expression {
+  //Actually smaller but this is a decent estimate
+  //Remember this is the stack size of this _as an expression_
+  //  THe stacksize of the code object should be body.maxStack
+  override lazy val maxStack: Int = freeVars.size + 2
+}
 
 object IST_Function {
 
@@ -128,23 +139,37 @@ case class IST_If(
                    tBranch: IST_Expression,
                    fBranch: Option[IST_Expression],
                    typ: ScalyType
-                 ) extends IST_Expression
+                 ) extends IST_Expression {
+  override lazy val maxStack: Int = List(cond.maxStack, tBranch.maxStack, fBranch.map(_.maxStack).getOrElse(0)).max
+}
 
-case class IST_Literal(py: PyObject, typ: ScalyValType) extends IST_Expression
+case class IST_Literal(py: PyObject, typ: ScalyValType) extends IST_Expression {
+  override lazy val maxStack: Int = 1
+}
 
-case class IST_Block(statements: List[IST_Statement], typ: ScalyType) extends IST_Expression
+case class IST_Block(statements: List[IST_Statement], typ: ScalyType) extends IST_Expression {
+  override lazy val maxStack: Int = (1 :: statements.map(_.maxStack)).max
+}
 
 //TODO: defs without application - perhaps could use the @property
-case class IST_Application(lhs: IST_Expression, args: List[IST_Expression], typ: ScalyType) extends IST_Expression
+case class IST_Application(lhs: IST_Expression, args: List[IST_Expression], typ: ScalyType) extends IST_Expression {
+  override lazy val maxStack: Int = List(lhs.maxStack, args.map(_.maxStack).sum, 1).max
+}
 
-case class IST_New(name: String, args: List[IST_Expression], typ: ScalyType) extends IST_Expression
+case class IST_New(name: String, args: List[IST_Expression], typ: ScalyType) extends IST_Expression {
+  override lazy val maxStack: Int = List(1, args.map(_.maxStack).sum).max
+}
 
 //TODO: This transformation should be used in future for the various types
 //  e.g. when the arm selected is a def
-case class IST_Select(lhs: IST_Expression, rhs: String, typ: ScalyType) extends IST_Expression
+case class IST_Select(lhs: IST_Expression, rhs: String, typ: ScalyType) extends IST_Expression {
+  override lazy val maxStack: Int = List(lhs.maxStack, 1).max
+}
 
 case class IST_Name(name: String, location: Location) extends IST_Expression {
 
+  //Varies but this is an upper bound
+  override lazy val maxStack: Int = 2
   override val typ: ScalyType = location.typ
 
 }
@@ -152,18 +177,22 @@ case class IST_Name(name: String, location: Location) extends IST_Expression {
 //TODO: More complex assignments
 case class IST_Assignment(name: String, location: Location, rhs: IST_Expression) extends IST_Expression {
 
+
+  override lazy val maxStack: Int = Math.max(rhs.maxStack, 2)
   override val typ: ScalyType = ScalyUnitType
 
 }
 
-case class IST_TupleExpr(elems: List[IST_Expression], typ: ScalyTupleType) extends IST_Expression
+case class IST_TupleExpr(elems: List[IST_Expression], typ: ScalyTupleType) extends IST_Expression {
+  override lazy val maxStack: Int = elems.map(_.maxStack).sum + 1
+}
 
 case class IST_While(cond: IST_Expression, body: IST_Expression) extends IST_Expression {
-
   override val typ: ScalyType = ScalyUnitType
-
+  override lazy val maxStack: Int = Math.max(cond.maxStack, body.maxStack)
 }
 
 case class IST_IsNone(lhs: IST_Expression) extends IST_Expression {
   override val typ: ScalyType = ScalyBooleanType
+  override lazy val maxStack: Int = lhs.maxStack + 1
 }

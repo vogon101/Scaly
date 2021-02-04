@@ -17,11 +17,20 @@ object SymbolSource extends Enumeration {
   }
 
   def writable(ss: SymbolSource): Option[SymbolSource] = ss match {
-    case LOCAL_WRITABLE | MEMBER_WRITABLE | CLOSURE_WRITABLE => Some(ss)
+    case LOCAL_WRITABLE | MEMBER_WRITABLE | CLOSURE_WRITABLE | CLOSURE_MEMBER_WRITABLE => Some(ss)
     case LOCAL => Some(LOCAL_WRITABLE)
     case MEMBER => Some(MEMBER_WRITABLE)
     case CLOSURE => Some(CLOSURE_WRITABLE)
+    case CLOSURE_MEMBER => Some(CLOSURE_MEMBER_WRITABLE)
     case _ => None
+  }
+
+  def nonWritable(ss: SymbolSource): SymbolSource = ss match {
+    case LOCAL_WRITABLE => LOCAL
+    case MEMBER_WRITABLE => MEMBER
+    case CLOSURE_MEMBER_WRITABLE => CLOSURE_MEMBER
+    case CLOSURE_WRITABLE => CLOSURE
+    case _ => ss
   }
 
 

@@ -1,6 +1,7 @@
 package com.freddieposer.scaly.typechecker.types
 
 import com.freddieposer.scaly.AST._
+import com.freddieposer.scaly.typechecker.TypeInferenceEngine
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap}
 import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValType}
 
@@ -26,7 +27,7 @@ abstract class ScalyASTTemplateType extends ASTScalyType with PlaceholderType{
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))
   lazy val parentConstructor: Option[List[Expr]] = node.parents.headOption.map(_._2)
 
-  override lazy val memberTypes: TypeMap = construct({
+  override val memberTypes: TypeMap = construct({
 
     def convertClause(clause: List[FunParam]): ScalyType =
       clause match {
@@ -60,6 +61,12 @@ abstract class ScalyASTTemplateType extends ASTScalyType with PlaceholderType{
               id -> Location(ScalyASTPlaceholderType(declType), SymbolSource.MEMBER)
             case VarDef(id, Some(declType), _) =>
               id -> Location(ScalyASTPlaceholderType(declType), SymbolSource.MEMBER_WRITABLE)
+
+            case ValDef(id, None, expr) =>
+              id -> Location(TypeInferenceEngine.infer(expr), SymbolSource.MEMBER)
+            case ValDef(id, None, expr) =>
+              id -> Location(TypeInferenceEngine.infer(expr), SymbolSource.MEMBER_WRITABLE)
+
             //TODO: Return could be none - inference
             case DefDef(id, params, Some(retType), _) =>
               id -> Location(convertParams(params, ScalyASTPlaceholderType(retType)), SymbolSource.MEMBER)

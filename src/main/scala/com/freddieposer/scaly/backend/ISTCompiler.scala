@@ -50,20 +50,13 @@ class ISTCompiler(_filename: String) {
             }.getOrElse(throw new Error(s"Cannot inherit from $p"))
           )
 
-        //        val objectCode = istClass match {
-        //          case _: IST_Class => BytecodeList.empty
-        //          case IST_Object(name, parent, parentParams, defs, statements, typ) =>
-        //            compileExpression(
-        //              IST_Function(Nil, IST_New(name, Nil, typ), ScalyFunctionType(Some(ScalyUnitType), typ), Map(), Map()),
-        //              ctx
-        //            ) --> (STORE_NAME, ctx.name((GLOBAL_LAZY_PREFIX + name).toPy)).toBCL
-        //        }
         val objectCode = istClass match {
           case _: IST_Class => BytecodeList.empty
           case IST_Object(name, _, _, _, _, typ) =>
             BuildGlobalLazy(GLOBAL_LAZY_PREFIX + name, name, ctx, typ) -->
               (STORE_NAME, ctx.name((GLOBAL_LAZY_PREFIX + name).toPy)).toBCL
         }
+
         BytecodeList(
           ~LOAD_BUILD_CLASS,
           (LOAD_CONST, ctx.const(pycode)),
@@ -80,6 +73,7 @@ class ISTCompiler(_filename: String) {
 
     val name = "<module>".toPy
 
+    //TODO
     val stackSize: Int = 10 // ???
 
     new PyCodeObject(
@@ -126,11 +120,15 @@ class ISTCompiler(_filename: String) {
 
     val constructorName = "__init__".toPy
     val stackSize = 10
+//    val stackSize = List(
+//      2, // Add params as attrs
+//      istClass.statements.map(_.maxStack), //Body of constructor
+//      istClass.parentParams.map(_.maxStack).max + 3 //Calling parents
+//    ).max + 2 //Buffer
 
     val nargs = 1 + istClass.params.length
     val localNames = THIS_NAME :: istClass.params.map(_.id.toPy)
 
-    //TODO: Constructor parameters for parent
     val parentConstructor = istClass.parent.map { p =>
 
       val paramCode = istClass.parentParams.map(compileExpression(_, ctx)).flat
@@ -145,6 +143,7 @@ class ISTCompiler(_filename: String) {
 
     localNames.foreach(n => ctx.varname(n))
 
+    // Max stack: 2
     val paramStatements: List[BytecodeList] = istClass.params.map { p =>
       BytecodeList(
         (LOAD_FAST, ctx.varname(p.id.toPy)),
@@ -193,7 +192,8 @@ class ISTCompiler(_filename: String) {
         istFunction.args.map(_.toPy)
       )
 
-      val stackSize = 10
+      //Add some buffer
+      val stackSize = istFunction.body.maxStack + 2
       localNames.foreach(ctx.varname)
       // TODO: + number of other locals
 
@@ -274,7 +274,7 @@ class ISTCompiler(_filename: String) {
 
         }
       //TODO: This could simply be rewritten to be a function application?
-      case IST_New(name, args, typ) =>
+      case IST_New(name, args, _) =>
         (LOAD_GLOBAL, ctx.name(name.toPy)).toBCL -->
           args.map(compileExpression(_, ctx)).flat -->
           (CALL_FUNCTION, args.length.toByte).toBCL
