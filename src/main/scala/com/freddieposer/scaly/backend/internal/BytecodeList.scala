@@ -43,6 +43,8 @@ class BytecodeList(val bytecodes: List[Bytecode]) extends Iterable[Bytecode] {
   def -->(b: Bytecode): BytecodeList =
     new BytecodeList(bytecodes ++ (b :: Nil))
 
+  def raw: RawISTExpr = RawISTExpr(this)
+
 }
 
 object BytecodeList {

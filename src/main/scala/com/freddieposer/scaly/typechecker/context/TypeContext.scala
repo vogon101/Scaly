@@ -2,6 +2,7 @@ package com.freddieposer.scaly.typechecker.context
 
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, TypeMap}
 import com.freddieposer.scaly.typechecker.types.SymbolSource.SymbolSource
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyUnitType
 import com.freddieposer.scaly.typechecker.types.{ScalyType, SymbolSource}
 
 import scala.collection.mutable
@@ -61,6 +62,12 @@ object TypeContext {
 
   case class Location(typ: ScalyType, source: SymbolSource) {
     def writable: Option[Location] = SymbolSource.writable(source).map(Location(typ, _))
+  }
+
+  object Location {
+    def apply(typ: ScalyType, source: SymbolSource) = new Location(typ, source)
+    def apply(source: SymbolSource) = new Location(ScalyUnitType, source)
+    def local: Location = Location(SymbolSource.LOCAL)
   }
 
   implicit def WrapLocation(t: (ScalyType, SymbolSource)) = Location(t._1, t._2)

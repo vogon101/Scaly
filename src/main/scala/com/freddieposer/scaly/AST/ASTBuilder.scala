@@ -1,5 +1,6 @@
 package com.freddieposer.scaly.AST
 
+import scala.meta.Pat.Var
 import scala.meta._
 
 object ASTBuilder {
@@ -110,6 +111,7 @@ object ASTBuilder {
       case Term.Assign(lhs, rhs) => AssignExpr(buildExpr(lhs), buildExpr(rhs))
       case Term.While(cond, body) => WhileExpr(buildExpr(cond), buildExpr(body))
       case Term.Function(params, body) => FunctionExpr(params.map(buildParam), buildExpr(body))
+      case Term.Match(expr, cases) => MatchExpr(buildExpr(expr), cases.map(buildCase))
     }
 
   private def buildLiteral(lit: Lit): Literal =
@@ -124,5 +126,15 @@ object ASTBuilder {
       case Lit.Null() => NullLiteral
       case Lit.Unit() => UnitLiteral
     }
+
+  private def buildCase(c: Case): MatchCase = c match {
+    case Case(pat, cond, body) => MatchCase(buildPattern(pat), cond.map(buildExpr), buildExpr(body))
+  }
+
+  private def buildPattern(pat: Pat): Pattern = pat match {
+    case l @ Lit(_) => LiteralPattern(buildLiteral(l))
+    case Name(str) => ???
+    case Var(name) => VariablePattern(name.value)
+  }
 
 }

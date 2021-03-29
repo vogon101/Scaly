@@ -2,7 +2,7 @@ package com.freddieposer.scaly.backend.internal
 
 import com.freddieposer.scaly.AST._
 import com.freddieposer.scaly.backend.pyc._
-import com.freddieposer.scaly.typechecker.types.ScalyASTTemplateType
+import com.freddieposer.scaly.typechecker.types.{ScalyASTTemplateType, ScalyType}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 
 object ISTBuilder {
@@ -35,13 +35,21 @@ object ISTBuilder {
 
   }
 
-  def buildLiteral(literal: Literal, typ: ScalyValType): IST_Literal = IST_Literal(literal match {
+  //TODO: Unit Literal
+  //TODO: Allowing other types at end of unit block
+  def buildLiteral(literal: Literal): IST_Literal = IST_Literal(literal match {
     case NullLiteral => PyNone
-    case UnitLiteral => ???
+    case UnitLiteral => PyNone
     case IntLiteral(value) => new PyInt(value)
     case StringLiteral(value) => PyAscii(value)
     case BooleanLiteral(true) => PyTrue
     case BooleanLiteral(false) => PyFalse
-  }, typ)
+  }, ScalyValType.literalType(literal))
+
+  def buildPattern(pattern: Pattern, matchType: ScalyType): IST_Pattern = pattern match {
+    case LiteralPattern(literal) => IST_LiteralPattern(buildLiteral(literal))
+    case VariablePattern(name) => IST_VariablePattern(name, matchType)
+    case _ => ???
+  }
 
 }

@@ -17,6 +17,7 @@ class ISTCompiler(_filename: String) {
   private val THIS_NAME: PyAscii = "this".toPy
   private val GLOBAL_LAZY_PREFIX: String = "__global__lazyImpl_"
 
+
   private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
     val ctx = new CompilationContext
     f(ctx)
@@ -120,11 +121,11 @@ class ISTCompiler(_filename: String) {
 
     val constructorName = "__init__".toPy
     val stackSize = 10
-//    val stackSize = List(
-//      2, // Add params as attrs
-//      istClass.statements.map(_.maxStack), //Body of constructor
-//      istClass.parentParams.map(_.maxStack).max + 3 //Calling parents
-//    ).max + 2 //Buffer
+    //    val stackSize = List(
+    //      2, // Add params as attrs
+    //      istClass.statements.map(_.maxStack), //Body of constructor
+    //      istClass.parentParams.map(_.maxStack).max + 3 //Calling parents
+    //    ).max + 2 //Buffer
 
     val nargs = 1 + istClass.params.length
     val localNames = THIS_NAME :: istClass.params.map(_.id.toPy)
@@ -314,6 +315,9 @@ class ISTCompiler(_filename: String) {
           (LOAD_CONST, ctx.const(PyNone)),
           (COMPARE_OP, 8.toByte)
         )
+
+      case m: IST_Match => compileMatch(m, ctx)
+      case RawISTExpr(bcl) => bcl
     }
   }
 
@@ -334,6 +338,39 @@ class ISTCompiler(_filename: String) {
       //We need to be popping items off the stack here but we can only do this IF they add things
       //thus all functions NEED to return a PY_NONE if they don't return something else!
     }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
+  }
+
+  def compileMatch(istMatch: IST_Match, ctx: CompilationContext): BytecodeList = ctx.withMatch[BytecodeList] {
+    istMatch match {
+      case IST_Match(lhs, cases, typ) =>
+        val assignBC: BytecodeList =
+          compileExpression(IST_Assignment(ctx.match_name, Location(lhs.typ, SymbolSource.LOCAL_WRITABLE), lhs), ctx)
+        val patternsBC = cases.map(c => compilePattern(c.pattern, ctx))
+
+        def descend(ps: List[(IST_Case, IST_Expression)]): IST_Expression = ps match {
+          case Nil => ???
+          case (c, cond) :: Nil => IST_If(cond, c.rhs, Some(ThrowException("Match error".toPy, ctx).raw) , c.typ)
+          case (c, cond) :: rest => IST_If(cond, c.rhs, Some(descend(rest)), c.typ)
+        }
+
+        assignBC --> compileExpression(descend(cases zip patternsBC), ctx)
+    }
+  }
+
+
+  //
+
+  def compilePattern(pattern: IST_Pattern, ctx: CompilationContext): IST_Expression = {
+    import PyOpcodes._
+    pattern match {
+
+      case IST_LiteralPattern(literal) =>
+        (compileExpression(IST_Name(ctx.match_name, Location.local), ctx) -->
+            compileExpression(literal, ctx) -->
+            (COMPARE_OP, 2.toByte)).raw
+
+
+    }
   }
 
   def makeFunction(id: String, func: IST_Function, ctx: CompilationContext): BytecodeList = {
@@ -407,5 +444,16 @@ class ISTCompiler(_filename: String) {
       ), ScalyFunctionType(Some(ScalyUnitType), typ)), ctx
     )
   }
+
+  private def ThrowException(message: PyAscii, ctx: CompilationContext): BytecodeList = {
+    import PyOpcodes._
+    BytecodeList(
+      (LOAD_GLOBAL, ctx.name("Exception".toPy)),
+      (LOAD_CONST, ctx.const(message)),
+      (CALL_FUNCTION, 1.toByte),
+      (RAISE_VARARGS, 1.toByte)
+    )
+  }
+
 
 }

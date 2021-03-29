@@ -99,6 +99,11 @@ sealed abstract class IST_Expression extends IST_Statement {
   val maxStack: Int
 }
 
+sealed case class RawISTExpr(bcl: BytecodeList) extends IST_Expression {
+  override val maxStack: Int = 0
+  override val typ: ScalyType = ScalyUnitType
+}
+
 case class IST_Function(
                          args: List[String],
                          body: IST_Expression,
@@ -195,4 +200,8 @@ case class IST_While(cond: IST_Expression, body: IST_Expression) extends IST_Exp
 case class IST_IsNone(lhs: IST_Expression) extends IST_Expression {
   override val typ: ScalyType = ScalyBooleanType
   override lazy val maxStack: Int = lhs.maxStack + 1
+}
+
+case class IST_Match(lhs: IST_Expression, cases: List[IST_Case], typ: ScalyType) extends IST_Expression {
+  override val maxStack: Int = 20
 }
