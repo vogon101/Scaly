@@ -42,6 +42,8 @@ object CodeGenerationUtils {
     override val length: Int = 2
 
     override def toString: String = f"BC(${t._1}, ${t._2})"
+
+    def raw: RawISTExpr = RawISTExpr(this.toBCL)
   }
 
   object BytecodeOpcode {
@@ -97,5 +99,16 @@ object CodeGenerationUtils {
     def flat: BytecodeList = bcls.foldLeft(BytecodeList.empty)(_ --> _)
   }
 
+  implicit class ExtendedIST_Statement(expr: IST_Expression) {
+
+    def + (that: IST_Expression): IST_Sequence = expr match {
+      case IST_Sequence(stats, typ) => IST_Sequence(stats :+ that, that.typ)
+      case _ => that match {
+        case IST_Sequence(stats, typ) => IST_Sequence(expr :: stats, typ)
+        case _ => IST_Sequence(expr :: that :: Nil, that.typ)
+      }
+    }
+
+  }
 
 }

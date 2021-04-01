@@ -5,7 +5,7 @@ import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyNothingType, ScalyUnitType}
-import com.freddieposer.scaly.typechecker.types.{ScalyASTClassType, ScalyASTTemplateType, ScalyFunctionType, ScalyTupleType, ScalyType}
+import com.freddieposer.scaly.typechecker.types.{ScalyASTTemplateType, ScalyFunctionType, ScalyTupleType, ScalyType}
 
 abstract class IST extends {
 
@@ -152,9 +152,24 @@ case class IST_Literal(py: PyObject, typ: ScalyValType) extends IST_Expression {
   override lazy val maxStack: Int = 1
 }
 
-case class IST_Block(statements: List[IST_Statement], typ: ScalyType) extends IST_Expression {
+sealed class IST_Sequence(val statements: List[IST_Statement], val typ: ScalyType) extends IST_Expression {
+  override lazy val maxStack: Int = (1 :: statements.map(_.maxStack)).sum
+}
+
+object IST_Sequence {
+
+  def apply(statements: List[IST_Statement], typ: ScalyType): IST_Sequence = new IST_Sequence(statements, typ)
+
+  def unapply(arg: IST_Sequence): Option[(List[IST_Statement], ScalyType)] = Some((arg.statements, arg.typ))
+
+}
+
+case class IST_Block(override val statements: List[IST_Statement], override val typ: ScalyType)
+  extends IST_Sequence(statements, typ)
+{
   override lazy val maxStack: Int = (1 :: statements.map(_.maxStack)).max
 }
+
 
 //TODO: defs without application - perhaps could use the @property
 case class IST_Application(lhs: IST_Expression, args: List[IST_Expression], typ: ScalyType) extends IST_Expression {

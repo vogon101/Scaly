@@ -358,7 +358,6 @@ class TypeChecker(
                     pat.bindings.map { case (k, v) => (k, Location(v, SymbolSource.LOCAL)) }.toMap
                   )
                 )
-//                ).flatMap(x => doesUnify(x.typ, retType)(ctx, Variance.CO).mapError(expr))
               }.collapse
                 .flatMap(retExprs => unify(retExprs.map(_.typ)) match {
                   case None => Left(TypeError(s"Cannot unify return types of $retExprs for patterns", expr))

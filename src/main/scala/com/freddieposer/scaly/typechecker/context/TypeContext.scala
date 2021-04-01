@@ -68,6 +68,7 @@ object TypeContext {
     def apply(typ: ScalyType, source: SymbolSource) = new Location(typ, source)
     def apply(source: SymbolSource) = new Location(ScalyUnitType, source)
     def local: Location = Location(SymbolSource.LOCAL)
+    def local_w: Location = Location(SymbolSource.LOCAL_WRITABLE)
   }
 
   implicit def WrapLocation(t: (ScalyType, SymbolSource)) = Location(t._1, t._2)

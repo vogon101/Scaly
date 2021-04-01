@@ -18,7 +18,8 @@ object Test {
   val COMPILED_OUTPUT_FILE = "test_files/compiled.pyc"
   val DUMP_PYTHON_FILE = "test_files/simple_class.py"
   val DUMP_INPUT_FILE = "test_files/sclass.pyc"
-  val SCALA_INPUT_FILE = "test_files/test1.scala"
+//  val SCALA_INPUT_FILE = "test_files/test1.scala"
+  val SCALA_INPUT_FILE = "test_files/compileTest.scala"
 
   def test_pyc(): Unit = {
     import sys.process._
@@ -118,7 +119,7 @@ object Test {
   def test_compile(): Unit = {
 
 
-    val lines = Files.readAllLines(Paths.get("test_files/compileTest.scala")).asScala.mkString("\n")
+    val lines = Files.readAllLines(Paths.get(SCALA_INPUT_FILE)).asScala.mkString("\n")
     println(lines)
 
     import scala.meta._

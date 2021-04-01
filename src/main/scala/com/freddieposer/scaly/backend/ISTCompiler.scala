@@ -4,7 +4,7 @@ import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyUnitType
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyUnitType}
 import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyType, SymbolSource}
 
 
@@ -248,7 +248,7 @@ class ISTCompiler(_filename: String) {
       case literal: IST_Literal =>
         BytecodeList((LOAD_CONST, ctx.const(literal.py)))
 
-      case block: IST_Block => compileBlock(block, ctx)
+      case block: IST_Sequence => compileBlock(block, ctx)
 
       case IST_Name(_name, location) =>
         val name = nameMangler.getOrElse(_name, _name)
@@ -322,10 +322,16 @@ class ISTCompiler(_filename: String) {
   }
 
   //Currently doesn't return - should be managed by compileFunction
-  def compileBlock(block: IST_Block, ctx: CompilationContext): BytecodeList = {
+  def compileBlock(block: IST_Sequence, ctx: CompilationContext): BytecodeList = {
+
     import PyOpcodes._
-    new BytecodeList(block.statements.map {
-      case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
+    val bc = block.statements.map {
+      case expr: IST_Expression =>
+        block match {
+          case IST_Block(_, _) => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
+          case _ => compileExpression(expr, ctx)
+        }
+
       case m: IST_Member => m match {
         case d@IST_Def(id, _, _, _, _, freeVars) =>
           makeFunction(id, d.func, ctx) -->
@@ -337,23 +343,37 @@ class ISTCompiler(_filename: String) {
       }
       //We need to be popping items off the stack here but we can only do this IF they add things
       //thus all functions NEED to return a PY_NONE if they don't return something else!
-    }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
+    }.foldLeft(BytecodeList.empty)(_ --> _)
+    block match {
+      case IST_Block(statements, typ) => new BytecodeList(bc.dropRight(1).toList)
+      case _ => new BytecodeList(bc.toList)
+    }
   }
 
+  //TODO: Swap to using functions for the case bodies so that the context is respected
+  //  and outer vars aren't overwritten! (Currently violates type safety)
   def compileMatch(istMatch: IST_Match, ctx: CompilationContext): BytecodeList = ctx.withMatch[BytecodeList] {
+    import PyOpcodes.DUP_TOP
     istMatch match {
       case IST_Match(lhs, cases, typ) =>
-        val assignBC: BytecodeList =
-          compileExpression(IST_Assignment(ctx.match_name, Location(lhs.typ, SymbolSource.LOCAL_WRITABLE), lhs), ctx)
+        val assign: IST_Assignment =
+          IST_Assignment(ctx.match_name, Location(lhs.typ, SymbolSource.LOCAL_WRITABLE), lhs)
         val patternsBC = cases.map(c => compilePattern(c.pattern, ctx))
 
         def descend(ps: List[(IST_Case, IST_Expression)]): IST_Expression = ps match {
           case Nil => ???
-          case (c, cond) :: Nil => IST_If(cond, c.rhs, Some(ThrowException("Match error".toPy, ctx).raw) , c.typ)
-          case (c, cond) :: rest => IST_If(cond, c.rhs, Some(descend(rest)), c.typ)
+          case (c, cond) :: Nil =>
+            (~DUP_TOP).raw + IST_If(cond, c.rhs, Some(ThrowException("Match error".toPy, ctx).raw) , c.typ)
+          case (c, cond) :: rest =>
+            (~DUP_TOP).raw + IST_If(cond, c.rhs, Some(descend(rest)), c.typ)
         }
 
-        assignBC --> compileExpression(descend(cases zip patternsBC), ctx)
+        val x = assign + IST_Name(ctx.match_name, Location.local) + descend(cases zip patternsBC)
+        x.statements.foreach(println)
+
+        compileExpression(
+          assign + IST_Name(ctx.match_name, Location.local) + descend(cases zip patternsBC), ctx
+        )
     }
   }
 
@@ -365,9 +385,11 @@ class ISTCompiler(_filename: String) {
     pattern match {
 
       case IST_LiteralPattern(literal) =>
-        (compileExpression(IST_Name(ctx.match_name, Location.local), ctx) -->
-            compileExpression(literal, ctx) -->
-            (COMPARE_OP, 2.toByte)).raw
+        literal + (COMPARE_OP, 2.toByte).raw
+
+      case IST_VariablePattern(name, mt) =>
+        IST_Assignment(name, Location.local_w, (~NOP).raw) +
+          IST_Literal(PyTrue, ScalyBooleanType)
 
 
     }
