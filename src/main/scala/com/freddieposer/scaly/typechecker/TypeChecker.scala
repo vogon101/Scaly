@@ -349,20 +349,13 @@ class TypeChecker(
             }
             .flatMap { case (patterns, matchType) =>
               patterns.zip(cases).map { case (pat, c) =>
-                typeCheck_Expr(c.result)(
-                  ctx.extend(
-                    Map(),
-                    //TODO: Nested pattern matching might mess with this for example
-                    //  e match { case x => (e2 match { case x => x}) + x }
-                    //  x might be overwritten by the inner match - could use functions for this
-                    pat.bindings.map { case (k, v) => (k, Location(v, SymbolSource.LOCAL)) }.toMap
-                  )
-                )
+                val ectx = MutableClosureContext(buildTypeMap(pat.bindings.toMap, SymbolSource.LOCAL), ctx)
+                typeCheck_Expr(c.result)(ectx).map((_, ectx))
               }.collapse
-                .flatMap(retExprs => unify(retExprs.map(_.typ)) match {
+                .flatMap(retExprs => unify(retExprs.map(_._1.typ)) match {
                   case None => Left(TypeError(s"Cannot unify return types of $retExprs for patterns", expr))
                   case Some(retType) =>
-                    val compiledCases = patterns.zip(retExprs).map {case (p, r) => IST_Case(p, r)}
+                    val compiledCases = patterns.zip(retExprs).map {case (p, (body, ectx)) => IST_Case(p, body, ectx.closedVars, ectx.freeVars(ctx))}
                     Right((compiledCases, retType))
                 })
             }.map { case (cs, retType) => IST_Match(lexpr, cs, retType) }
@@ -490,6 +483,10 @@ class TypeChecker(
         .mapError(pattern)
         .map(_ => IST_LiteralPattern(ISTBuilder.buildLiteral(literal)))
     case VariablePattern(name) => Right(IST_VariablePattern(name, typ))
+    case TuplePattern(pats) => typ match {
+      case ScalyTupleType(elems) if elems.length == pats.length =>
+        (elems zip pats).map{ case (x,y) => canMatch(x,y)}.collapse.map(IST_TuplePattern)
+    }
   }
 
 

@@ -1,6 +1,7 @@
 package com.freddieposer.scaly.backend.internal
 
 import com.freddieposer.scaly.AST.ClassParam
+import com.freddieposer.scaly.backend.internal.CodeGenerationUtils.Bytecode
 import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
@@ -99,9 +100,11 @@ sealed abstract class IST_Expression extends IST_Statement {
   val maxStack: Int
 }
 
-sealed case class RawISTExpr(bcl: BytecodeList) extends IST_Expression {
+sealed case class RawISTExpr(bcl: BytecodeList) extends IST_Expression with Iterable[Bytecode] {
   override val maxStack: Int = 0
   override val typ: ScalyType = ScalyUnitType
+
+  override def iterator: Iterator[Bytecode] = bcl.iterator
 }
 
 case class IST_Function(
@@ -152,8 +155,10 @@ case class IST_Literal(py: PyObject, typ: ScalyValType) extends IST_Expression {
   override lazy val maxStack: Int = 1
 }
 
-sealed class IST_Sequence(val statements: List[IST_Statement], val typ: ScalyType) extends IST_Expression {
+sealed class IST_Sequence(val statements: List[IST_Statement], val typ: ScalyType) extends IST_Expression with Iterable[IST_Statement]{
   override lazy val maxStack: Int = (1 :: statements.map(_.maxStack)).sum
+
+  override def iterator: Iterator[IST_Statement] = statements.iterator
 }
 
 object IST_Sequence {
@@ -219,4 +224,8 @@ case class IST_IsNone(lhs: IST_Expression) extends IST_Expression {
 
 case class IST_Match(lhs: IST_Expression, cases: List[IST_Case], typ: ScalyType) extends IST_Expression {
   override val maxStack: Int = 20
+}
+
+case class IST_Subscript(lhs: IST_Expression, rhs: Int, typ: ScalyType) extends IST_Expression{
+  override val maxStack: Int = 1
 }

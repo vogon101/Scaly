@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.AST
 
-import scala.meta.Pat.Var
+import scala.meta.Pat.{Tuple, Var}
 import scala.meta._
 
 object ASTBuilder {
@@ -135,6 +135,7 @@ object ASTBuilder {
     case l @ Lit(_) => LiteralPattern(buildLiteral(l))
     case Name(str) => ???
     case Var(name) => VariablePattern(name.value)
+    case Tuple(pats) => TuplePattern(pats.map(buildPattern))
   }
 
 }

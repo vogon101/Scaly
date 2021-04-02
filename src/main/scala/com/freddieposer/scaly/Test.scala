@@ -16,9 +16,9 @@ object Test {
 
   val Q = '"'
   val COMPILED_OUTPUT_FILE = "test_files/compiled.pyc"
-  val DUMP_PYTHON_FILE = "test_files/simple_class.py"
-  val DUMP_INPUT_FILE = "test_files/sclass.pyc"
-//  val SCALA_INPUT_FILE = "test_files/test1.scala"
+  val DUMP_PYTHON_FILE = "test_files/t.py"
+  val DUMP_INPUT_FILE = "test_files/t.pyc"
+//  val SCALA_INPUT_FILE = "test_files/typesafety_matches.sc"
   val SCALA_INPUT_FILE = "test_files/compileTest.scala"
 
   def test_pyc(): Unit = {

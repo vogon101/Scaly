@@ -2,15 +2,13 @@ object Main {
 
   def main() : Unit = {
 
-//    val x = "Hello" match {
-//      case x => "Goodbye " + x
-//    }
 
     val x = "Hello" match {
       case "Goodbye" => 100
       case "Hello" => 200
       case "Nothing" => 300
     }
+    print("X: " + str(x))
 
     val y = x match {
       case 20 => "Not this"
@@ -18,28 +16,33 @@ object Main {
       case 200 => "this"
     }
 
+    print("Y: " + y)
+
     val z = y match {
       case "Not this" => "Not this either"
       case p => "This: " + p
     }
 
-//    var z = -1
-//    var a = -1
-//
-//    print(a)
-//    z = 100 match {
-//      case a => 10 + a
-//    }
-//
-//    print(a)
+    print("Z: " + z)
 
-    // Should be "One abc"
-//    val q = "abc" match { case x => ("def" match { case x => "One "}) + x }
-//    print(q)
+    val q = "abc" match { case x => ("def" match { case x => "One "}) + x }
+    print(q)
 
-    print(str(x) + str(y) + str(z))
+    val t = (1, (2, 3))
 
-    print(str(x))
+    val p = t match {
+      case (x, (y,z)) => str(x) + str(y) + str(z)
+    }
+
+    val q = t match {
+      case (0, x) => "Pattern zero " + str(x)
+      case (1, (20, x)) => "Pattern One, Twenty " + str(x)
+      case (1, (2, x)) => "Pattern One, Two  " + str(x)
+    }
+
+    print(p)
+
+    print(q)
 
     ()
 

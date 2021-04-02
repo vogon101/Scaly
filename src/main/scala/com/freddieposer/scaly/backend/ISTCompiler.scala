@@ -3,8 +3,9 @@ package com.freddieposer.scaly.backend
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.ROT_TWO
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyUnitType}
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType._
 import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyType, SymbolSource}
 
 
@@ -318,6 +319,10 @@ class ISTCompiler(_filename: String) {
 
       case m: IST_Match => compileMatch(m, ctx)
       case RawISTExpr(bcl) => bcl
+      case IST_Subscript(lhs, rhs, _) =>
+        compileExpression(lhs, ctx) -->
+          (LOAD_CONST, ctx.const(rhs.toPy)) -->
+          ~BINARY_SUBSCR
     }
   }
 
@@ -352,48 +357,82 @@ class ISTCompiler(_filename: String) {
 
   //TODO: Swap to using functions for the case bodies so that the context is respected
   //  and outer vars aren't overwritten! (Currently violates type safety)
-  def compileMatch(istMatch: IST_Match, ctx: CompilationContext): BytecodeList = ctx.withMatch[BytecodeList] {
-    import PyOpcodes.DUP_TOP
-    istMatch match {
-      case IST_Match(lhs, cases, typ) =>
-        val assign: IST_Assignment =
-          IST_Assignment(ctx.match_name, Location(lhs.typ, SymbolSource.LOCAL_WRITABLE), lhs)
-        val patternsBC = cases.map(c => compilePattern(c.pattern, ctx))
+  def compileMatch(matchExpr: IST_Match, ctx: CompilationContext): BytecodeList = ctx.withMatch {
+    import PyOpcodes._
 
-        def descend(ps: List[(IST_Case, IST_Expression)]): IST_Expression = ps match {
-          case Nil => ???
-          case (c, cond) :: Nil =>
-            (~DUP_TOP).raw + IST_If(cond, c.rhs, Some(ThrowException("Match error".toPy, ctx).raw) , c.typ)
-          case (c, cond) :: rest =>
-            (~DUP_TOP).raw + IST_If(cond, c.rhs, Some(descend(rest)), c.typ)
-        }
+    val IST_Match(lhs, cases, _) = matchExpr
 
-        val x = assign + IST_Name(ctx.match_name, Location.local) + descend(cases zip patternsBC)
-        x.statements.foreach(println)
+    val assign =
+      IST_Assignment(ctx.match_name, Location(lhs.typ, SymbolSource.LOCAL_WRITABLE), (~DUP_TOP).r) + (~POP_TOP)
 
-        compileExpression(
-          assign + IST_Name(ctx.match_name, Location.local) + descend(cases zip patternsBC), ctx
-        )
+    val patternsBC = cases.map(c => compilePattern(c.pattern, ctx))
+
+    def descend(ps: List[(IST_Case, IST_CompiledPattern)]): IST_Expression = ps match {
+      case Nil => ThrowException("Match error".toPy)
+      case (c, IST_CompiledPattern(binds, cond)) :: rest =>
+        (~DUP_TOP).r +
+          IST_If(
+            cond,
+            (~DUP_TOP).r +
+              IST_Function(c.pattern.bindings.keys.toList, c.rhs, ScalyFunctionType(None, ScalyNothingType), c.closedVars, c.freeVars) +
+              (~ROT_TWO).r + binds + (CALL_FUNCTION, c.pattern.bindings.size.toByte).r,
+            Some(descend(rest)),
+            c.typ
+          )
     }
+
+    val matchIST = lhs + assign + descend(cases zip patternsBC)
+
+    val x = compileExpression(matchIST, ctx)
+    x
+
   }
 
-
-  //
-
-  def compilePattern(pattern: IST_Pattern, ctx: CompilationContext): IST_Expression = {
+  def compilePatternCondition(pattern: IST_Pattern): IST_Expression = {
     import PyOpcodes._
     pattern match {
-
       case IST_LiteralPattern(literal) =>
-        literal + (COMPARE_OP, 2.toByte).raw
-
-      case IST_VariablePattern(name, mt) =>
-        IST_Assignment(name, Location.local_w, (~NOP).raw) +
-          IST_Literal(PyTrue, ScalyBooleanType)
-
-
+        literal + (COMPARE_OP, 2.toByte)
+      case IST_VariablePattern(name, matchType) =>
+        (~POP_TOP).r + IST_Literal(PyTrue, ScalyBooleanType)
+      case IST_TuplePattern(pats) =>
+        pats.map(compilePatternCondition)
+          .zipWithIndex.map {
+          case (cond, 0) =>
+            (~DUP_TOP).r + IST_Literal(0.toPy, ScalyIntType) + (~BINARY_SUBSCR) + cond
+          case (cond, i) =>
+            (~ROT_TWO).r + (~DUP_TOP) + IST_Literal(i.toPy, ScalyIntType) + (~BINARY_SUBSCR) +
+              cond +
+              (~ROT_THREE) + (~ROT_THREE) + (~BINARY_AND)
+        }.flat + ~ROT_TWO + ~POP_TOP
     }
   }
+
+  def compilePatternBindings(pattern: IST_Pattern, ctx: CompilationContext): IST_Expression = {
+    import PyOpcodes._
+    pattern match {
+      case IST_LiteralPattern(_) => (~POP_TOP).r
+      case IST_VariablePattern(_, _) => (~NOP).r
+      case IST_TuplePattern(pats) =>
+        val outerName = ctx.match_name
+        (~POP_TOP).r + pats.zipWithIndex.map {
+          case (pattern, i) => ctx.withMatch {
+            val innerBind = compilePatternBindings(pattern, ctx)
+            IST_Name(outerName, Location.local) +
+              IST_Assignment(ctx.match_name, Location.local_w, IST_Literal(i.toPy, ScalyIntType) + (~BINARY_SUBSCR)) +
+              ~POP_TOP +
+              IST_Name(ctx.match_name, Location.local) +
+              innerBind
+          }
+        }.flat
+    }
+  }
+
+  def compilePattern(pattern: IST_Pattern, ctx: CompilationContext): IST_CompiledPattern =
+    IST_CompiledPattern(compilePatternBindings(pattern, ctx), compilePatternCondition(pattern))
+
+
+  case class IST_CompiledPattern(binds: IST_Expression, cond: IST_Expression)
 
   def makeFunction(id: String, func: IST_Function, ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
@@ -467,15 +506,32 @@ class ISTCompiler(_filename: String) {
     )
   }
 
-  private def ThrowException(message: PyAscii, ctx: CompilationContext): BytecodeList = {
+  private def ThrowException(message: PyAscii): IST_Sequence = {
     import PyOpcodes._
-    BytecodeList(
-      (LOAD_GLOBAL, ctx.name("Exception".toPy)),
-      (LOAD_CONST, ctx.const(message)),
-      (CALL_FUNCTION, 1.toByte),
-      (RAISE_VARARGS, 1.toByte)
-    )
+    IST_Application(
+      IST_Name("Exception", Location(SymbolSource.GLOBAL)),
+      List(IST_Literal(message, ScalyStringType)),
+      ScalyNothingType
+    ) + (RAISE_VARARGS, 1.toByte)
   }
 
+  private def PrintTopThree: IST_Sequence = {
+    PrintString("TOS") //+ PrintTop +
+    //      ~ROT_THREE + PrintString("TOS1") + PrintTop +
+    //      ~ROT_THREE + PrintString("TOS2") + PrintTop + ~ROT_THREE
+
+  }
+
+
+  private def PrintTop: IST_Sequence = {
+    import PyOpcodes.{DUP_TOP, POP_TOP}
+
+    (~DUP_TOP).r + IST_Application(IST_Name("print", Location(SymbolSource.GLOBAL)), List((~ROT_TWO).r), ScalyNothingType) + ~POP_TOP
+  }
+
+  private def PrintString(str: String): IST_Sequence = {
+    import PyOpcodes.POP_TOP
+    IST_Application(IST_Name("print", Location(SymbolSource.GLOBAL)), List(IST_Literal(str.toPy, ScalyStringType)), ScalyNothingType) + ~POP_TOP
+  }
 
 }
