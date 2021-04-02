@@ -26,6 +26,11 @@ object CodeGenerationUtils {
 
     override def toString: String = f"BC($length)"
 
+    final override def equals(that: Any): Boolean = that match {
+      case bc: Bytecode => this eq bc
+      case _ => false
+    }
+
   }
 
   implicit class BytecodeByte(val value: Byte) extends Bytecode {
@@ -42,6 +47,8 @@ object CodeGenerationUtils {
     override val length: Int = 2
 
     override def toString: String = f"BC(${t._1}, ${t._2})"
+
+    def r: RawISTExpr = RawISTExpr(this.toBCL)
   }
 
   object BytecodeOpcode {
@@ -51,7 +58,7 @@ object CodeGenerationUtils {
   }
 
   implicit class BytecodeOpcodeWithMarker(val t: (PyOpcode, BytecodeMarker)) extends Bytecode {
-    override val length: Int = 2
+    override val length: Int = 4
 
     override def toString: String = f"BC(${t._1}, ${t._2})"
   }
@@ -64,16 +71,15 @@ object CodeGenerationUtils {
 
   sealed abstract class BytecodeMarker extends Bytecode {
     override val length: Int = 0
-
-    override def equals(that: Any): Boolean = that match {
-      case obj: BytecodeMarker => this eq obj
-      case _ => false
-    }
   }
 
-  class BytecodeAbsoluteMarker extends BytecodeMarker
+  class BytecodeAbsoluteMarker extends BytecodeMarker {
+    override def toString: String = s"BCM{A} + ${hashCode()}"
+  }
 
-  class BytecodeRelativeMarker extends BytecodeMarker
+  class BytecodeRelativeMarker extends BytecodeMarker {
+    override def toString: String = s"BCM{R} + ${hashCode()}"
+  }
 
   object Marker {
     def absolute: BytecodeMarker = new BytecodeAbsoluteMarker
@@ -97,5 +103,26 @@ object CodeGenerationUtils {
     def flat: BytecodeList = bcls.foldLeft(BytecodeList.empty)(_ --> _)
   }
 
+  implicit class ExtendedListOfRawISTs(rists: List[RawISTExpr]) {
+    def flat: RawISTExpr = RawISTExpr(rists.map(_.bcl).flat)
+  }
+
+  implicit class ExtendedListOfISTSequence(istseqs: List[IST_Sequence]) {
+    def flat: IST_Sequence = IST_Sequence(istseqs.flatMap(_.statements), istseqs.last.typ)
+  }
+
+  implicit class ExtendedIST_Statement(expr: IST_Expression) {
+
+    def + (that: IST_Expression): IST_Sequence = expr match {
+      case IST_Sequence(stats, typ) => IST_Sequence(stats ::: List(that), that.typ)
+      case _ => that match {
+        case IST_Sequence(stats, typ) => IST_Sequence(expr :: stats, typ)
+        case _ => IST_Sequence(expr :: that :: Nil, that.typ)
+      }
+    }
+
+    def + (that: (PyOpcode, Byte)): IST_Sequence = this + that.r
+
+  }
 
 }

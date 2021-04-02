@@ -2,6 +2,7 @@ package com.freddieposer.scaly.backend.internal
 
 import com.freddieposer.scaly.backend.internal.CodeGenerationUtils.{Bytecode, BytecodeAbsoluteMarker, BytecodeByte, BytecodeMarker, BytecodeOpcode, BytecodeOpcodeWithMarker, BytecodeRelativeMarker}
 import com.freddieposer.scaly.backend.pyc.PyString
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.EXTENDED_ARG
 
 class BytecodeList(val bytecodes: List[Bytecode]) extends Iterable[Bytecode] {
 
@@ -11,27 +12,26 @@ class BytecodeList(val bytecodes: List[Bytecode]) extends Iterable[Bytecode] {
    * @return
    */
   def compile: PyString =
-    new PyString(bytecodes.flatMap { bc =>
-      bc match {
-        case BytecodeByte(value) => List(value)
-        case _: BytecodeMarker => Nil
-        case BytecodeOpcode(op, arg) => List(op.byte, arg)
-        case BytecodeOpcodeWithMarker(op, marker) =>
-          List(op.byte, marker match {
-            case m: BytecodeAbsoluteMarker =>
-              bytecodes
-                .takeWhile(_ != m)
-                .foldRight(0)(_.length + _)
-                .toByte
-            case m: BytecodeRelativeMarker =>
-              (bytecodes
-                .dropWhile(_ != bc)
-                .drop(1)
-                .takeWhile(_ != m)
-                .foldRight(0)(_.length + _)
-                ).toByte
-          })
-      }
+    new PyString(bytecodes.flatMap {
+      case BytecodeByte(value) => List(value)
+      case _: BytecodeMarker => Nil
+      case BytecodeOpcode(op, arg) => List(op.byte, arg)
+      case bc@BytecodeOpcodeWithMarker(op, marker) =>
+        val value = marker match {
+          case m: BytecodeAbsoluteMarker =>
+            bytecodes
+              .takeWhile(_ ne m)
+              .foldRight(0)(_.length + _)
+          case m: BytecodeRelativeMarker =>
+            bytecodes
+              .dropWhile(_ ne bc)
+              .drop(1)
+              .takeWhile(_ ne m)
+              .foldRight(0)(_.length + _)
+        }
+
+        List(EXTENDED_ARG.byte, ((value >> 8) & 0xff).toByte, op.byte, (value & 0xff).toByte)
+
     })
 
 
@@ -42,6 +42,8 @@ class BytecodeList(val bytecodes: List[Bytecode]) extends Iterable[Bytecode] {
 
   def -->(b: Bytecode): BytecodeList =
     new BytecodeList(bytecodes ++ (b :: Nil))
+
+  def raw: RawISTExpr = RawISTExpr(this)
 
 }
 

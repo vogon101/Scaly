@@ -1,7 +1,7 @@
 package com.freddieposer.scaly
 
 import com.freddieposer.scaly.AST.ASTBuilder
-import com.freddieposer.scaly.backend.ISTCompiler
+import com.freddieposer.scaly.backend.{ISTCompilationPipeline, ISTCompiler}
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
@@ -16,9 +16,10 @@ object Test {
 
   val Q = '"'
   val COMPILED_OUTPUT_FILE = "test_files/compiled.pyc"
-  val DUMP_PYTHON_FILE = "test_files/simple_class.py"
-  val DUMP_INPUT_FILE = "test_files/sclass.pyc"
-  val SCALA_INPUT_FILE = "test_files/test1.scala"
+  val DUMP_PYTHON_FILE = "test_files/t.py"
+  val DUMP_INPUT_FILE = "test_files/t.pyc"
+//  val SCALA_INPUT_FILE = "test_files/typesafety_matches.sc"
+  val SCALA_INPUT_FILE = "test_files/compileTest.scala"
 
   def test_pyc(): Unit = {
     import sys.process._
@@ -118,7 +119,7 @@ object Test {
   def test_compile(): Unit = {
 
 
-    val lines = Files.readAllLines(Paths.get("test_files/compileTest.scala")).asScala.mkString("\n")
+    val lines = Files.readAllLines(Paths.get(SCALA_INPUT_FILE)).asScala.mkString("\n")
     println(lines)
 
     import scala.meta._
@@ -126,6 +127,7 @@ object Test {
     val x = lines.parse[scala.meta.Source].get
     val ast = ASTBuilder.fromScalaMeta(x)
     val tc = new TypeChecker(ast)
+    val compiler = ISTCompilationPipeline.standard("placeholder")
 
     val res = tc.typeCheck()
 
@@ -138,7 +140,7 @@ object Test {
         println(ist)
 
         //        val ist = ISTBuilder.buildIST(ast)
-        val pyCodeObject = new ISTCompiler("placeholder").compile(ist)
+        val pyCodeObject = compiler.compile(ist)
         println(pyCodeObject)
         val f = PycFile(pyCodeObject)
         Files.write(Paths.get("test_files/compiled.pyc"), f.toBytes.bytes)

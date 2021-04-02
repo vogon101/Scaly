@@ -13,6 +13,8 @@ class CompilationContext {
   private val _cellvars: ArrayBuffer[PyAscii] = ArrayBuffer()
   private val _freevars: ArrayBuffer[PyAscii] = ArrayBuffer()
 
+
+
   private var _inClass: Boolean = false
 
   def inClass: Boolean = _inClass

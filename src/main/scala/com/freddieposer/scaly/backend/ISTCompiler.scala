@@ -1,10 +1,13 @@
 package com.freddieposer.scaly.backend
 
+import com.freddieposer.scaly.backend.ISTCompiler.{GLOBAL_LAZY_PREFIX, THIS_NAME}
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
+import BytecodeSnippets._
+import com.freddieposer.scaly.backend.internal.CodeGenerationUtils.StringPyConverter
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyUnitType
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType._
 import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyType, SymbolSource}
 
 
@@ -14,8 +17,6 @@ class ISTCompiler(_filename: String) {
 
   private val filename = _filename.toPy
 
-  private val THIS_NAME: PyAscii = "this".toPy
-  private val GLOBAL_LAZY_PREFIX: String = "__global__lazyImpl_"
 
   private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
     val ctx = new CompilationContext
@@ -120,11 +121,11 @@ class ISTCompiler(_filename: String) {
 
     val constructorName = "__init__".toPy
     val stackSize = 10
-//    val stackSize = List(
-//      2, // Add params as attrs
-//      istClass.statements.map(_.maxStack), //Body of constructor
-//      istClass.parentParams.map(_.maxStack).max + 3 //Calling parents
-//    ).max + 2 //Buffer
+    //    val stackSize = List(
+    //      2, // Add params as attrs
+    //      istClass.statements.map(_.maxStack), //Body of constructor
+    //      istClass.parentParams.map(_.maxStack).max + 3 //Calling parents
+    //    ).max + 2 //Buffer
 
     val nargs = 1 + istClass.params.length
     val localNames = THIS_NAME :: istClass.params.map(_.id.toPy)
@@ -247,7 +248,7 @@ class ISTCompiler(_filename: String) {
       case literal: IST_Literal =>
         BytecodeList((LOAD_CONST, ctx.const(literal.py)))
 
-      case block: IST_Block => compileBlock(block, ctx)
+      case block: IST_Sequence => compileBlock(block, ctx)
 
       case IST_Name(_name, location) =>
         val name = nameMangler.getOrElse(_name, _name)
@@ -314,14 +315,29 @@ class ISTCompiler(_filename: String) {
           (LOAD_CONST, ctx.const(PyNone)),
           (COMPARE_OP, 8.toByte)
         )
+
+      case m: IST_Match =>
+        throw new Error("Cannot compile IST_Match - use a PatternMatchingTransformer in the pipeline")
+
+      case RawISTExpr(bcl) => bcl
+      case IST_Subscript(lhs, rhs, _) =>
+        compileExpression(lhs, ctx) -->
+          (LOAD_CONST, ctx.const(rhs.toPy)) -->
+          ~BINARY_SUBSCR
     }
   }
 
   //Currently doesn't return - should be managed by compileFunction
-  def compileBlock(block: IST_Block, ctx: CompilationContext): BytecodeList = {
+  def compileBlock(block: IST_Sequence, ctx: CompilationContext): BytecodeList = {
+
     import PyOpcodes._
-    new BytecodeList(block.statements.map {
-      case expr: IST_Expression => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
+    val bc = block.statements.map {
+      case expr: IST_Expression =>
+        block match {
+          case IST_Block(_, _) => compileExpression(expr, ctx) --> (~POP_TOP).toBCL
+          case _ => compileExpression(expr, ctx)
+        }
+
       case m: IST_Member => m match {
         case d@IST_Def(id, _, _, _, _, freeVars) =>
           makeFunction(id, d.func, ctx) -->
@@ -333,8 +349,21 @@ class ISTCompiler(_filename: String) {
       }
       //We need to be popping items off the stack here but we can only do this IF they add things
       //thus all functions NEED to return a PY_NONE if they don't return something else!
-    }.foldLeft(BytecodeList.empty)(_ --> _).dropRight(1).toList)
+    }.foldLeft(BytecodeList.empty)(_ --> _)
+    block match {
+      case IST_Block(statements, typ) => new BytecodeList(bc.dropRight(1).toList)
+      case _ => new BytecodeList(bc.toList)
+    }
   }
+
+  //TODO: Swap to using functions for the case bodies so that the context is respected
+  //  and outer vars aren't overwritten! (Currently violates type safety)
+
+
+
+
+
+
 
   def makeFunction(id: String, func: IST_Function, ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
@@ -352,35 +381,7 @@ class ISTCompiler(_filename: String) {
 
   }
 
-  private def loadThis(ctx: CompilationContext): Bytecode = {
-    import PyOpcodes.{LOAD_DEREF, LOAD_FAST}
-    if (ctx.isBoxed(THIS_NAME.text)) (LOAD_DEREF, ctx.freeOrCell(THIS_NAME))
-    else (LOAD_FAST, ctx.varname(THIS_NAME))
-  }
 
-
-  private def TestCaddy(ctx: CompilationContext): BytecodeList = {
-    import PyOpcodes._
-    BytecodeList(
-      (LOAD_NAME, ctx.name("print".toPy)),
-      (LOAD_NAME, ctx.name((GLOBAL_LAZY_PREFIX + "Main").toPy)),
-      (CALL_FUNCTION, 0.toByte),
-      (LOAD_METHOD, ctx.name("main".toPy)),
-      (CALL_METHOD, 0.toByte),
-      (CALL_FUNCTION, 1.toByte),
-      ~POP_TOP
-    )
-  }
-
-  private def ImportSTDLib(ctx: CompilationContext): BytecodeList = {
-    import PyOpcodes._
-    BytecodeList(
-      (LOAD_CONST, ctx.const(0.toPy)),
-      (LOAD_CONST, ctx.const(PyTuple(List("*".toPy)))),
-      (IMPORT_NAME, ctx.name("pyScaly_lib".toPy)),
-      ~IMPORT_STAR
-    )
-  }
 
   //TODO: Clean this up
   //TODO: Make this more efficient (overwrite function?)
@@ -408,4 +409,11 @@ class ISTCompiler(_filename: String) {
     )
   }
 
+
+
+}
+
+object ISTCompiler {
+  val THIS_NAME: PyAscii = "this".toPy
+  val GLOBAL_LAZY_PREFIX: String = "__global__lazyImpl_"
 }

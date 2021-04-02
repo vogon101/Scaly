@@ -49,6 +49,7 @@ object ScalyValType {
     "toChar" -> (O --> ScalyCharType),
     "+" -> (typ --> typ),
     "-" -> (typ --> typ),
+    "*" -> (typ --> typ),
     "<" -> (typ --> ScalyBooleanType),
     ">" -> (typ --> ScalyBooleanType),
     ">=" -> (typ --> ScalyBooleanType),

@@ -7,11 +7,11 @@ import com.freddieposer.scaly.typechecker.TypeCheckerUtils._
 import com.freddieposer.scaly.typechecker.Variance.Variance
 import com.freddieposer.scaly.typechecker.context.TypeContext.{Location, buildTypeMap}
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation._
-import com.freddieposer.scaly.typechecker.context.{BaseTypeContext, EmptyContext, MutableClosureContext, ThisTypeContext, TypeContext}
+import com.freddieposer.scaly.typechecker.context._
 import com.freddieposer.scaly.typechecker.types.SymbolSource.SymbolSource
 import com.freddieposer.scaly.typechecker.types._
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
-import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyUnitType}
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyNothingType, ScalyUnitType, literalType}
 
 import scala.annotation.tailrec
 
@@ -35,7 +35,7 @@ class TypeChecker(
     try {
       _typeCheck()
     } catch {
-      case e @ InferenceError(node) => Left(TypeError(e.getMessage, node)(EmptyContext))
+      case e@InferenceError(node) => Left(TypeError(e.getMessage, node)(EmptyContext))
     }
   }
 
@@ -212,7 +212,7 @@ class TypeChecker(
   private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext): TCR[IST_Expression] = addToError(expr, ctx) {
     expr match {
       case l: Literal =>
-        Right(ISTBuilder.buildLiteral(l, ScalyValType.literalType(l)))
+        Right(ISTBuilder.buildLiteral(l))
 
       case SelectExpr(lhs, rhs) =>
         typeCheck_Expr(lhs).flatMap { lhsExpr =>
@@ -337,7 +337,44 @@ class TypeChecker(
             }
           }
 
+      case MatchExpr(lhs, cases) =>
+        typeCheck_Expr(lhs).flatMap { case lexpr =>
+          cases.map { c => canMatch(lexpr.typ, c.pattern) }
+            .collapse
+            .flatMap {
+              patterns =>
+                unify(patterns.map(_.matchType))
+                  .map((patterns, _))
+                  .toRight(TypeError(s"Cannot unify types $patterns", expr))
+            }
+            .flatMap { case (patterns, matchType) =>
+              patterns.zip(cases).map { case (pat, c) =>
+                val ectx = MutableClosureContext(buildTypeMap(pat.bindings.toMap, SymbolSource.LOCAL), ctx)
+                typeCheck_Expr(c.result)(ectx).map((_, ectx))
+              }.collapse
+                .flatMap(retExprs => unify(retExprs.map(_._1.typ)) match {
+                  case None => Left(TypeError(s"Cannot unify return types of $retExprs for patterns", expr))
+                  case Some(retType) =>
+                    val compiledCases = patterns.zip(retExprs).map {case (p, (body, ectx)) => IST_Case(p, body, ectx.closedVars, ectx.freeVars(ctx))}
+                    Right((compiledCases, retType))
+                })
+            }.map { case (cs, retType) => IST_Match(lexpr, cs, retType) }
+        }
+    }
+  }
 
+  private def unify(ts: List[ScalyType])(implicit ctx: TypeContext): Option[ScalyType] = {
+    ts.foldLeft(Some(ScalyNothingType): Option[ScalyType]) {
+      case (Some(x), y) =>
+        doesUnify(x, y)(ctx, Variance.CO)
+          .map(_ => y)
+          .left.map(_ => doesUnify(y, x)(ctx, Variance.CO).map(_ => x).toOption)
+        match {
+          case Left(x@Some(_)) => x
+          case Right(x) => Some(x)
+          case Left(None) => None
+        }
+      case (None, _) => None
     }
   }
 
@@ -437,6 +474,18 @@ class TypeChecker(
         else Left(UnificationFailure(t1, t2, s"Static types: $t1 is not a subtype of $t2"))
 
       case _ => Left(UnificationFailure(t1, t2, s"Cannot unify static types [$t1] and [$t2]"))
+    }
+  }
+
+  def canMatch(typ: ScalyType, pattern: Pattern)(implicit context: TypeContext): TCR[IST_Pattern] = pattern match {
+    case LiteralPattern(literal) =>
+      doesUnify(typ, literalType(literal))(context, Variance.CO)
+        .mapError(pattern)
+        .map(_ => IST_LiteralPattern(ISTBuilder.buildLiteral(literal)))
+    case VariablePattern(name) => Right(IST_VariablePattern(name, typ))
+    case TuplePattern(pats) => typ match {
+      case ScalyTupleType(elems) if elems.length == pats.length =>
+        (elems zip pats).map{ case (x,y) => canMatch(x,y)}.collapse.map(IST_TuplePattern)
     }
   }
 

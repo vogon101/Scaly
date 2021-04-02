@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.tests
 
-import com.freddieposer.scaly.backend.ISTCompiler
+import com.freddieposer.scaly.backend.{ISTCompilationPipeline, ISTCompiler}
 import com.freddieposer.scaly.backend.internal.IST_CompilationUnit
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.typechecker.TypeCheckerUtils.TCR
@@ -34,7 +34,7 @@ class CompilerSpec(val folder: Path, val tmp_file: String) extends TestSpec {
           })
         }
 
-        val pyCodeObject = new ISTCompiler("placeholder").compile(ist)
+        val pyCodeObject = ISTCompilationPipeline.standard("placeholder").compile(ist)
         val f = PycFile(pyCodeObject)
         Files.write(tmpFile, f.toBytes.bytes)
         import sys.process._
