@@ -1,7 +1,7 @@
 package com.freddieposer.scaly
 
 import com.freddieposer.scaly.AST.ASTBuilder
-import com.freddieposer.scaly.backend.ISTCompiler
+import com.freddieposer.scaly.backend.{ISTCompilationPipeline, ISTCompiler}
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
@@ -127,6 +127,7 @@ object Test {
     val x = lines.parse[scala.meta.Source].get
     val ast = ASTBuilder.fromScalaMeta(x)
     val tc = new TypeChecker(ast)
+    val compiler = ISTCompilationPipeline.standard("placeholder")
 
     val res = tc.typeCheck()
 
@@ -139,7 +140,7 @@ object Test {
         println(ist)
 
         //        val ist = ISTBuilder.buildIST(ast)
-        val pyCodeObject = new ISTCompiler("placeholder").compile(ist)
+        val pyCodeObject = compiler.compile(ist)
         println(pyCodeObject)
         val f = PycFile(pyCodeObject)
         Files.write(Paths.get("test_files/compiled.pyc"), f.toBytes.bytes)

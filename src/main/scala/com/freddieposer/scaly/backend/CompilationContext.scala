@@ -13,17 +13,7 @@ class CompilationContext {
   private val _cellvars: ArrayBuffer[PyAscii] = ArrayBuffer()
   private val _freevars: ArrayBuffer[PyAscii] = ArrayBuffer()
 
-  private val _MATCH_NAME: String = "__match__tmp__impl__"
-  private var _MATCH_COUNT: Int = 0
 
-  def match_name: String = (_MATCH_NAME + _MATCH_COUNT)
-
-  def withMatch[T](f: => T): T = {
-    _MATCH_COUNT += 1
-    val res = f
-    _MATCH_COUNT -= 1
-    res
-  }
 
   private var _inClass: Boolean = false
 
