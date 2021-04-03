@@ -17,16 +17,11 @@ case class ScalyASTPlaceholderType(node: AST_ScalyType) extends ASTScalyType wit
   }
 }
 
-abstract class ScalyASTTemplateType extends ASTScalyType with PlaceholderType{
+abstract class ScalyASTTemplateType extends ASTScalyType with PlaceholderType {
 
-  val name: String
-  protected val _parent: Option[ScalyType]
-  val node: TemplateDef
-
-  override val globalName: Option[String] = Some(name)
   override lazy val parent: Option[ScalyType] = _parent.orElse(Some(ScalyObject))
   lazy val parentConstructor: Option[List[Expr]] = node.parents.headOption.map(_._2)
-
+  override val globalName: Option[String] = Some(name)
   override val memberTypes: TypeMap = construct({
 
     def convertClause(clause: List[FunParam]): ScalyType =
@@ -76,14 +71,16 @@ abstract class ScalyASTTemplateType extends ASTScalyType with PlaceholderType{
       case None => List()
     }) ++ constructorMembers.getOrElse(Nil)
   }.toMap)
-
+  val name: String
+  val node: TemplateDef
+  protected val _parent: Option[ScalyType]
   private val _visited: Boolean = false
 
   override def visited: Boolean = _visited
 
 }
 
-class ScalyASTClassType (
+class ScalyASTClassType(
                          val name: String,
                          protected val _parent: Option[ScalyType],
                          val node: ScalyClassDef
@@ -102,11 +99,11 @@ class ScalyASTClassType (
 
 }
 
-class ScalyASTObjectType (
-                         val name: String,
-                         protected val _parent: Option[ScalyType],
-                         val node: ScalyObjectDef
-                         ) extends ScalyASTTemplateType {
+class ScalyASTObjectType(
+                          val name: String,
+                          protected val _parent: Option[ScalyType],
+                          val node: ScalyObjectDef
+                        ) extends ScalyASTTemplateType {
 
   override def constructor: Option[List[ClassParam]] = Some(Nil)
 

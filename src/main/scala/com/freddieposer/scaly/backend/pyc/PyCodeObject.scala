@@ -23,15 +23,9 @@ class PyCodeObject(
                     val lnotab: PyString
                   ) extends PyObject {
 
-  def getConstant(i: Int): PyObject = consts.objects(i)
-
-  def getName(i: Int): PyObject = names.objects(i)
-
-  override def prettyPrint(indent: Int): String = _prettyPrint(indent)
-
   override def toString: String = prettyPrint(0)
 
-  override def shortName: String = f"PyCodeObject(${name})"
+  override def prettyPrint(indent: Int): String = _prettyPrint(indent)
 
   def _prettyPrint(indent: Int): String = {
     val sb = new StringBuilder("\t".repeat(indent) + "Code Object:\n")
@@ -83,6 +77,12 @@ class PyCodeObject(
             case _ => f"$arg%-2d"
           } else "")
     }.toList
+
+  def getConstant(i: Int): PyObject = consts.objects(i)
+
+  def getName(i: Int): PyObject = names.objects(i)
+
+  override def shortName: String = f"PyCodeObject(${name})"
 
   def toBytes: ByteArrayStream = {
 

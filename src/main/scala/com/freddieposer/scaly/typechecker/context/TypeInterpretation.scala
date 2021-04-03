@@ -37,11 +37,6 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
     }
   }
 
-  private def getMemberOfWellFormedType(typ: ScalyType, memberName: String): Either[String, Location] =
-    typ.getOwnMemberLocation(memberName)
-      .orElse(typ.parent.flatMap(p => TypeInterpretation(p).getMember(memberName).toOption))
-      .toRight(s"Type $typ does not have member $memberName")
-
   /**
    * Returns true if `subject` < `obj`
    *
@@ -62,11 +57,16 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
 
     case (t1, t2) => (t1 equals t2) || (t1.parent.exists(_.isSubtypeOf(t2)))
   }
+
+  private def getMemberOfWellFormedType(typ: ScalyType, memberName: String): Either[String, Location] =
+    typ.getOwnMemberLocation(memberName)
+      .orElse(typ.parent.flatMap(p => TypeInterpretation(p).getMember(memberName).toOption))
+      .toRight(s"Type $typ does not have member $memberName")
 }
 
 object TypeInterpretation {
 
-  def apply(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
+  def interpret(subject: ScalyType, context: TypeContext): TypeInterpretation = TypeInterpretation(subject)(context)  def apply(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
     new TypeInterpretation(subject)(context)
 
   implicit def TypeToInterpretation(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
@@ -75,9 +75,8 @@ object TypeInterpretation {
   implicit def ASTTypeToInterpretation(subject: AST_ScalyType)(implicit context: TypeContext): ASTTypeInterpretation =
     ASTTypeInterpretation(subject)
 
-
-  def interpret(subject: ScalyType, context: TypeContext): TypeInterpretation = TypeInterpretation(subject)(context)
-
   def interpret(subject: AST_ScalyType, context: TypeContext): ASTTypeInterpretation = ASTTypeInterpretation(subject)(context)
+
+
 
 }

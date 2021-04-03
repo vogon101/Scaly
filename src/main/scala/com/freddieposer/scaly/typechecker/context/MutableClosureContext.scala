@@ -17,12 +17,6 @@ class MutableClosureContext private(
                                      private val _closedVars: mutable.Map[String, Location]
                                    ) extends TypeContext(types, vars, Some(outer)) {
 
-  private def addFreeVar(name: String): Unit =
-    if (!_freeVars.contains(name)) _freeVars.addOne(name)
-
-  private def addClosedVar(name: String, location: Location): Unit =
-    if (!_closedVars.contains(name)) _closedVars.addOne(name -> location)
-
   override def getVarType(name: String): Option[Location] =
     if (vars isDefinedAt name) vars get name
     else outer.escalateVar(name).map { //Add to free vars
@@ -34,6 +28,9 @@ class MutableClosureContext private(
         l
       case x => x
     }
+
+  private def addFreeVar(name: String): Unit =
+    if (!_freeVars.contains(name)) _freeVars.addOne(name)
 
   override def escalateVar(name: String): Option[Location] =
     if (vars.isDefinedAt(name)) vars.get(name).map {
@@ -68,13 +65,6 @@ class MutableClosureContext private(
   override def addTypes(es: List[(String, Location)]): TypeContext =
     new MutableClosureContext(types ++ es, vars, outer, _freeVars, _closedVars)
 
-  /**
-   * Variables that the function this represents access from an outer closure
-   *
-   * @return
-   */
-  def freeVars: List[String] = _freeVars.toList
-
   def freeVars(outerContext: TypeContext): immutable.Map[String, Location] =
     freeVars.map(x => x -> outerContext.getVarType(x)).map {
       case (_, None) => ???
@@ -82,11 +72,21 @@ class MutableClosureContext private(
     }.toMap
 
   /**
+   * Variables that the function this represents access from an outer closure
+   *
+   * @return
+   */
+  def freeVars: List[String] = _freeVars.toList
+
+  /**
    * Variables of this function that are accessed by inner functions as part of a closure
    *
    * @return
    */
   def closedVars: immutable.Map[String, Location] = _closedVars.toMap
+
+  private def addClosedVar(name: String, location: Location): Unit =
+    if (!_closedVars.contains(name)) _closedVars.addOne(name -> location)
 
 }
 

@@ -7,27 +7,14 @@ import com.freddieposer.scaly.typechecker.types.{ScalyType, StaticScalyType, Sym
 
 sealed abstract case class ScalyValType(name: String) extends StaticScalyType {
 
-  override protected def memberTypes: TypeMap = Map()
-
   override val parent: Option[ScalyType] = Some(ScalyAny)
 
   override def constructor: Option[List[ClassParam]] = None
+
+  override protected def memberTypes: TypeMap = Map()
 }
 
 object ScalyValType {
-
-  def literalType(l: Literal): ScalyValType = l match {
-    case NullLiteral => ScalyNullType
-    case UnitLiteral => ScalyUnitType
-    case IntLiteral(_) => ScalyIntType
-    case CharLiteral(_) => ScalyCharType
-    case FloatLiteral(_) => ScalyFloatType
-    case DoubleLiteral(_) => ScalyDoubleType
-    case SymbolLiteral(_) => ScalySymbolType
-    case StringLiteral(_) => ScalyStringType
-    case BooleanLiteral(_) => ScalyBooleanType
-  }
-
 
   lazy val valTypes: TypeMap = buildTypeMap(SymbolSource.GLOBAL)(
     "String" -> ScalyStringType,
@@ -41,6 +28,18 @@ object ScalyValType {
     "Nothing" -> ScalyNothingType,
     "Null" -> ScalyNullType
   )
+
+  def literalType(l: Literal): ScalyValType = l match {
+    case NullLiteral => ScalyNullType
+    case UnitLiteral => ScalyUnitType
+    case IntLiteral(_) => ScalyIntType
+    case CharLiteral(_) => ScalyCharType
+    case FloatLiteral(_) => ScalyFloatType
+    case DoubleLiteral(_) => ScalyDoubleType
+    case SymbolLiteral(_) => ScalySymbolType
+    case StringLiteral(_) => ScalyStringType
+    case BooleanLiteral(_) => ScalyBooleanType
+  }
 
   private def numericConverterTypes(typ: ScalyValType): TypeMap = buildTypeMap(SymbolSource.MEMBER)(
     "toInt" -> (O --> ScalyIntType),

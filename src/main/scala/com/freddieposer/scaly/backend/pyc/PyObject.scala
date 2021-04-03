@@ -59,9 +59,9 @@ object PyObject {
 }
 
 abstract class PyBoolean(val value: Boolean) extends PyObject {
-  override def toString: String = s"Py${value.toString}"
-
   override def shortName: String = toString
+
+  override def toString: String = s"Py${value.toString}"
 }
 
 object PyTrue extends PyBoolean(true) {
@@ -73,9 +73,9 @@ object PyFalse extends PyBoolean(false) {
 }
 
 object PyNone extends PyObject {
-  override def toString: String = "PyNone"
-
   override def shortName: String = toString
+
+  override def toString: String = "PyNone"
 
   override def toBytes: ByteArrayStream = ByteArrayStream(PycTypeBytes.TYPE_NONE)
 }
@@ -101,20 +101,20 @@ class PyString(val str: List[Byte]) extends PyObject {
 
 object PyString {
 
+  lazy val empty = new PyString(Nil)
+
   def readPyString()(implicit data: ByteArrayStream): PyString = {
     val length = data.readLong()
     new PyString(data.take_bytes(length))
   }
 
-  lazy val empty = new PyString(Nil)
-
 }
 
 
 class PyAscii(val text: String) extends PyObject {
-  override def toString: String = f"PyAscii( $text )"
-
   override def shortName: String = toString
+
+  override def toString: String = f"PyAscii( $text )"
 
   override def toBytes: ByteArrayStream =
     (
@@ -142,9 +142,9 @@ object PyAscii {
 }
 
 class PyInt(val value: Int) extends PyObject {
-  override def toString: String = f"PyInt($value)"
-
   override def shortName: String = toString
+
+  override def toString: String = f"PyInt($value)"
 
   override def toBytes: ByteArrayStream =
     ByteArrayStream(PycTypeBytes.TYPE_INT) + ByteArrayStream.fromLongs(value)

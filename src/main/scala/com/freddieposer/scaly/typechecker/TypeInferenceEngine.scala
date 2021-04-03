@@ -1,8 +1,8 @@
 package com.freddieposer.scaly.typechecker
 
-import com.freddieposer.scaly.AST.{Expr, FunctionExpr, Literal, TupleExpr}
-import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyTupleType, ScalyType}
+import com.freddieposer.scaly.AST.{Expr, Literal, TupleExpr}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
+import com.freddieposer.scaly.typechecker.types.{ScalyTupleType, ScalyType}
 
 object TypeInferenceEngine {
 

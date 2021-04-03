@@ -4,17 +4,7 @@ import com.freddieposer.scaly.backend.pyc.defs.PyOpcodeArgType.PyOpcodeArgType
 
 object PyOpcodes extends Enumeration {
 
-  protected case class Val(opcode: Int, argType: Option[PyOpcodeArgType] = None) extends super.Val {
-    def takesArg: Boolean = opcode >= 90
-
-    def byte: Byte = (opcode & 0xff).toByte
-  }
-
   type PyOpcode = Val
-
-  lazy val valueList: List[Val] = values.toList.asInstanceOf[List[Val]]
-  lazy val opcodeMap: Map[Int, Val] = valueList.map(value => (value.opcode, value)).toMap
-
   final val POP_TOP = Val(1)
   final val ROT_TWO = Val(2)
   final val ROT_THREE = Val(3)
@@ -134,5 +124,13 @@ object PyOpcodes extends Enumeration {
   final val BUILD_TUPLE_UNPACK_WITH_CALL = Val(158)
   final val LOAD_METHOD = Val(160, Some(PyOpcodeArgType.IDX_NAME_LIST))
   final val CALL_METHOD = Val(161)
+  lazy val valueList: List[Val] = values.toList.asInstanceOf[List[Val]]
+  lazy val opcodeMap: Map[Int, Val] = valueList.map(value => (value.opcode, value)).toMap
+
+  protected case class Val(opcode: Int, argType: Option[PyOpcodeArgType] = None) extends super.Val {
+    def takesArg: Boolean = opcode >= 90
+
+    def byte: Byte = (opcode & 0xff).toByte
+  }
 
 }

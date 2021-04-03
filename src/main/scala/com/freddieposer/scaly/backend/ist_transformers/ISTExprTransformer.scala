@@ -25,8 +25,6 @@ trait ISTExprTransformer {
     })
   }
 
-  def transformExpr(ist: IST_Expression): IST_Expression
-
   final def transformStatement(stat: IST_Statement): IST_Statement = stat match {
     case member: IST_Member => member match {
       case IST_Def(id, params, expr, typ, closedVars, freeVars) =>
@@ -38,6 +36,8 @@ trait ISTExprTransformer {
     }
     case expr: IST_Expression => transformExpr(expr)
   }
+
+  def transformExpr(ist: IST_Expression): IST_Expression
 
   def descend(expr: IST_Expression): IST_Expression = expr match {
     case RawISTExpr(_) => expr

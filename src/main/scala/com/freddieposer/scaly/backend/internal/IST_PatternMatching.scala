@@ -1,11 +1,12 @@
 package com.freddieposer.scaly.backend.internal
+
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
-import com.freddieposer.scaly.typechecker.types.{ScalyTupleType, ScalyType}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyNothingType
+import com.freddieposer.scaly.typechecker.types.{ScalyTupleType, ScalyType}
 
 import scala.collection.SeqMap
 
-sealed case class IST_Case (pattern: IST_Pattern, rhs: IST_Expression, closedVars: Map[String, Location], freeVars: Map[String, Location]) extends IST {
+sealed case class IST_Case(pattern: IST_Pattern, rhs: IST_Expression, closedVars: Map[String, Location], freeVars: Map[String, Location]) extends IST {
   override val typ: ScalyType = rhs.typ
 }
 

@@ -1,7 +1,6 @@
 package com.freddieposer.scaly.backend.internal
 
 import com.freddieposer.scaly.AST.ClassParam
-import com.freddieposer.scaly.backend.internal.CodeGenerationUtils.Bytecode
 import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
@@ -86,13 +85,13 @@ case class IST_Def(
 }
 
 case class IST_Val(id: String, expr: IST_Expression, location: Location) extends IST_Member {
-  override val typ: ScalyType = location.typ
   override lazy val maxStack: Int = expr.maxStack + 2
+  override val typ: ScalyType = location.typ
 }
 
 case class IST_Var(id: String, expr: IST_Expression, location: Location) extends IST_Member {
-  override val typ: ScalyType = location.typ
   override lazy val maxStack: Int = expr.maxStack + 2
+  override val typ: ScalyType = location.typ
 }
 
 
@@ -155,7 +154,7 @@ case class IST_Literal(py: PyObject, typ: ScalyValType) extends IST_Expression {
   override lazy val maxStack: Int = 1
 }
 
-sealed class IST_Sequence(val statements: List[IST_Statement], val typ: ScalyType) extends IST_Expression with Iterable[IST_Statement]{
+sealed class IST_Sequence(val statements: List[IST_Statement], val typ: ScalyType) extends IST_Expression with Iterable[IST_Statement] {
   override lazy val maxStack: Int = (1 :: statements.map(_.maxStack)).sum
 
   override def iterator: Iterator[IST_Statement] = statements.iterator
@@ -170,8 +169,7 @@ object IST_Sequence {
 }
 
 case class IST_Block(override val statements: List[IST_Statement], override val typ: ScalyType)
-  extends IST_Sequence(statements, typ)
-{
+  extends IST_Sequence(statements, typ) {
   override lazy val maxStack: Int = (1 :: statements.map(_.maxStack)).max
 }
 
@@ -213,19 +211,19 @@ case class IST_TupleExpr(elems: List[IST_Expression], typ: ScalyTupleType) exten
 }
 
 case class IST_While(cond: IST_Expression, body: IST_Expression) extends IST_Expression {
-  override val typ: ScalyType = ScalyUnitType
   override lazy val maxStack: Int = Math.max(cond.maxStack, body.maxStack)
+  override val typ: ScalyType = ScalyUnitType
 }
 
 case class IST_IsNone(lhs: IST_Expression) extends IST_Expression {
-  override val typ: ScalyType = ScalyBooleanType
   override lazy val maxStack: Int = lhs.maxStack + 1
+  override val typ: ScalyType = ScalyBooleanType
 }
 
 case class IST_Match(lhs: IST_Expression, cases: List[IST_Case], typ: ScalyType) extends IST_Expression {
   override val maxStack: Int = 20
 }
 
-case class IST_Subscript(lhs: IST_Expression, rhs: Int, typ: ScalyType) extends IST_Expression{
+case class IST_Subscript(lhs: IST_Expression, rhs: Int, typ: ScalyType) extends IST_Expression {
   override val maxStack: Int = 1
 }

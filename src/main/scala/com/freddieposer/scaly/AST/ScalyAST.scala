@@ -115,4 +115,4 @@ class Pattern extends ScalyAST {
 
 }
 
-case class MatchCase (pattern: Pattern, guard: Option[Expr], result: Expr)
+case class MatchCase(pattern: Pattern, guard: Option[Expr], result: Expr)

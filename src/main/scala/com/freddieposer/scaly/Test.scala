@@ -1,7 +1,7 @@
 package com.freddieposer.scaly
 
 import com.freddieposer.scaly.AST.ASTBuilder
-import com.freddieposer.scaly.backend.{ISTCompilationPipeline, ISTCompiler}
+import com.freddieposer.scaly.backend.ISTCompilationPipeline
 import com.freddieposer.scaly.backend.pyc.PycFile
 import com.freddieposer.scaly.backend.pyc.utils.ImmutableByteArrayStream
 import com.freddieposer.scaly.typechecker.{TypeChecker, TypeError, TypeErrorContext, TypeErrorFromUnificationFailure}
@@ -18,7 +18,7 @@ object Test {
   val COMPILED_OUTPUT_FILE = "test_files/compiled.pyc"
   val DUMP_PYTHON_FILE = "test_files/t.py"
   val DUMP_INPUT_FILE = "test_files/t.pyc"
-//  val SCALA_INPUT_FILE = "test_files/typesafety_matches.sc"
+  //  val SCALA_INPUT_FILE = "test_files/typesafety_matches.sc"
   val SCALA_INPUT_FILE = "test_files/compileTest.scala"
 
   def test_pyc(): Unit = {

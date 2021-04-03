@@ -7,22 +7,22 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class ByteArrayStream {
 
-  def bytes: Array[Byte]
-
   protected[ByteArrayStream] var _offset: AtomicInteger = new AtomicInteger(0)
 
-  def offset: Int = _offset.get()
+  def bytes: Array[Byte]
 
   def reset(): Unit = _offset.set(0)
+
+  def head(): Int = take(1).head
+
+  def take(n: Int): List[Int] = take_bytes(n).map(_ & 0xff)
 
   def take_bytes(n: Int): List[Byte] = {
     if (offset + n > bytes.length) throw new Error(s"No more bytes ${offset + n}")
     bytes.slice(offset, _offset.addAndGet(n)).toList
   }
 
-  def take(n: Int): List[Int] = take_bytes(n).map(_ & 0xff)
-
-  def head(): Int = take(1).head
+  def offset: Int = _offset.get()
 
   def readLong(rev: Boolean = true): Int = {
     val bs_r = take(4).map(_.toInt)
@@ -49,8 +49,6 @@ object ByteArrayStream {
 
   def apply(chars: Array[Char]): ImmutableByteArrayStream = new ImmutableByteArrayStream(chars.map(_.toByte))
 
-  def apply(bytes: Byte*): ImmutableByteArrayStream = new ImmutableByteArrayStream(bytes.toArray)
-
   def apply(typ: PycTypeBytes.TypeByte): ImmutableByteArrayStream = ByteArrayStream(typ.toByte)
 
   def fromLongs(longs: Int*): ImmutableByteArrayStream = {
@@ -62,6 +60,8 @@ object ByteArrayStream {
   def join(bass: List[ByteArrayStream]): ImmutableByteArrayStream =
     bass.foldLeft(ByteArrayStream()) { case (x, y) => x + y }
 
+  def apply(bytes: Byte*): ImmutableByteArrayStream = new ImmutableByteArrayStream(bytes.toArray)
+
 }
 
 class ImmutableByteArrayStream(override val bytes: Array[Byte]) extends ByteArrayStream {
@@ -72,13 +72,11 @@ class ImmutableByteArrayStream(override val bytes: Array[Byte]) extends ByteArra
 
 class MutableByteArrayStream(private val _m_bytes: ArrayBuffer[Byte] = ArrayBuffer()) extends ByteArrayStream {
 
-  override def bytes: Array[Byte] = _m_bytes.toArray
-
   def write(byte: Byte): Unit = _m_bytes.append(byte)
 
-  def write(bytes: Array[Byte]): Unit = _m_bytes.appendAll(bytes)
-
   def write(bytes: ByteArrayStream): Unit = write(bytes.bytes)
+
+  def writeLongs(ns: List[Int], rev: Boolean = true): Unit = ns.foreach(n => writeLong(n, rev))
 
   def writeLong(n: Int, rev: Boolean = true): Unit = {
     val bs = Array(
@@ -87,8 +85,10 @@ class MutableByteArrayStream(private val _m_bytes: ArrayBuffer[Byte] = ArrayBuff
     write(if (!rev) bs.reverse else bs)
   }
 
-  def writeLongs(ns: List[Int], rev: Boolean = true): Unit = ns.foreach(n => writeLong(n, rev))
+  def write(bytes: Array[Byte]): Unit = _m_bytes.appendAll(bytes)
 
   def freeze: ImmutableByteArrayStream = new ImmutableByteArrayStream(bytes)
+
+  override def bytes: Array[Byte] = _m_bytes.toArray
 
 }

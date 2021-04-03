@@ -1,19 +1,20 @@
 package com.freddieposer.scaly.backend.internal
 
-import com.freddieposer.scaly.backend.pyc.{PyAscii, PyTuple}
+import com.freddieposer.scaly.backend.CompilationContext
+import com.freddieposer.scaly.backend.ISTCompiler.{GLOBAL_LAZY_PREFIX, THIS_NAME}
+import com.freddieposer.scaly.backend.internal.Bytecode._
+import com.freddieposer.scaly.backend.internal.CodeGenerationUtils._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{DUP_TOP, POP_TOP, RAISE_VARARGS, ROT_THREE, ROT_TWO}
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{LOAD_CONST, RETURN_VALUE, ROT_TWO}
+import com.freddieposer.scaly.backend.pyc.{PyAscii, PyNone, PyTuple}
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.SymbolSource
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyNothingType, ScalyStringType}
-import CodeGenerationUtils._
-import com.freddieposer.scaly.backend.CompilationContext
-import com.freddieposer.scaly.backend.ISTCompiler.{GLOBAL_LAZY_PREFIX, THIS_NAME}
 
 //TODO: Refactor this
 object BytecodeSnippets {
 
-   def ThrowException(message: PyAscii): IST_Sequence = {
+  def ThrowException(message: PyAscii): IST_Sequence = {
     import PyOpcodes._
     IST_Application(
       IST_Name("Exception", Location(SymbolSource.GLOBAL)),
@@ -22,7 +23,7 @@ object BytecodeSnippets {
     ) + (RAISE_VARARGS, 1.toByte)
   }
 
-   def PrintTopThree: IST_Sequence = {
+  def PrintTopThree: IST_Sequence = {
     import PyOpcodes.ROT_THREE
     PrintString("TOS") + PrintTop +
       ~ROT_THREE + PrintString("TOS1") + PrintTop +
@@ -30,24 +31,24 @@ object BytecodeSnippets {
   }
 
 
-   def PrintTop: IST_Sequence = {
+  def PrintTop: IST_Sequence = {
     import PyOpcodes.{DUP_TOP, POP_TOP}
     (~DUP_TOP).r + IST_Application(IST_Name("print", Location(SymbolSource.GLOBAL)), List((~ROT_TWO).r), ScalyNothingType) + ~POP_TOP
   }
 
-   def PrintString(str: String): IST_Sequence = {
+  def PrintString(str: String): IST_Sequence = {
     import PyOpcodes.POP_TOP
     IST_Application(IST_Name("print", Location(SymbolSource.GLOBAL)), List(IST_Literal(str.toPy, ScalyStringType)), ScalyNothingType) + ~POP_TOP
   }
 
-   def loadThis(ctx: CompilationContext): Bytecode = {
+  def loadThis(ctx: CompilationContext): Bytecode = {
     import PyOpcodes.{LOAD_DEREF, LOAD_FAST}
     if (ctx.isBoxed(THIS_NAME.text)) (LOAD_DEREF, ctx.freeOrCell(THIS_NAME))
     else (LOAD_FAST, ctx.varname(THIS_NAME))
   }
 
 
-   def TestCaddy(ctx: CompilationContext): BytecodeList = {
+  def TestCaddy(ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
     BytecodeList(
       (LOAD_NAME, ctx.name("print".toPy)),
@@ -60,7 +61,7 @@ object BytecodeSnippets {
     )
   }
 
-   def ImportSTDLib(ctx: CompilationContext): BytecodeList = {
+  def ImportSTDLib(ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
     BytecodeList(
       (LOAD_CONST, ctx.const(0.toPy)),
@@ -69,5 +70,9 @@ object BytecodeSnippets {
       ~IMPORT_STAR
     )
   }
+
+  def ReturnNone(ctx: CompilationContext): BytecodeList = BytecodeList(
+    (LOAD_CONST, ctx.const(PyNone)), (RETURN_VALUE, 0.toByte)
+  )
 
 }

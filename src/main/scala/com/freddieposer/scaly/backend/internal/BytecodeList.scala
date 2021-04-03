@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.backend.internal
 
-import com.freddieposer.scaly.backend.internal.CodeGenerationUtils.{Bytecode, BytecodeAbsoluteMarker, BytecodeByte, BytecodeMarker, BytecodeOpcode, BytecodeOpcodeWithMarker, BytecodeRelativeMarker}
+import com.freddieposer.scaly.backend.internal.Bytecode._
 import com.freddieposer.scaly.backend.pyc.PyString
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.EXTENDED_ARG
 
@@ -49,8 +49,8 @@ class BytecodeList(val bytecodes: List[Bytecode]) extends Iterable[Bytecode] {
 
 object BytecodeList {
 
-  def apply(bs: Bytecode*): BytecodeList = new BytecodeList(bs.toList)
-
   val empty = new BytecodeList(Nil)
+
+  def apply(bs: Bytecode*): BytecodeList = new BytecodeList(bs.toList)
 
 }

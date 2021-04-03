@@ -34,6 +34,9 @@ class TypeContext(
 
   final def addType(e: (String, Location)): TypeContext = addTypes(List(e))
 
+  def addTypes(es: List[(String, Location)]): TypeContext =
+    TypeContext(types ++ es, vars, parent)
+
   final def addVar(e: (String, Location)): TypeContext = addVars(List(e))
 
   def addVars(es: List[(String, Location)]): TypeContext =
@@ -41,9 +44,6 @@ class TypeContext(
 
   def addVars(es: TypeMap): TypeContext =
     TypeContext(types, vars ++ es, parent)
-
-  def addTypes(es: List[(String, Location)]): TypeContext =
-    TypeContext(types ++ es, vars, parent)
 
   def extend(types: TypeMap, vars: TypeMap): TypeContext =
     TypeContext(types, vars, Some(this))
@@ -60,28 +60,31 @@ class TypeContext(
 
 object TypeContext {
 
+  type TypeMap = Map[String, Location]
+
+  def apply(types: TypeMap, vars: TypeMap, parent: Option[TypeContext] = None): TypeContext =
+    new TypeContext(types, vars, parent)
+
+  implicit def WrapLocation(t: (ScalyType, SymbolSource)) = Location(t._1, t._2)
+
+  def buildTypeMap(source: SymbolSource)(items: (String, ScalyType)*): TypeMap = buildTypeMap(items.toMap, source)
+
+  def buildTypeMap(map: Map[String, ScalyType], source: SymbolSource): TypeMap =
+    map.map { case (s, t) => s -> (t, source) }
+
   case class Location(typ: ScalyType, source: SymbolSource) {
     def writable: Option[Location] = SymbolSource.writable(source).map(Location(typ, _))
   }
 
   object Location {
     def apply(typ: ScalyType, source: SymbolSource) = new Location(typ, source)
-    def apply(source: SymbolSource) = new Location(ScalyUnitType, source)
+
     def local: Location = Location(SymbolSource.LOCAL)
+
     def local_w: Location = Location(SymbolSource.LOCAL_WRITABLE)
+
+    def apply(source: SymbolSource) = new Location(ScalyUnitType, source)
   }
-
-  implicit def WrapLocation(t: (ScalyType, SymbolSource)) = Location(t._1, t._2)
-
-  type TypeMap = Map[String, Location]
-
-  def apply(types: TypeMap, vars: TypeMap, parent: Option[TypeContext] = None): TypeContext =
-    new TypeContext(types, vars, parent)
-
-  def buildTypeMap(map: Map[String, ScalyType], source: SymbolSource): TypeMap =
-    map.map { case (s, t) => s -> (t, source) }
-
-  def buildTypeMap(source: SymbolSource)(items: (String, ScalyType)*): TypeMap = buildTypeMap(items.toMap, source)
 
   implicit def unwrapLocation(location: Location): ScalyType = location.typ
 

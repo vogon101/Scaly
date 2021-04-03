@@ -14,9 +14,6 @@ trait PlaceholderType {
 sealed abstract class ScalyType extends IST {
 
   override val typ: ScalyType = this
-
-  protected def memberTypes: TypeMap
-
   val parent: Option[ScalyType]
 
   def visited: Boolean
@@ -30,6 +27,8 @@ sealed abstract class ScalyType extends IST {
   def globalName: Option[String] = None
 
   def constructor: Option[List[ClassParam]]
+
+  protected def memberTypes: TypeMap
 
 }
 
@@ -47,11 +46,10 @@ abstract class StaticScalyType extends ScalyType {
 
 abstract class ASTScalyType extends ScalyType {
 
+  val node: ScalyAST
   private var _visited: Boolean = false
 
   override def visited: Boolean = _visited
-
-  val node: ScalyAST
 
   protected def constructMutable(f: mutable.Map[String, Location] => Unit): TypeMap = {
     _visited = true

@@ -132,7 +132,7 @@ object ASTBuilder {
   }
 
   private def buildPattern(pat: Pat): Pattern = pat match {
-    case l @ Lit(_) => LiteralPattern(buildLiteral(l))
+    case l@Lit(_) => LiteralPattern(buildLiteral(l))
     case Name(str) => ???
     case Var(name) => VariablePattern(name.value)
     case Tuple(pats) => TuplePattern(pats.map(buildPattern))

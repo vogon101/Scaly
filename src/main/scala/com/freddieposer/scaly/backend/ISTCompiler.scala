@@ -1,11 +1,13 @@
 package com.freddieposer.scaly.backend
 
+import com.freddieposer.scaly.backend.CompilationContext.withContext
 import com.freddieposer.scaly.backend.ISTCompiler.{GLOBAL_LAZY_PREFIX, THIS_NAME}
+import com.freddieposer.scaly.backend.internal.Bytecode._
+import com.freddieposer.scaly.backend.internal.BytecodeSnippets._
+import com.freddieposer.scaly.backend.internal.CodeGenerationUtils.StringPyConverter
 import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.pyc._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
-import BytecodeSnippets._
-import com.freddieposer.scaly.backend.internal.CodeGenerationUtils.StringPyConverter
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType._
 import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyType, SymbolSource}
@@ -14,14 +16,6 @@ import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, ScalyType, S
 class ISTCompiler(_filename: String) {
 
   import CodeGenerationUtils._
-
-  private val filename = _filename.toPy
-
-
-  private def withContext(f: CompilationContext => PyCodeObject): PyCodeObject = {
-    val ctx = new CompilationContext
-    f(ctx)
-  }
 
   val nameMangler: Map[String, String] = Map(
     "+" -> "__add__",
@@ -34,7 +28,7 @@ class ISTCompiler(_filename: String) {
     ">=" -> "__ge__",
     "==" -> "__eq__"
   )
-
+  private val filename = _filename.toPy
 
   def compile(ist: IST_CompilationUnit): PyCodeObject = withContext { ctx =>
 
@@ -220,8 +214,8 @@ class ISTCompiler(_filename: String) {
           (BUILD_TUPLE, elems.length.toByte) -->
           (CALL_FUNCTION, 1.toByte).toBCL
       case IST_If(cond, tBranch, Some(fBranch), _) =>
-        val falseMarker = Marker.absolute
-        val endMarker = Marker.relative
+        val falseMarker = BytecodeMarker.absolute
+        val endMarker = BytecodeMarker.relative
         compileExpression(cond, ctx) -->
           (POP_JUMP_IF_FALSE, falseMarker) -->
           compileExpression(tBranch, ctx) -->
@@ -229,7 +223,7 @@ class ISTCompiler(_filename: String) {
           falseMarker -->
           compileExpression(fBranch, ctx) --> endMarker
       case IST_If(cond, tBranch, None, _) =>
-        val endMarker = Marker.absolute
+        val endMarker = BytecodeMarker.absolute
         compileExpression(cond, ctx) -->
           (POP_JUMP_IF_FALSE, endMarker) -->
           compileExpression(tBranch, ctx) -->
@@ -300,8 +294,8 @@ class ISTCompiler(_filename: String) {
         }) --> (LOAD_CONST, ctx.const(PyNone))
 
       case IST_While(cond, body) =>
-        val endMarker = Marker.absolute
-        val condMarker = Marker.absolute
+        val endMarker = BytecodeMarker.absolute
+        val condMarker = BytecodeMarker.absolute
         condMarker.toBCL -->
           compileExpression(cond, ctx) -->
           (POP_JUMP_IF_FALSE, endMarker) -->
@@ -316,7 +310,7 @@ class ISTCompiler(_filename: String) {
           (COMPARE_OP, 8.toByte)
         )
 
-      case m: IST_Match =>
+      case _: IST_Match =>
         throw new Error("Cannot compile IST_Match - use a PatternMatchingTransformer in the pipeline")
 
       case RawISTExpr(bcl) => bcl
@@ -356,15 +350,6 @@ class ISTCompiler(_filename: String) {
     }
   }
 
-  //TODO: Swap to using functions for the case bodies so that the context is respected
-  //  and outer vars aren't overwritten! (Currently violates type safety)
-
-
-
-
-
-
-
   def makeFunction(id: String, func: IST_Function, ctx: CompilationContext): BytecodeList = {
     import PyOpcodes._
     ctx.withoutClass {
@@ -380,8 +365,6 @@ class ISTCompiler(_filename: String) {
     }
 
   }
-
-
 
   //TODO: Clean this up
   //TODO: Make this more efficient (overwrite function?)
@@ -408,7 +391,6 @@ class ISTCompiler(_filename: String) {
       ), ScalyFunctionType(Some(ScalyUnitType), typ)), ctx
     )
   }
-
 
 
 }

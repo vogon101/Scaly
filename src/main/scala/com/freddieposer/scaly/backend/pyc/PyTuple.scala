@@ -14,16 +14,16 @@ import scala.collection.mutable.ListBuffer
  */
 class PyTuple(private var _objectsBuffer: ListBuffer[PyObject]) extends PyObject {
 
-  override def prettyPrint(indent: Int): String = _prettyPrint(indent)
-
   override def shortName: String = f"PyTuple(n=${objects.length})"
-
-  override def toString: String = prettyPrint(0)
 
   /**
    * @return Objects of the tuple
    */
   def objects: List[PyObject] = _objectsBuffer.toList
+
+  override def toString: String = prettyPrint(0)
+
+  override def prettyPrint(indent: Int): String = _prettyPrint(indent)
 
   def _prettyPrint(indent: Int): String = {
     if (objects.isEmpty) f"${"\t".repeat(indent)}PyTuple(-)"

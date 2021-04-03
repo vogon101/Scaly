@@ -1,17 +1,23 @@
 package com.freddieposer.scaly.backend.ist_transformers
 
+import com.freddieposer.scaly.backend.internal.Bytecode._
 import com.freddieposer.scaly.backend.internal.BytecodeSnippets.ThrowException
 import com.freddieposer.scaly.backend.internal.CodeGenerationUtils._
-import com.freddieposer.scaly.backend.CompilationContext
-import com.freddieposer.scaly.backend.internal.{IST_Assignment, IST_Case, IST_Expression, IST_Function, IST_If, IST_Literal, IST_LiteralPattern, IST_Match, IST_Name, IST_Pattern, IST_TuplePattern, IST_VariablePattern, RawISTExpr}
+import com.freddieposer.scaly.backend.internal._
 import com.freddieposer.scaly.backend.ist_transformers.PatternMatchingTransformer.IST_CompiledPattern
 import com.freddieposer.scaly.backend.pyc.PyTrue
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
-import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, SymbolSource}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyIntType, ScalyNothingType}
+import com.freddieposer.scaly.typechecker.types.{ScalyFunctionType, SymbolSource}
 
+/**
+ * Transformer compiles pattern match expressions to IST_If
+ */
 class PatternMatchingTransformer extends ISTExprTransformer {
+
+  private val _MATCH_NAME: String = "__match__tmp__impl__"
+  private var _MATCH_COUNT: Int = 0
 
   override def transformExpr(ist: IST_Expression): IST_Expression = ist match {
     case expr: IST_Match =>
@@ -90,10 +96,6 @@ class PatternMatchingTransformer extends ISTExprTransformer {
   def compilePattern(pattern: IST_Pattern): IST_CompiledPattern =
     IST_CompiledPattern(compilePatternBindings(pattern), compilePatternCondition(pattern))
 
-
-  private val _MATCH_NAME: String = "__match__tmp__impl__"
-  private var _MATCH_COUNT: Int = 0
-
   def match_name: String = (_MATCH_NAME + _MATCH_COUNT)
 
   def withMatch[T](f: => T): T = {
@@ -106,5 +108,7 @@ class PatternMatchingTransformer extends ISTExprTransformer {
 }
 
 object PatternMatchingTransformer {
+
   case class IST_CompiledPattern(binds: IST_Expression, cond: IST_Expression)
+
 }

@@ -20,16 +20,6 @@ class TypeChecker(
                  ) {
 
 
-  private def addToError[T](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
-    f.left.map(new TypeErrorContext(_, node)(context))
-
-  //TODO: Clean up this code
-  //  Ideas:  - Helper function for checking parameter types
-  //            - And if they unify with actuals
-  //          - Remove UnificationSuccess
-
-  //TODO: Better errors with line numbers
-
   //TODO: This is a hack - remove
   def typeCheck(): TCR[IST_CompilationUnit] = {
     try {
@@ -38,6 +28,109 @@ class TypeChecker(
       case e@InferenceError(node) => Left(TypeError(e.getMessage, node)(EmptyContext))
     }
   }
+
+  //TODO: Clean up this code
+  //  Ideas:  - Helper function for checking parameter types
+  //            - And if they unify with actuals
+  //          - Remove UnificationSuccess
+
+  //TODO: Better errors with line numbers
+
+  def typeCheck(stat: Statement, source: SymbolSource)(implicit ctx: TypeContext): TCR[(IST_Statement, TypeContext)] =
+    addToError(stat, ctx) {
+      stat match {
+        case e: Expr => typeCheck_Expr(e).map(t => (t, ctx))
+
+        case d: Dcl => d match {
+          case d: DefDef => typeCheck_def(d, source)
+          case m@MemberDcl(id, typ, rhs) =>
+            typeCheck_Expr(rhs).flatMap { rhsExpr =>
+              (typ.map(_.fromAST) match {
+                case Some(dt) => dt.flatMap { declaredType =>
+                  doesUnify(rhsExpr.typ, declaredType)(ctx, Variance.CO)
+                    .mapError(stat)
+                }
+                case None => Right(EmptyUS)
+              }).map { _ =>
+                m match {
+                  case _: ValDef =>
+                    (
+                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, source)),
+                      ctx.addVar(id -> Location(rhsExpr.typ, source))
+                    )
+                  case _: VarDef =>
+                    (
+                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, SymbolSource.writable(source).get)),
+                      ctx.addVar(id -> Location(rhsExpr.typ, SymbolSource.writable(source).get))
+                    )
+                }
+              }
+            }
+        }
+
+      }
+    }
+
+  def typeCheck_def(defDef: DefDef, source: SymbolSource)(implicit ctx: TypeContext): TCR[(IST_Def, TypeContext)] = addToError(defDef, ctx) {
+    defDef match {
+      case DefDef(id, params, retType, body) =>
+        val paramResults = params.map(ps =>
+          ps.map(p => p.name -> p.pType.fromAST)
+        )
+
+        val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
+          .collect { case xs@_ :: _ => xs }.flatten.map(_.value)
+
+        if (errors.nonEmpty)
+          return Left(new TypeErrorCombination(s"Cannot typecheck parameter types for def: $defDef", defDef, errors))
+
+        val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
+        val ptList = paramTypes.map(_.values.toList)
+        (retType match {
+          case Some(rt) => rt.fromAST.map { declaredRT =>
+            (MutableClosureContext(
+              buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL) +
+                (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.nonWritable(source))),
+              ctx
+            ), Some(declaredRT))
+          }
+          case None =>
+            Right((MutableClosureContext(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL), ctx), None))
+        }).flatMap { case (eCtx, rtOpt) =>
+          typeCheck_Expr(body)(eCtx)
+            .flatMap { actualRetType =>
+              (rtOpt match {
+                case Some(declaredRT) =>
+                  doesUnify(actualRetType.typ, declaredRT)(ctx, Variance.CO)
+                    .mapError(defDef)
+                case None => Right(EmptyUS)
+              }).map { _ =>
+                val fType = ScalyFunctionType.build(actualRetType.typ, ptList)
+                (
+                  IST_Def(id, paramTypes, actualRetType, fType, eCtx.closedVars, eCtx.freeVars(ctx)),
+                  ctx.addVar(id -> Location(fType, source))
+                )
+              }
+            }
+        }
+
+    }
+  }
+
+  def canMatch(typ: ScalyType, pattern: Pattern)(implicit context: TypeContext): TCR[IST_Pattern] = pattern match {
+    case LiteralPattern(literal) =>
+      doesUnify(typ, literalType(literal))(context, Variance.CO)
+        .mapError(pattern)
+        .map(_ => IST_LiteralPattern(ISTBuilder.buildLiteral(literal)))
+    case VariablePattern(name) => Right(IST_VariablePattern(name, typ))
+    case TuplePattern(pats) => typ match {
+      case ScalyTupleType(elems) if elems.length == pats.length =>
+        (elems zip pats).map { case (x, y) => canMatch(x, y) }.collapse.map(IST_TuplePattern)
+    }
+  }
+
+  private def addToError[T](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
+    f.left.map(new TypeErrorContext(_, node)(context))
 
   private def _typeCheck(): TCR[IST_CompilationUnit] = {
 
@@ -124,89 +217,6 @@ class TypeChecker(
 
       case stat: ScalyObjectDef => checkBody(stat, Right(Nil))
     }.collapse.map(new IST_CompilationUnit(_))
-  }
-
-
-  def typeCheck(stat: Statement, source: SymbolSource)(implicit ctx: TypeContext): TCR[(IST_Statement, TypeContext)] =
-    addToError(stat, ctx) {
-      stat match {
-        case e: Expr => typeCheck_Expr(e).map(t => (t, ctx))
-
-        case d: Dcl => d match {
-          case d: DefDef => typeCheck_def(d, source)
-          case m@MemberDcl(id, typ, rhs) =>
-            typeCheck_Expr(rhs).flatMap { rhsExpr =>
-              (typ.map(_.fromAST) match {
-                case Some(dt) => dt.flatMap { declaredType =>
-                  doesUnify(rhsExpr.typ, declaredType)(ctx, Variance.CO)
-                    .mapError(stat)
-                }
-                case None => Right(EmptyUS)
-              }).map { _ =>
-                m match {
-                  case _: ValDef =>
-                    (
-                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, source)),
-                      ctx.addVar(id -> Location(rhsExpr.typ, source))
-                    )
-                  case _: VarDef =>
-                    (
-                      IST_Val(id, rhsExpr, Location(rhsExpr.typ, SymbolSource.writable(source).get)),
-                      ctx.addVar(id -> Location(rhsExpr.typ, SymbolSource.writable(source).get))
-                    )
-                }
-              }
-            }
-        }
-
-      }
-    }
-
-
-  def typeCheck_def(defDef: DefDef, source: SymbolSource)(implicit ctx: TypeContext): TCR[(IST_Def, TypeContext)] = addToError(defDef, ctx) {
-    defDef match {
-      case DefDef(id, params, retType, body) =>
-        val paramResults = params.map(ps =>
-          ps.map(p => p.name -> p.pType.fromAST)
-        )
-
-        val errors: List[TypeError] = paramResults.map(_.collect { case (_, e@Left(_)) => e })
-          .collect { case xs@_ :: _ => xs }.flatten.map(_.value)
-
-        if (errors.nonEmpty)
-          return Left(new TypeErrorCombination(s"Cannot typecheck parameter types for def: $defDef", defDef, errors))
-
-        val paramTypes = paramResults.map { ps => ps.map { case (n, Right(t)) => n -> t.typ }.toMap }
-        val ptList = paramTypes.map(_.values.toList)
-        (retType match {
-          case Some(rt) => rt.fromAST.map { declaredRT =>
-            (MutableClosureContext(
-              buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL) +
-                (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.nonWritable(source))),
-              ctx
-            ), Some(declaredRT))
-          }
-          case None =>
-            Right((MutableClosureContext(buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL), ctx), None))
-        }).flatMap { case (eCtx, rtOpt) =>
-          typeCheck_Expr(body)(eCtx)
-            .flatMap { actualRetType =>
-              (rtOpt match {
-                case Some(declaredRT) =>
-                  doesUnify(actualRetType.typ, declaredRT)(ctx, Variance.CO)
-                    .mapError(defDef)
-                case None => Right(EmptyUS)
-              }).map { _ =>
-                val fType = ScalyFunctionType.build(actualRetType.typ, ptList)
-                (
-                  IST_Def(id, paramTypes, actualRetType, fType, eCtx.closedVars, eCtx.freeVars(ctx)),
-                  ctx.addVar(id -> Location(fType, source))
-                )
-              }
-            }
-        }
-
-    }
   }
 
   private def typeCheck_Expr(expr: Expr)(implicit ctx: TypeContext): TCR[IST_Expression] = addToError(expr, ctx) {
@@ -355,7 +365,7 @@ class TypeChecker(
                 .flatMap(retExprs => unify(retExprs.map(_._1.typ)) match {
                   case None => Left(TypeError(s"Cannot unify return types of $retExprs for patterns", expr))
                   case Some(retType) =>
-                    val compiledCases = patterns.zip(retExprs).map {case (p, (body, ectx)) => IST_Case(p, body, ectx.closedVars, ectx.freeVars(ctx))}
+                    val compiledCases = patterns.zip(retExprs).map { case (p, (body, ectx)) => IST_Case(p, body, ectx.closedVars, ectx.freeVars(ctx)) }
                     Right((compiledCases, retType))
                 })
             }.map { case (cs, retType) => IST_Match(lexpr, cs, retType) }
@@ -474,18 +484,6 @@ class TypeChecker(
         else Left(UnificationFailure(t1, t2, s"Static types: $t1 is not a subtype of $t2"))
 
       case _ => Left(UnificationFailure(t1, t2, s"Cannot unify static types [$t1] and [$t2]"))
-    }
-  }
-
-  def canMatch(typ: ScalyType, pattern: Pattern)(implicit context: TypeContext): TCR[IST_Pattern] = pattern match {
-    case LiteralPattern(literal) =>
-      doesUnify(typ, literalType(literal))(context, Variance.CO)
-        .mapError(pattern)
-        .map(_ => IST_LiteralPattern(ISTBuilder.buildLiteral(literal)))
-    case VariablePattern(name) => Right(IST_VariablePattern(name, typ))
-    case TuplePattern(pats) => typ match {
-      case ScalyTupleType(elems) if elems.length == pats.length =>
-        (elems zip pats).map{ case (x,y) => canMatch(x,y)}.collapse.map(IST_TuplePattern)
     }
   }
 
