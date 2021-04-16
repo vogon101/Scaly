@@ -26,7 +26,9 @@ class TypeContext(
 
   def getWellFormedType(name: String): Option[Location] =
     if (types isDefinedAt name) types get name
+    else if (types isDefinedAt (name + "$")) types get (name + "$")
     else parent.flatMap(_ getWellFormedType name)
+      .orElse(parent.flatMap(_ getWellFormedType (name + "$")))
 
   def getVarType(name: String): Option[Location] =
     if (vars isDefinedAt name) vars get name

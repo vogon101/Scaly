@@ -65,6 +65,8 @@ abstract class ScalyASTTemplateType extends ASTScalyType with PlaceholderType {
             //TODO: Return could be none - inference
             case DefDef(id, params, Some(retType), _) =>
               id -> Location(convertParams(params, ScalyASTPlaceholderType(retType)), SymbolSource.MEMBER)
+
+            case _ => throw new Exception(s"Return type needed for $d at $node")
           })
           case _: Expr => None
         }
@@ -104,6 +106,9 @@ class ScalyASTObjectType(
                           protected val _parent: Option[ScalyType],
                           val node: ScalyObjectDef
                         ) extends ScalyASTTemplateType {
+
+  val typeName: String = name + "$"
+  override val globalName: Option[String] = Some(typeName)
 
   override def constructor: Option[List[ClassParam]] = Some(Nil)
 

@@ -52,7 +52,7 @@ object BytecodeSnippets {
     import PyOpcodes._
     BytecodeList(
       (LOAD_NAME, ctx.name("print".toPy)),
-      (LOAD_NAME, ctx.name((GLOBAL_LAZY_PREFIX + "Main").toPy)),
+      (LOAD_NAME, ctx.name((GLOBAL_LAZY_PREFIX + "Main$").toPy)),
       (CALL_FUNCTION, 0.toByte),
       (LOAD_METHOD, ctx.name("main".toPy)),
       (CALL_METHOD, 0.toByte),

@@ -48,8 +48,8 @@ class ISTCompiler(_filename: String) {
         val objectCode = istClass match {
           case _: IST_Class => BytecodeList.empty
           case IST_Object(name, _, _, _, _, typ) =>
-            BuildGlobalLazy(GLOBAL_LAZY_PREFIX + name, name, ctx, typ) -->
-              (STORE_NAME, ctx.name((GLOBAL_LAZY_PREFIX + name).toPy)).toBCL
+            BuildGlobalLazy(GLOBAL_LAZY_PREFIX + name + "$", name + "$", ctx, typ) -->
+              (STORE_NAME, ctx.name((GLOBAL_LAZY_PREFIX + name + "$").toPy)).toBCL
         }
 
         BytecodeList(
@@ -83,6 +83,11 @@ class ISTCompiler(_filename: String) {
 
     val constructor = compileConstructor(istClass)
 
+    val name = istClass match {
+      case IST_Class(name, params, parent, parentParams, defs, statements, typ) => name
+      case IST_Object(name, parent, parentParams, defs, statements, typ) => name + "$"
+    }
+
     val functions = constructor :: ctx.withClass {
       istClass.defs.map(t => compileFunction(t._1, t._2.func, ctx))
     }.toList
@@ -92,7 +97,7 @@ class ISTCompiler(_filename: String) {
       BytecodeList(
         (LOAD_NAME, ctx.name("__name__".toPy)),
         (STORE_NAME, ctx.name("__module__".toPy)),
-        (LOAD_CONST, ctx.const(istClass.name.toPy)),
+        (LOAD_CONST, ctx.const(name.toPy)),
         (STORE_NAME, ctx.name("__qualname__".toPy))
       ) --> functions.flatMap(func => BytecodeList(
         (LOAD_CONST, ctx.const(func)),
@@ -104,7 +109,7 @@ class ISTCompiler(_filename: String) {
 
     new PyCodeObject(
       0, 0, 0, 0, stackSize, 64, 1,
-      code.compile, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty, PyTuple.empty, istClass.name.toPy, filename, PyString.empty
+      code.compile, ctx.constants, ctx.names, PyTuple.empty, PyTuple.empty, PyTuple.empty, name.toPy, filename, PyString.empty
     )
 
   }
@@ -262,7 +267,7 @@ class ISTCompiler(_filename: String) {
           case GLOBAL =>
             (LOAD_GLOBAL, ctx.name(name.toPy)).toBCL
           case GLOBAL_LAZY => BytecodeList(
-            (LOAD_GLOBAL, ctx.name((GLOBAL_LAZY_PREFIX + name).toPy)),
+            (LOAD_GLOBAL, ctx.name((GLOBAL_LAZY_PREFIX + name + "$").toPy)),
             (CALL_FUNCTION, 0.toByte)
           )
           case THIS => loadThis(ctx).toBCL
