@@ -10,6 +10,13 @@ AClass Instance
 Constructing AnotherClass with 40
 Constructing YetAnotherObject
 AnotherClass Instance with 40
+Constructing Vector Companion Object
+Vector 1 2
+Vector 9 10
+Vector 10 12
+Vector 9 11
+11
+19
 None
  */
 object Main {
@@ -22,6 +29,15 @@ object Main {
     print(a)
     print(YetAnotherObject)
 
+    val v1 = Vector(1,2)
+    val v2 = Vector(9, 10)
+
+    print(v1)
+    print(v2)
+    print(v1 + v2)
+    print(Vector bar v2)
+    print(v1.foo(10))
+    print(v2.foo(10))
 
   }
 
@@ -66,5 +82,25 @@ object AnotherObject extends AnotherClass(20) {
 object YetAnotherObject extends AnotherClass(40) {
 
   print("Constructing YetAnotherObject")
+
+}
+
+class Vector (val x: Int, val y: Int) {
+
+  def foo(z: Int): Int = z + x
+
+  def toString: String = "Vector " + str(x) + " " + str(y)
+
+  def + (that: Vector): Vector = Vector(x + that.x, y + that.y)
+
+}
+
+object Vector {
+
+  print("Constructing Vector Companion Object")
+
+  def apply(x: Int, y: Int): Vector = new Vector(x,y)
+
+  def bar(v: Vector): Vector = v + Vector (0, 1)
 
 }

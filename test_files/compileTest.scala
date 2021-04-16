@@ -14,7 +14,6 @@ object Main {
 
   def bar(f: Int => Int): Int = f(10)
 
-
 }
 
 
@@ -22,6 +21,8 @@ object Main {
 class Vector (val x: Int, val y: Int) {
 
   def foo(z: Int): Int = z + x
+
+  def toString: String = "Vector " + str(x) + " " + str(y)
 
 }
 object Vector {

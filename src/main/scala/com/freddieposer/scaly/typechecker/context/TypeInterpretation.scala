@@ -66,7 +66,9 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
 
 object TypeInterpretation {
 
-  def interpret(subject: ScalyType, context: TypeContext): TypeInterpretation = TypeInterpretation(subject)(context)  def apply(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
+  def interpret(subject: ScalyType, context: TypeContext): TypeInterpretation = TypeInterpretation(subject)(context)
+
+  def apply(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =
     new TypeInterpretation(subject)(context)
 
   implicit def TypeToInterpretation(subject: ScalyType)(implicit context: TypeContext): TypeInterpretation =

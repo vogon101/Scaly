@@ -25,29 +25,22 @@ class CompilerSpec(val folder: Path, val tmp_file: String) extends TestSpec {
 
       case Right(ist) =>
 
-        val regex = "\\/\\*\n((.|\n)+)\n \\*\\/".r
-        val expectation = try {
-          regex.findFirstMatchIn(text).get.group(1)
-        } catch {
-          case e: NoSuchElementException => return (false, () => {
-            Logger.error(s"Compiler test $filename did not have expectation")
-          })
-        }
-
+        val expectation = getExpectation(text)
         val pyCodeObject = ISTCompilationPipeline.standard("placeholder").compile(ist)
         val f = PycFile(pyCodeObject)
         Files.write(tmpFile, f.toBytes.bytes)
         import sys.process._
         val command = s"bash test_files/run_compiled.sh ${'"'}${tmp_file}${'"'}"
         try {
-          val res = command.!!
+          val res: String = command.!!
+//          val trimmedExpectation = expectation.substring(3, expectation.length-4)
           if (res.dropRight(2).replace("\r\n", "\n") == expectation) (true, () => {})
           else {
             (false, () => {
               Logger.debug(ist.toString)
               Logger.debug(pyCodeObject.toString)
               Logger.warn(s"Expected:\n$expectation")
-              Logger.warn("Actual:\n" + res.toString)
+              Logger.warn(f"Actual:\n$res")
             })
           }
         } catch {
@@ -67,4 +60,16 @@ class CompilerSpec(val folder: Path, val tmp_file: String) extends TestSpec {
   }
 
   override def descend(f: Path): TestSpec = new CompilerSpec(f, tmp_file)
+
+  private def getExpectation(s: String): String = {
+    var i = 2
+    var x = ""
+    assert(s.substring(0, 3) == "/*\n")
+    while (!x.contains("\n */")) {
+      i += 1
+      x += s.charAt(i)
+    }
+    x.substring(0, i - 6)
+  }
+
 }

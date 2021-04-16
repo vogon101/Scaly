@@ -123,10 +123,17 @@ class TypeChecker(
         .mapError(pattern)
         .map(_ => IST_LiteralPattern(ISTBuilder.buildLiteral(literal)))
     case VariablePattern(name) => Right(IST_VariablePattern(name, typ))
-    case TuplePattern(pats) => typ match {
-      case ScalyTupleType(elems) if elems.length == pats.length =>
-        (elems zip pats).map { case (x, y) => canMatch(x, y) }.collapse.map(IST_TuplePattern)
-    }
+    case TuplePattern(pats) =>
+      typ match {
+        case ScalyTupleType(elems) if elems.length == pats.length =>
+          (elems zip pats)
+            .map { case (x, y) => canMatch(x, y) }
+            .collapse
+            .map(IST_TuplePattern)
+        case _ =>
+          Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
+      }
+    case _ => Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
   }
 
   private def addToError[T](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
@@ -142,14 +149,14 @@ class TypeChecker(
         case c@ScalyClassDef(id, (parent, _) :: Nil, _, _) =>
           id -> ScalyASTClassType(id, Some(ScalyPlaceholderTypeName(parent.name)), c)
         case o@ScalyObjectDef(id, Nil, _) =>
-          id -> ScalyASTObjectType(id, None, o)
+          (id + "$") -> ScalyASTObjectType(id, None, o)
         case o@ScalyObjectDef(id, (parent, _) :: Nil, _) =>
-          id -> ScalyASTObjectType(id, Some(ScalyPlaceholderTypeName(parent.name)), o)
+          (id + "$") -> ScalyASTObjectType(id, Some(ScalyPlaceholderTypeName(parent.name)), o)
       }.toMap
 
     val globalObjects: Map[String, Location] =
       types.flatMap {
-        case id -> (t@ScalyASTObjectType(_, _, _)) => Some(id -> Location(t, SymbolSource.GLOBAL_LAZY))
+        case _ -> (t@ScalyASTObjectType(_, _, _)) => Some(t.name -> Location(t, SymbolSource.GLOBAL_LAZY))
         case _ => None
       }
 
@@ -157,10 +164,13 @@ class TypeChecker(
       .addTypes(types.map { case (id, typ) => id -> Location(typ, SymbolSource.GLOBAL) }.toList)
       .addVars(globalObjects)
 
+    def getTType(id: String): ScalyASTTemplateType =
+      types.get(id).orElse(types.get(id + "$")).get
+
     def checkBody(stat: TemplateDef, params: TCR[List[(ClassParam, ScalyType)]]): TCR[IST_Template] = params.flatMap { paramTypes =>
       stat match {
         case TemplateDef(id, parents, body) =>
-          val ctx = new ThisTypeContext(types(id), Some(globalContext))
+          val ctx = new ThisTypeContext(getTType(id), Some(globalContext))
 
           val constructorParams = paramTypes.map {
             case (p: VarClassParam, pt) => p.id -> Location(pt, SymbolSource.MEMBER)
@@ -199,8 +209,8 @@ class TypeChecker(
               ).collapse
             }.getOrElse(Right(Nil))
               .map(stats => stat match {
-                case _: ScalyClassDef => ISTBuilder.buildISTClass(id, pr, stats.map(_._1), types(id))
-                case _: ScalyObjectDef => ISTBuilder.buildISTObject(id, pr, stats.map(_._1), types(id))
+                case _: ScalyClassDef => ISTBuilder.buildISTClass(id, pr, stats.map(_._1), getTType(id))
+                case _: ScalyObjectDef => ISTBuilder.buildISTObject(id, pr, stats.map(_._1), getTType(id))
               })
           })
 
