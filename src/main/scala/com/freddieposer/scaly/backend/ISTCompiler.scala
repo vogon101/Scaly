@@ -79,7 +79,7 @@ class ISTCompiler(_filename: String) {
   }
 
   def compileClass(istClass: IST_Template, outerContext: CompilationContext): PyCodeObject = withContext { ctx =>
-    val stackSize: Int = 10 // ???
+    val stackSize: Int = 20 // ???
 
     val constructor = compileConstructor(istClass)
 
@@ -119,7 +119,7 @@ class ISTCompiler(_filename: String) {
     import PyOpcodes._
 
     val constructorName = "__init__".toPy
-    val stackSize = 10
+    val stackSize = 20
     //    val stackSize = List(
     //      2, // Add params as attrs
     //      istClass.statements.map(_.maxStack), //Body of constructor
@@ -193,7 +193,7 @@ class ISTCompiler(_filename: String) {
       )
 
       //Add some buffer
-      val stackSize = istFunction.body.maxStack + 2
+      val stackSize = istFunction.body.maxStack + 10
       localNames.foreach(ctx.varname)
       // TODO: + number of other locals
 

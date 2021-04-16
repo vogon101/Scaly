@@ -221,7 +221,7 @@ case class IST_IsNone(lhs: IST_Expression) extends IST_Expression {
 }
 
 case class IST_Match(lhs: IST_Expression, cases: List[IST_Case], typ: ScalyType) extends IST_Expression {
-  override val maxStack: Int = 20
+  override val maxStack: Int = 200
 }
 
 case class IST_Subscript(lhs: IST_Expression, rhs: Int, typ: ScalyType) extends IST_Expression {

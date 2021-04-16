@@ -36,3 +36,8 @@ case class IST_TuplePattern(pats: List[IST_Pattern]) extends IST_Pattern {
   override val matchType: ScalyType = ScalyTupleType(pats.map(_.matchType))
   override val bindings: SeqMap[String, ScalyType] = SeqMap.from(pats.flatMap(_.bindings)) //TODO: ordering?
 }
+
+case class IST_ExtractorPattern(function: IST_Expression, pats: List[IST_Pattern], matchType: ScalyType) extends IST_Pattern {
+  override val bindings: SeqMap[String, ScalyType] = SeqMap.from(pats.flatMap(_.bindings))
+
+}

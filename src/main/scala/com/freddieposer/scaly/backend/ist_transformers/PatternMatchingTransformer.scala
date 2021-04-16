@@ -25,8 +25,13 @@ class PatternMatchingTransformer extends ISTExprTransformer {
     case _ => descend(ist)
   }
 
+  private def transformPattern(pattern: IST_Pattern): (Option[IST_Expression], IST_Pattern) = pattern match {
+    case IST_ExtractorPattern(function, pats, _) =>
+      (Some(function), IST_TuplePattern(pats))
+    case p => (None, p)
+  }
+
   def compileMatch(matchExpr: IST_Match): IST_Expression = withMatch {
-    import PyOpcodes._
 
     val IST_Match(lhs, cases, _) = matchExpr
 
@@ -43,7 +48,8 @@ class PatternMatchingTransformer extends ISTExprTransformer {
             cond,
             (~DUP_TOP).r +
               IST_Function(c.pattern.bindings.keys.toList, transformExpr(c.rhs), ScalyFunctionType(None, ScalyNothingType), c.closedVars, c.freeVars) +
-              (~ROT_TWO).r + binds + (CALL_FUNCTION, c.pattern.bindings.size.toByte).r,
+              (~ROT_TWO).r +
+              binds + (CALL_FUNCTION, c.pattern.bindings.size.toByte).r + ~ROT_TWO + ~POP_TOP,
             Some(descend(rest)),
             c.typ
           )
@@ -54,7 +60,6 @@ class PatternMatchingTransformer extends ISTExprTransformer {
   }
 
   def compilePatternCondition(pattern: IST_Pattern): IST_Expression = {
-    import PyOpcodes._
     pattern match {
       case IST_LiteralPattern(literal) =>
         literal + (COMPARE_OP, 2.toByte)
@@ -70,11 +75,14 @@ class PatternMatchingTransformer extends ISTExprTransformer {
               cond +
               (~ROT_THREE) + (~ROT_THREE) + (~BINARY_AND)
         }.flat + ~ROT_TWO + ~POP_TOP
+
+      case IST_ExtractorPattern(func, pats, _) =>
+        func + ~ROT_TWO + (CALL_FUNCTION, 1.toByte) + compilePatternCondition(IST_TuplePattern(pats))
+
     }
   }
 
   def compilePatternBindings(pattern: IST_Pattern): IST_Expression = {
-    import PyOpcodes._
     pattern match {
       case IST_LiteralPattern(_) => (~POP_TOP).r
       case IST_VariablePattern(_, _) => (~NOP).r
@@ -90,11 +98,18 @@ class PatternMatchingTransformer extends ISTExprTransformer {
               innerBind
           }
         }.flat
+
+      case IST_ExtractorPattern(func, pats, _) =>
+        func + ~ROT_TWO + (CALL_FUNCTION, 1.toByte) +
+          IST_Assignment(match_name, Location.local_w, (~DUP_TOP).r) + ~POP_TOP +
+          compilePatternBindings(IST_TuplePattern(pats))
+
     }
   }
 
   def compilePattern(pattern: IST_Pattern): IST_CompiledPattern =
     IST_CompiledPattern(compilePatternBindings(pattern), compilePatternCondition(pattern))
+
 
   def match_name: String = (_MATCH_NAME + _MATCH_COUNT)
 

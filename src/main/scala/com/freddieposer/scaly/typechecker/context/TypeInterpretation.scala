@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.typechecker.context
 
-import com.freddieposer.scaly.AST.AST_ScalyType
+import com.freddieposer.scaly.AST.{AST_ScalyType, AST_ScalyTypeName}
 import com.freddieposer.scaly.typechecker.context.TypeContext._
 import com.freddieposer.scaly.typechecker.context.TypeInterpretation.{ASTTypeToInterpretation, TypeToInterpretation}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
@@ -49,11 +49,19 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
     case (t1, ScalyPlaceholderTypeName(name)) =>
       context.getWellFormedType(name).exists(t1 isSubtypeOf _)
 
+    case (ScalyASTPlaceholderType(AST_ScalyTypeName(name)), t2) =>
+      context.getWellFormedType(name).exists(_.typ isSubtypeOf t2)
+
+    case (t1, ScalyASTPlaceholderType(AST_ScalyTypeName(name))) =>
+      context.getWellFormedType(name).exists(t1.typ isSubtypeOf _)
+
+
     case (ScalyNothingType, _) => true
     case (ScalyNullType, t) if (t.isInstanceOf[ScalyValType] && !t.equals(ScalyStringType)) => false
     case (ScalyNullType, _) => true
 
     case (ScalyTupleType(ts1), ScalyTupleType(ts2)) => ts1.zip(ts2).forall { case (a, b) => a.isSubtypeOf(b) }
+
 
     case (t1, t2) => (t1 equals t2) || (t1.parent.exists(_.isSubtypeOf(t2)))
   }
@@ -78,7 +86,6 @@ object TypeInterpretation {
     ASTTypeInterpretation(subject)
 
   def interpret(subject: AST_ScalyType, context: TypeContext): ASTTypeInterpretation = ASTTypeInterpretation(subject)(context)
-
 
 
 }

@@ -117,7 +117,7 @@ class TypeChecker(
     }
   }
 
-  def canMatch(typ: ScalyType, pattern: Pattern)(implicit context: TypeContext): TCR[IST_Pattern] = pattern match {
+  private def canMatch(typ: ScalyType, pattern: Pattern)(implicit context: TypeContext): TCR[IST_Pattern] = pattern match {
     case LiteralPattern(literal) =>
       doesUnify(typ, literalType(literal))(context, Variance.CO)
         .mapError(pattern)
@@ -133,6 +133,34 @@ class TypeChecker(
         case _ =>
           Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
       }
+    case ExtractorPattern(name, pats) =>
+      context.getVarType(name)
+        .flatMap(typeLocation => typeLocation.getOwnMemberLocation("unapply").map(l => (typeLocation, l)))
+        .map {
+          case (typeLocation, unapplyLocation@Location(unapplyType, _)) =>
+            val fType = unapplyType match {
+              case t: ScalyASTPlaceholderType => t.node.fromAST
+              case ScalyFunctionType(Some(f: ScalyASTPlaceholderType), t: ScalyASTPlaceholderType) =>
+                f.node.fromAST.flatMap(from => t.node.fromAST.flatMap(to => Right(ScalyFunctionType(Some(from), to))))
+              case ScalyFunctionType(Some(f: ScalyASTPlaceholderType), to) =>
+                f.node.fromAST.flatMap(from => Right(ScalyFunctionType(Some(from), to)))
+              case ScalyFunctionType(from, t: ScalyASTPlaceholderType) =>
+                t.node.fromAST.flatMap(to => Right(ScalyFunctionType(from, to)))
+              case t => Right(t)
+            }
+            fType.flatMap {
+              case t@ScalyFunctionType(Some(from), innerTypes: ScalyTupleType) =>
+                doesUnify(typ, from)(context, Variance.CO)
+                  .mapError(pattern)
+                  .map(_ => canMatch(innerTypes, TuplePattern(pats)))
+                  .collapse
+                  .map {
+                    case IST_TuplePattern(compiledPats) =>
+                      IST_ExtractorPattern(IST_Select(IST_Name(name, typeLocation), "unapply", t), compiledPats, from)
+                  }
+              case _ => Left(TypeError(s"Cannot match non-functional unapply type $fType", pattern))
+            }
+        }.getOrElse(Left(TypeError(s"Cannot find unnapply on $name", pattern)))
     case _ => Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
   }
 

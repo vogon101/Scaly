@@ -24,7 +24,7 @@ object BytecodeSnippets {
   }
 
   def PrintTopThree: IST_Sequence = {
-    import PyOpcodes.ROT_THREE
+    //    return IST_Sequence(Nil, null)
     PrintString("TOS") + PrintTop +
       ~ROT_THREE + PrintString("TOS1") + PrintTop +
       ~ROT_THREE + PrintString("TOS2") + PrintTop + ~ROT_THREE
@@ -32,24 +32,22 @@ object BytecodeSnippets {
 
 
   def PrintTop: IST_Sequence = {
-    import PyOpcodes.{DUP_TOP, POP_TOP}
+    //    return IST_Sequence(Nil, null)
     (~DUP_TOP).r + IST_Application(IST_Name("print", Location(SymbolSource.GLOBAL)), List((~ROT_TWO).r), ScalyNothingType) + ~POP_TOP
   }
 
   def PrintString(str: String): IST_Sequence = {
-    import PyOpcodes.POP_TOP
+    //    return IST_Sequence(Nil, null)
     IST_Application(IST_Name("print", Location(SymbolSource.GLOBAL)), List(IST_Literal(str.toPy, ScalyStringType)), ScalyNothingType) + ~POP_TOP
   }
 
   def loadThis(ctx: CompilationContext): Bytecode = {
-    import PyOpcodes.{LOAD_DEREF, LOAD_FAST}
     if (ctx.isBoxed(THIS_NAME.text)) (LOAD_DEREF, ctx.freeOrCell(THIS_NAME))
     else (LOAD_FAST, ctx.varname(THIS_NAME))
   }
 
 
   def TestCaddy(ctx: CompilationContext): BytecodeList = {
-    import PyOpcodes._
     BytecodeList(
       (LOAD_NAME, ctx.name("print".toPy)),
       (LOAD_NAME, ctx.name((GLOBAL_LAZY_PREFIX + "Main$").toPy)),
@@ -62,7 +60,6 @@ object BytecodeSnippets {
   }
 
   def ImportSTDLib(ctx: CompilationContext): BytecodeList = {
-    import PyOpcodes._
     BytecodeList(
       (LOAD_CONST, ctx.const(0.toPy)),
       (LOAD_CONST, ctx.const(PyTuple(List("*".toPy)))),
