@@ -32,6 +32,7 @@ class PatternMatchingTransformer extends ISTExprTransformer {
   }
 
   def compileMatch(matchExpr: IST_Match): IST_Expression = withMatch {
+    import PyOpcodes._
 
     val IST_Match(lhs, cases, _) = matchExpr
 
@@ -60,6 +61,7 @@ class PatternMatchingTransformer extends ISTExprTransformer {
   }
 
   def compilePatternCondition(pattern: IST_Pattern): IST_Expression = {
+    import PyOpcodes._
     pattern match {
       case IST_LiteralPattern(literal) =>
         literal + (COMPARE_OP, 2.toByte)
@@ -83,6 +85,7 @@ class PatternMatchingTransformer extends ISTExprTransformer {
   }
 
   def compilePatternBindings(pattern: IST_Pattern): IST_Expression = {
+    import PyOpcodes._
     pattern match {
       case IST_LiteralPattern(_) => (~POP_TOP).r
       case IST_VariablePattern(_, _) => (~NOP).r

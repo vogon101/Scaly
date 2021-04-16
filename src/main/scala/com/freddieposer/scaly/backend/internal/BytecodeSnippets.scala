@@ -5,7 +5,7 @@ import com.freddieposer.scaly.backend.ISTCompiler.{GLOBAL_LAZY_PREFIX, THIS_NAME
 import com.freddieposer.scaly.backend.internal.Bytecode._
 import com.freddieposer.scaly.backend.internal.CodeGenerationUtils._
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
-import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes.{LOAD_CONST, RETURN_VALUE, ROT_TWO}
+import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes._
 import com.freddieposer.scaly.backend.pyc.{PyAscii, PyNone, PyTuple}
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.SymbolSource
