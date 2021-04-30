@@ -33,5 +33,19 @@ object SymbolSource extends Enumeration {
     case _ => ss
   }
 
+  def asClosure(ss: SymbolSource): SymbolSource = ss match {
+    case LOCAL => CLOSURE
+    case LOCAL_WRITABLE => CLOSURE_WRITABLE
+    case MEMBER => CLOSURE_MEMBER
+    case MEMBER_WRITABLE => CLOSURE_MEMBER_WRITABLE
+    case GLOBAL | GLOBAL_LAZY | THIS => ???
+    case _ => ss
+  }
+
+  def localClosure(ss: SymbolSource): SymbolSource = ss match {
+    case LOCAL | LOCAL_WRITABLE => asClosure(ss)
+    case _ => ss
+  }
+
 
 }

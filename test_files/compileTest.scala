@@ -1,61 +1,28 @@
-object Main {
+class Main {
 
-  def main() : Unit = {
+  def foo(x: Int): String = {
 
-//    val v = Vector(1, 2)
-//    print(Vector.unapply(v))
-//
-//    print(v match {
-//      case Vector(1, y) => y + 1
-//    })
-//
-//    print( (10,2) match {
-//      case (x, y) => x + y
-//    })
+    def bar(y: String, z: Int): (String, Int) = {
 
-    val f = new Foo(100, new Bar("Hello", 20))
+      if (z < 1) (y + "!", z)
+      else (foo(z - 1) + "?" + foo(z - 2), z - 1)
 
-    print(f match {
-      case Foo(x,y) => print(y)
-    })
+    }
 
-    print(f match {
-      case Foo(a, Bar(x, y)) => print(x)
-    })
+    val res = bar("", x)
+    "(" + res._1 + res._2 + ")"
 
-    print((10, f) match {
-      case (p, Foo(a, Bar("Hello", (u, v)))) => v
-    })
+  }
+
+  def main(): Unit = {
+
+    print(foo(1))
+
+    print(foo(2))
+
+    print(foo(3))
 
   }
 
 }
 
-
-class Foo(val a: Int, val b: Bar)
-
-class Bar(val x: String, val y: Int)
-
-object Foo {
-  def unapply(arg: Foo): (Int, Bar) = (arg.a, arg.b)
-}
-
-object Bar {
-  def unapply(arg: Bar): (String, (Int, String)) = (arg.x, (arg.y, "V"))
-}
-
-
-class Vector (val x: Int, val y: Int) {
-//  def toString: String = "Vector " + str(x) + " " + str(y)
-
-}
-object Vector {
-
-  def apply(x: Int, y: Int): Vector = new Vector(x,y)
-
-  def unapply(obj: Vector): (Int, Int) = {
-    print("Unapply " + str(obj))
-    (obj.x, obj.y)
-  }
-
-}

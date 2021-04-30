@@ -27,8 +27,8 @@ trait ISTExprTransformer {
 
   final def transformStatement(stat: IST_Statement): IST_Statement = stat match {
     case member: IST_Member => member match {
-      case IST_Def(id, params, expr, typ, closedVars, freeVars) =>
-        IST_Def(id, params, transformExpr(expr), typ, closedVars, freeVars)
+      case IST_Def(id, params, expr, typ, closedVars, freeVars, loc) =>
+        IST_Def(id, params, transformExpr(expr), typ, closedVars, freeVars, loc)
       case IST_Val(id, expr, location) =>
         IST_Val(id, transformExpr(expr), location)
       case IST_Var(id, expr, location) =>
@@ -62,8 +62,10 @@ trait ISTExprTransformer {
     case IST_Select(lhs, rhs, typ) =>
       IST_Select(transformExpr(lhs), rhs, typ)
 
-    case IST_Assignment(name, location, rhs) =>
-      IST_Assignment(name, location, transformExpr(rhs))
+    case IST_Assignment(name, rhs) =>
+      IST_Assignment(name, transformExpr(rhs))
+    case IST_SelectAssignment(IST_Select(lhs, mem, l), rhs) =>
+      IST_SelectAssignment(IST_Select(transformExpr(lhs), mem, l), rhs)
     case IST_TupleExpr(elems, typ) =>
       IST_TupleExpr(elems.map(transformExpr), typ)
     case IST_While(cond, body) =>

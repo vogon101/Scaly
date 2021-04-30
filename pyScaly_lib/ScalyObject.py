@@ -5,7 +5,12 @@ class ScalyObject(object):
     def __str__(self):
         return self.toString()
 
+    def __eq__(self, obj):
+        return self is obj
+
     def equals(self, obj):
         return self.__eq__(obj)
+
+
 
     #TODO: isInstanceOf?

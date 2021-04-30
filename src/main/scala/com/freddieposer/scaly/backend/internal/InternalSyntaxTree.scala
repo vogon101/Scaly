@@ -5,7 +5,7 @@ import com.freddieposer.scaly.backend.pyc.PyObject
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBooleanType, ScalyNothingType, ScalyUnitType}
-import com.freddieposer.scaly.typechecker.types.{ScalyASTTemplateType, ScalyFunctionType, ScalyTupleType, ScalyType}
+import com.freddieposer.scaly.typechecker.types.{ScalyASTTemplateType, ScalyFunctionType, ScalyTupleType, ScalyType, StaticScalyType}
 
 abstract class IST extends {
 
@@ -77,7 +77,8 @@ case class IST_Def(
                     expr: IST_Expression,
                     typ: ScalyType,
                     closedVars: Map[String, Location],
-                    freeVars: Map[String, Location]
+                    freeVars: Map[String, Location],
+                    location: Location
                   ) extends IST_Member {
 
   lazy val func: IST_Function = IST_Function.build(params, expr, typ, closedVars, freeVars)
@@ -150,7 +151,7 @@ case class IST_If(
   override lazy val maxStack: Int = List(cond.maxStack, tBranch.maxStack, fBranch.map(_.maxStack).getOrElse(0)).max
 }
 
-case class IST_Literal(py: PyObject, typ: ScalyValType) extends IST_Expression {
+case class IST_Literal(py: PyObject, typ: StaticScalyType) extends IST_Expression {
   override lazy val maxStack: Int = 1
 }
 
@@ -165,6 +166,8 @@ object IST_Sequence {
   def apply(statements: List[IST_Statement], typ: ScalyType): IST_Sequence = new IST_Sequence(statements, typ)
 
   def unapply(arg: IST_Sequence): Option[(List[IST_Statement], ScalyType)] = Some((arg.statements, arg.typ))
+
+  def empty = IST_Sequence(Nil, ScalyNothingType)
 
 }
 
@@ -185,8 +188,9 @@ case class IST_New(name: String, args: List[IST_Expression], typ: ScalyType) ext
 
 //TODO: This transformation should be used in future for the various types
 //  e.g. when the arm selected is a def
-case class IST_Select(lhs: IST_Expression, rhs: String, typ: ScalyType) extends IST_Expression {
+case class IST_Select(lhs: IST_Expression, rhs: String, location: Location) extends IST_Expression {
   override lazy val maxStack: Int = List(lhs.maxStack, 1).max
+  override val typ: ScalyType = location.typ
 }
 
 case class IST_Name(name: String, location: Location) extends IST_Expression {
@@ -198,12 +202,14 @@ case class IST_Name(name: String, location: Location) extends IST_Expression {
 }
 
 //TODO: More complex assignments
-case class IST_Assignment(name: String, location: Location, rhs: IST_Expression) extends IST_Expression {
-
-
+case class IST_Assignment(name: IST_Name, rhs: IST_Expression) extends IST_Expression {
   override lazy val maxStack: Int = Math.max(rhs.maxStack, 2)
   override val typ: ScalyType = ScalyUnitType
+}
 
+case class IST_SelectAssignment(lhs: IST_Select, rhs: IST_Expression) extends IST_Expression {
+  override lazy val maxStack: Int = Math.max(rhs.maxStack, 2 + lhs.maxStack)
+  override val typ: ScalyType = ScalyUnitType
 }
 
 case class IST_TupleExpr(elems: List[IST_Expression], typ: ScalyTupleType) extends IST_Expression {

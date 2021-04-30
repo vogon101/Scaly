@@ -29,7 +29,6 @@ class BytecodeList(val bytecodes: List[Bytecode]) extends Iterable[Bytecode] {
               .takeWhile(_ ne m)
               .foldRight(0)(_.length + _)
         }
-
         List(EXTENDED_ARG.byte, ((value >> 8) & 0xff).toByte, op.byte, (value & 0xff).toByte)
 
     })

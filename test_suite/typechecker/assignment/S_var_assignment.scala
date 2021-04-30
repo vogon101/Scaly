@@ -17,6 +17,8 @@ class Foo {
 
     (new MyThing("Name1")).rename("This is a new name")
 
+    (new MyThing("Name 1")).name = "Name 2"
+
     x
   }
 

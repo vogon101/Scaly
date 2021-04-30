@@ -26,7 +26,10 @@ class ISTCompiler(_filename: String) {
     "<=" -> "__le__",
     ">" -> "__gt__",
     ">=" -> "__ge__",
-    "==" -> "__eq__"
+    "==" -> "__eq__",
+    "&&" -> "__and__",
+    "||" -> "__or__",
+    "unary_-" -> "__neg__"
   )
   private val filename = _filename.toPy
 
@@ -84,8 +87,8 @@ class ISTCompiler(_filename: String) {
     val constructor = compileConstructor(istClass)
 
     val name = istClass match {
-      case IST_Class(name, params, parent, parentParams, defs, statements, typ) => name
-      case IST_Object(name, parent, parentParams, defs, statements, typ) => name + "$"
+      case c:IST_Class => c.name
+      case o:IST_Object => o.name + "$"
     }
 
     val functions = constructor :: ctx.withClass {
@@ -279,7 +282,7 @@ class ISTCompiler(_filename: String) {
           args.map(compileExpression(_, ctx)).flat -->
           (CALL_FUNCTION, args.length.toByte).toBCL
 
-      case IST_Assignment(_name, location, rhs) =>
+      case IST_Assignment(IST_Name(_name, location), rhs) =>
         val name = nameMangler.getOrElse(_name, _name)
         import com.freddieposer.scaly.typechecker.types.SymbolSource._
         compileExpression(rhs, ctx) --> (location.source match {
@@ -297,6 +300,13 @@ class ISTCompiler(_filename: String) {
             (STORE_GLOBAL, ctx.name(name.toPy)).toBCL
           case _ => throw new Exception(s"Cannot assign to $location ($name)")
         }) --> (LOAD_CONST, ctx.const(PyNone))
+
+      case IST_SelectAssignment(IST_Select(lhs, member, _), rhs) =>
+        val name = nameMangler.getOrElse(member, member)
+        import SymbolSource._
+        compileExpression(rhs, ctx) -->
+          compileExpression(lhs, ctx) -->
+          (STORE_ATTR, ctx.name(name.toPy))
 
       case IST_While(cond, body) =>
         val endMarker = BytecodeMarker.absolute
@@ -326,10 +336,12 @@ class ISTCompiler(_filename: String) {
     }
   }
 
-  //Currently doesn't return - should be managed by compileFunction
+
   def compileBlock(block: IST_Sequence, ctx: CompilationContext): BytecodeList = {
 
     import PyOpcodes._
+
+    import com.freddieposer.scaly.typechecker.types.SymbolSource._
     val bc = block.statements.map {
       case expr: IST_Expression =>
         block match {
@@ -338,13 +350,18 @@ class ISTCompiler(_filename: String) {
         }
 
       case m: IST_Member => m match {
-        case d@IST_Def(id, _, _, _, _, freeVars) =>
+        case d@IST_Def(id, _, _, _, _, freeVars, location) =>
           makeFunction(id, d.func, ctx) -->
-            (STORE_FAST, ctx.varname(id.toPy))
+            (location.source match {
+            case CLOSURE | CLOSURE_WRITABLE =>
+              (STORE_DEREF, ctx.freeOrCell(id.toPy))
+            case _ =>
+              (STORE_FAST, ctx.varname(id.toPy))
+          })
         case IST_Val(id, expr, location) =>
-          compileExpression(IST_Assignment(id, location.writable.get, expr), ctx)
+          compileExpression(IST_Assignment(IST_Name(id, location.writable.get), expr), ctx)
         case IST_Var(id, expr, location) =>
-          compileExpression(IST_Assignment(id, location.writable.get, expr), ctx)
+          compileExpression(IST_Assignment(IST_Name(id, location.writable.get), expr), ctx)
       }
       //We need to be popping items off the stack here but we can only do this IF they add things
       //thus all functions NEED to return a PY_NONE if they don't return something else!
@@ -377,16 +394,17 @@ class ISTCompiler(_filename: String) {
 
     val location = Location(typ, SymbolSource.GLOBAL)
     val locationName = name + "_loc"
+    val istName = IST_Name(locationName, location)
 
     compileExpression(
       IST_Block(List(
-        IST_Assignment(locationName, location, IST_Literal(PyNone, ScalyUnitType)),
+        IST_Assignment(istName, IST_Literal(PyNone, ScalyUnitType)),
         IST_Function(
           Nil,
           IST_Block(List(
             IST_If(
               IST_IsNone(IST_Name(locationName, location)),
-              IST_Assignment(locationName, location, IST_New(constructorName, Nil, typ)),
+              IST_Assignment(istName, IST_New(constructorName, Nil, typ)),
               Some(IST_Literal(PyNone, ScalyUnitType)),
               ScalyUnitType
             ), IST_Name(locationName, location)

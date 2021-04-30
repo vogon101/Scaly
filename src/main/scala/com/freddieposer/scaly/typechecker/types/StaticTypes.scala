@@ -3,11 +3,11 @@ package com.freddieposer.scaly.typechecker.types
 import com.freddieposer.scaly.AST.ClassParam
 import com.freddieposer.scaly.typechecker.context.TypeContext.{TypeMap, buildTypeMap}
 import com.freddieposer.scaly.typechecker.types.ScalyType.defaultMembers
-import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyObject, ScalyValType}
+import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyAny, ScalyObject, ScalyValType}
 
 case class ScalyFunctionType(from: Option[ScalyType], to: ScalyType) extends StaticScalyType {
 
-  override lazy val parent: Option[ScalyType] = Some(ScalyObject)
+  override lazy val parent: Option[ScalyType] = Some(ScalyAny)
 
   override val memberTypes: TypeMap = defaultMembers ++ Map()
 
@@ -36,6 +36,11 @@ class ScalyTupleType private(val elems: List[ScalyType]) extends StaticScalyType
   override def toString: String = s"TupleType(${elems.mkString(", ")})"
 
   override def constructor: Option[List[ClassParam]] = None
+
+  override def equals(obj: Any): Boolean = obj match {
+    case ScalyTupleType(xs) => elems.zip(xs).forall {case (x,y) => x equals y}
+    case _ => false
+  }
 
 }
 

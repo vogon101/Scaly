@@ -16,7 +16,7 @@ object Main {
     val test = new Test
     test.foo()
     test.f(new Thing)
-    print(test.puppy.toString())
+    print(test.puppy.toString)
 
   }
 

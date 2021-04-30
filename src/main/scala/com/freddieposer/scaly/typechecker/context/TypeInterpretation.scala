@@ -56,8 +56,9 @@ class TypeInterpretation(val subject: ScalyType)(implicit val context: TypeConte
       context.getWellFormedType(name).exists(t1.typ isSubtypeOf _)
 
 
+    case (ScalyNullType, ScalyNothingType) => false
+    //    case (ScalyNullType, t) if (t.isInstanceOf[ScalyValType] && !t.equals(ScalyStringType)) => false
     case (ScalyNothingType, _) => true
-    case (ScalyNullType, t) if (t.isInstanceOf[ScalyValType] && !t.equals(ScalyStringType)) => false
     case (ScalyNullType, _) => true
 
     case (ScalyTupleType(ts1), ScalyTupleType(ts2)) => ts1.zip(ts2).forall { case (a, b) => a.isSubtypeOf(b) }

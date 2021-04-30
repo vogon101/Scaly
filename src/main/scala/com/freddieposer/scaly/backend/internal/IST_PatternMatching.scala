@@ -17,7 +17,7 @@ sealed abstract class IST_Pattern extends IST {
   //TODO: What was the plan here?
   val bindings: SeqMap[String, ScalyType]
 
-  override def toString: String = s"Pattern with $bindings"
+  override def toString: String = s"Pattern with $bindings, MT: $matchType"
 
 }
 
@@ -40,4 +40,12 @@ case class IST_TuplePattern(pats: List[IST_Pattern]) extends IST_Pattern {
 case class IST_ExtractorPattern(function: IST_Expression, pats: List[IST_Pattern], matchType: ScalyType) extends IST_Pattern {
   override val bindings: SeqMap[String, ScalyType] = SeqMap.from(pats.flatMap(_.bindings))
 
+}
+
+case class IST_NamePattern(name: String, location: Location, matchType: ScalyType) extends IST_Pattern {
+  override val bindings: SeqMap[String, ScalyType] = SeqMap.empty
+}
+
+case class IST_WildcardPattern(override val matchType: ScalyType) extends IST_Pattern {
+  override val bindings: SeqMap[String, ScalyType] = SeqMap.empty
 }

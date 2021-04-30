@@ -17,9 +17,10 @@ class MutableClosureContext private(
                                      private val _closedVars: mutable.Map[String, Location]
                                    ) extends TypeContext(types, vars, Some(outer)) {
 
-  override def getVarType(name: String): Option[Location] =
-    if (vars isDefinedAt name) vars get name
-    else outer.escalateVar(name).map { //Add to free vars
+  override def getVarType(name: String): Option[Location] = {
+
+    vars.get(name)
+      .orElse(outer.escalateVar(name)).map {
       case l@Location(_, SymbolSource.CLOSURE | SymbolSource.CLOSURE_WRITABLE) =>
         addFreeVar(name)
         l
@@ -29,18 +30,32 @@ class MutableClosureContext private(
       case x => x
     }
 
+//
+//    if (vars isDefinedAt name) vars get name
+//    else outer.escalateVar(name).map { //Add to free vars
+//      case l@Location(_, SymbolSource.CLOSURE | SymbolSource.CLOSURE_WRITABLE) =>
+//        addFreeVar(name)
+//        l
+//      case l@Location(_, SymbolSource.CLOSURE_MEMBER_WRITABLE | SymbolSource.CLOSURE_MEMBER) =>
+//        addFreeVar("this")
+//        l
+//      case x => x
+//    }
+  }
+
   private def addFreeVar(name: String): Unit =
     if (!_freeVars.contains(name)) _freeVars.addOne(name)
 
   override def escalateVar(name: String): Option[Location] =
     if (vars.isDefinedAt(name)) vars.get(name).map {
       //Add to cell vars, return closure
-      case l@Location(t, SymbolSource.LOCAL) =>
+      case l@Location(t, s @ (SymbolSource.LOCAL | SymbolSource.LOCAL_WRITABLE)) =>
         addClosedVar(name, l)
-        Location(t, SymbolSource.CLOSURE)
-      case l@Location(t, SymbolSource.LOCAL_WRITABLE) =>
-        addClosedVar(name, l)
-        Location(t, SymbolSource.CLOSURE_WRITABLE)
+        Location(t, SymbolSource.asClosure(s))
+      case l@Location(t, s @ (SymbolSource.MEMBER | SymbolSource.MEMBER_WRITABLE)) =>
+        escalateVar("this")
+        Location(t, SymbolSource.asClosure(s))
+
       case x => x
     }
     else outer.escalateVar(name).map {

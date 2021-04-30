@@ -1,4 +1,5 @@
-class ScalyTuple(tuple):
+from pyScaly_lib.ScalyObject import ScalyObject
+class ScalyTuple(tuple, ScalyObject):
     @property
     def _1(self): return self[0]
 
@@ -63,9 +64,17 @@ class ScalyTuple(tuple):
     @property
     def _21(self): return self[20]
 
-
     def __new__(cls, elems):
         return tuple.__new__(cls, elems)
+
+    def __eq__(self, other):
+        if isinstance(other, tuple) and len(other) == len(self):
+            all([other[i] == self[i] for i in range(len(self))])
+        else:
+            return False
+
+    def __init__(self, *args, **kwargs):
+        ScalyObject.__init__(self)
 
     #TODO: This could work for all value types
     #   It is inefficient but could be enough for this project

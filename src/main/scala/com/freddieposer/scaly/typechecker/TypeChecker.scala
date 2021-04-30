@@ -15,15 +15,12 @@ import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyBool
 
 import scala.annotation.tailrec
 
-class TypeChecker(
-                   val ast: CompilationUnit
-                 ) {
-
+object TypeChecker {
 
   //TODO: This is a hack - remove
-  def typeCheck(): TCR[IST_CompilationUnit] = {
+  def typeCheck(ast: CompilationUnit): TCR[IST_CompilationUnit] = {
     try {
-      _typeCheck()
+      _typeCheck(ast)
     } catch {
       case e@InferenceError(node) => Left(TypeError(e.getMessage, node)(EmptyContext))
     }
@@ -90,7 +87,10 @@ class TypeChecker(
           case Some(rt) => rt.fromAST.map { declaredRT =>
             (MutableClosureContext(
               buildTypeMap(paramTypes.flatten.toMap, SymbolSource.LOCAL) +
-                (id -> (ScalyFunctionType.build(declaredRT, ptList), SymbolSource.nonWritable(source))),
+                (id -> (
+                  ScalyFunctionType.build(declaredRT, ptList),
+                  SymbolSource.localClosure(SymbolSource.nonWritable(source)))
+                  ),
               ctx
             ), Some(declaredRT))
           }
@@ -106,9 +106,18 @@ class TypeChecker(
                 case None => Right(EmptyUS)
               }).map { _ =>
                 val fType = ScalyFunctionType.build(actualRetType.typ, ptList)
+                val newCtx = ctx.addVar(id -> Location(fType, source))
+
+                val location =
+                  if (eCtx.freeVars.contains(id)) {
+                    newCtx.escalateVar(id)
+                    Location(fType, SymbolSource.localClosure(source))
+                  }
+                  else Location(fType, source)
+
                 (
-                  IST_Def(id, paramTypes, actualRetType, fType, eCtx.closedVars, eCtx.freeVars(ctx)),
-                  ctx.addVar(id -> Location(fType, source))
+                  IST_Def(id, paramTypes, actualRetType, fType, eCtx.closedVars, eCtx.freeVars(newCtx), location.writable.get),
+                  newCtx,
                 )
               }
             }
@@ -117,57 +126,76 @@ class TypeChecker(
     }
   }
 
-  private def canMatch(typ: ScalyType, pattern: Pattern)(implicit context: TypeContext): TCR[IST_Pattern] = pattern match {
-    case LiteralPattern(literal) =>
-      doesUnify(typ, literalType(literal))(context, Variance.CO)
-        .mapError(pattern)
-        .map(_ => IST_LiteralPattern(ISTBuilder.buildLiteral(literal)))
-    case VariablePattern(name) => Right(IST_VariablePattern(name, typ))
-    case TuplePattern(pats) =>
-      typ match {
-        case ScalyTupleType(elems) if elems.length == pats.length =>
-          (elems zip pats)
-            .map { case (x, y) => canMatch(x, y) }
-            .collapse
-            .map(IST_TuplePattern)
-        case _ =>
-          Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
-      }
-    case ExtractorPattern(name, pats) =>
-      context.getVarType(name)
-        .flatMap(typeLocation => typeLocation.getOwnMemberLocation("unapply").map(l => (typeLocation, l)))
-        .map {
-          case (typeLocation, unapplyLocation@Location(unapplyType, _)) =>
-            val fType = unapplyType match {
-              case t: ScalyASTPlaceholderType => t.node.fromAST
-              case ScalyFunctionType(Some(f: ScalyASTPlaceholderType), t: ScalyASTPlaceholderType) =>
-                f.node.fromAST.flatMap(from => t.node.fromAST.flatMap(to => Right(ScalyFunctionType(Some(from), to))))
-              case ScalyFunctionType(Some(f: ScalyASTPlaceholderType), to) =>
-                f.node.fromAST.flatMap(from => Right(ScalyFunctionType(Some(from), to)))
-              case ScalyFunctionType(from, t: ScalyASTPlaceholderType) =>
-                t.node.fromAST.flatMap(to => Right(ScalyFunctionType(from, to)))
-              case t => Right(t)
-            }
-            fType.flatMap {
-              case t@ScalyFunctionType(Some(from), innerTypes: ScalyTupleType) =>
-                doesUnify(typ, from)(context, Variance.CO)
-                  .mapError(pattern)
-                  .map(_ => canMatch(innerTypes, TuplePattern(pats)))
-                  .collapse
-                  .map {
-                    case IST_TuplePattern(compiledPats) =>
-                      IST_ExtractorPattern(IST_Select(IST_Name(name, typeLocation), "unapply", t), compiledPats, from)
-                  }
-              case _ => Left(TypeError(s"Cannot match non-functional unapply type $fType", pattern))
-            }
-        }.getOrElse(Left(TypeError(s"Cannot find unnapply on $name", pattern)))
-    case _ => Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
+  private def canMatch(typ: ScalyType, pattern: Pattern)(implicit context: TypeContext): TCR[IST_Pattern] = addToError(pattern, context) {
+    pattern match {
+      case LiteralPattern(literal) =>
+        doesUnify(typ, literalType(literal))(context, Variance.CO)
+          .mapError(pattern)
+          .map(_ => IST_LiteralPattern(ISTBuilder.buildLiteral(literal)))
+      case VariablePattern(name) => Right(IST_VariablePattern(name, typ))
+      case WildcardPattern => Right(IST_WildcardPattern(typ))
+      case TuplePattern(pats) =>
+        typ match {
+          case ScalyTupleType(elems) if elems.length == pats.length =>
+            (elems zip pats)
+              .map { case (x, y) => canMatch(x, y) }
+              .collapse
+              .map(IST_TuplePattern)
+          case _ =>
+            Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
+        }
+      case ExtractorPattern(name, pats) =>
+        context.getVarType(name)
+          .flatMap(typeLocation => typeLocation.getOwnMemberLocation("unapply").map(l => (typeLocation, l)))
+          .map {
+            case (typeLocation, unapplyLocation@Location(unapplyType, _)) =>
+              val fType = unapplyType match {
+                case t: ScalyASTPlaceholderType => t.node.fromAST
+                case ScalyFunctionType(Some(f: ScalyASTPlaceholderType), t: ScalyASTPlaceholderType) =>
+                  f.node.fromAST.flatMap(from => t.node.fromAST.flatMap(to => Right(ScalyFunctionType(Some(from), to))))
+                case ScalyFunctionType(Some(f: ScalyASTPlaceholderType), to) =>
+                  f.node.fromAST.flatMap(from => Right(ScalyFunctionType(Some(from), to)))
+                case ScalyFunctionType(from, t: ScalyASTPlaceholderType) =>
+                  t.node.fromAST.flatMap(to => Right(ScalyFunctionType(from, to)))
+                case t => Right(t)
+              }
+              fType.flatMap {
+                case t@ScalyFunctionType(Some(from), inner) =>
+
+                  (inner match {
+                    case inner: ScalyTupleType => canMatch(inner, TuplePattern(pats))
+                    case _ if pats.length == 1 => canMatch(inner, pats.head)
+                    case _ => Left(TypeError(s"Cannot match patterns $pats to $inner type", pattern))
+                  }).map {
+                      case IST_TuplePattern(compiledPats) =>
+                        IST_ExtractorPattern(
+                          IST_Select(IST_Name(name, typeLocation), "unapply", Location(t, SymbolSource.MEMBER)),
+                          compiledPats, from
+                        )
+                      case p => IST_ExtractorPattern(
+                        IST_Select(IST_Name(name, typeLocation), "unapply", Location(t, SymbolSource.MEMBER)),
+                        p :: Nil, from
+                      )
+                    }
+
+                case _ => Left(TypeError(s"Cannot match non-functional unapply type $fType", pattern))
+              }
+          }.getOrElse(Left(TypeError(s"Cannot find unnapply on $name", pattern)))
+      case NamePattern(name) =>
+        context.getVarType(name)
+          .map(l => l -> doesUnify(l.typ, typ)(context, Variance.CO))
+          .map {
+            case _ -> Left(value) => Left(TypeError(s"Pattern $pattern type ${value.t1} does not unify with $typ", pattern))
+            case l -> Right(value) => Right(IST_NamePattern(name, l, value.t1))
+          }.getOrElse(Left(TypeError(s"Cannot find name $name for pattern", pattern)))
+      case _ => Left(TypeError(s"Pattern $pattern cannot match $typ", pattern))
+    }
   }
 
   private def addToError[T](node: ScalyAST, context: TypeContext)(f: => TCR[T]): TCR[T] =
     f.left.map(new TypeErrorContext(_, node)(context))
 
-  private def _typeCheck(): TCR[IST_CompilationUnit] = {
+  private def _typeCheck(ast: CompilationUnit): TCR[IST_CompilationUnit] = {
 
     val types: Map[String, ScalyASTTemplateType] =
       ast.statements.map {
@@ -265,14 +293,24 @@ class TypeChecker(
       case SelectExpr(lhs, rhs) =>
         typeCheck_Expr(lhs).flatMap { lhsExpr =>
           lhsExpr.typ.getMember(rhs)
-            .map(l => IST_Select(lhsExpr, rhs, l.typ))
+            .map {
+              case l@Location(ScalyFunctionType(None, to), _) =>
+                IST_Application(IST_Select(lhsExpr, rhs, l), Nil, to)
+              case l => IST_Select(lhsExpr, rhs, l)
+            }
+//            .map(l => IST_Select(lhsExpr, rhs, l))
             .left.map(TypeError(_, expr))
         }
 
       case IDExpr(name) =>
         ctx.getVarType(name)
           .toRight(TypeError(s"Cannot find variable $name", expr))
-          .map(IST_Name(name, _))
+          .map {
+            case l@Location(ScalyFunctionType(None, to), _) =>
+              IST_Application(IST_Name(name, l), Nil, to)
+            case l => IST_Name(name, l)
+          }
+//          .map(IST_Name(name, _))
 
       case TupleExpr(elems) =>
         elems
@@ -351,15 +389,24 @@ class TypeChecker(
         }
 
       case AssignExpr(lhs, rhs) => lhs match {
-        case IDExpr(_) => typeCheck_Expr(lhs).flatMap {
-          case IST_Name(name, location) =>
-            if (SymbolSource.isWritable(location.source))
-              typeCheck_Expr(rhs).flatMap { ist =>
-                doesUnify(ist.typ, location.typ)(ctx, Variance.CO).mapError(expr).map(_ => IST_Assignment(name, location, ist))
-              }
-            else Left(TypeError(s"Cannot assign to $name [location $location]", expr))
+        case SelectExpr(_, _) | IDExpr(_) => typeCheck_Expr(lhs).flatMap { compiledLHS =>
+          val location = compiledLHS match {
+            case IST_Name(_, location) => location
+            case IST_Select(_, _, location) => location
+          }
+
+          if (SymbolSource.isWritable(location.source))
+            typeCheck_Expr(rhs).flatMap { compiledRHS =>
+              doesUnify(compiledRHS.typ, location.typ)(ctx, Variance.CO)
+                .mapError(expr)
+                .map { _ => compiledLHS match {
+                  case n: IST_Name => IST_Assignment(n, compiledRHS)
+                  case s:IST_Select => IST_SelectAssignment(s, compiledRHS)
+                }}
+            }
+          else Left(TypeError(s"Cannot assign to $lhs [location $location]", expr))
+
         }
-        case _ => ???
       }
 
       case WhileExpr(cond, body) => typeCheck_Expr(cond).flatMap { condIST =>
@@ -386,16 +433,10 @@ class TypeChecker(
           }
 
       case MatchExpr(lhs, cases) =>
-        typeCheck_Expr(lhs).flatMap { case lexpr =>
+        typeCheck_Expr(lhs).flatMap { lexpr =>
           cases.map { c => canMatch(lexpr.typ, c.pattern) }
             .collapse
-            .flatMap {
-              patterns =>
-                unify(patterns.map(_.matchType))
-                  .map((patterns, _))
-                  .toRight(TypeError(s"Cannot unify types $patterns", expr))
-            }
-            .flatMap { case (patterns, matchType) =>
+            .flatMap { patterns =>
               patterns.zip(cases).map { case (pat, c) =>
                 val ectx = MutableClosureContext(buildTypeMap(pat.bindings.toMap, SymbolSource.LOCAL), ctx)
                 typeCheck_Expr(c.result)(ectx).map((_, ectx))
@@ -403,7 +444,9 @@ class TypeChecker(
                 .flatMap(retExprs => unify(retExprs.map(_._1.typ)) match {
                   case None => Left(TypeError(s"Cannot unify return types of $retExprs for patterns", expr))
                   case Some(retType) =>
-                    val compiledCases = patterns.zip(retExprs).map { case (p, (body, ectx)) => IST_Case(p, body, ectx.closedVars, ectx.freeVars(ctx)) }
+                    val compiledCases = patterns.zip(retExprs).map {
+                      case (p, (body, ectx)) => IST_Case(p, body, ectx.closedVars, ectx.freeVars(ctx))
+                    }
                     Right((compiledCases, retType))
                 })
             }.map { case (cs, retType) => IST_Match(lexpr, cs, retType) }
@@ -440,6 +483,7 @@ class TypeChecker(
   private def doesUnify(t1: ScalyType, t2: ScalyType)(implicit ctx: TypeContext, variance: Variance): UR =
     (t1, t2) match {
       case _ if variance == Variance.CONTRA => doesUnify(t2, t1)(ctx, Variance.CO)
+      case _ if t1.equals(t2) => Right(UnificationSuccess(t1, t2))
       case (x: ScalyASTPlaceholderType, _) =>
         x.node.fromAST
           .mapError(t1, t2)
@@ -450,7 +494,7 @@ class TypeChecker(
           .map { t => doesUnify(t1, t.typ) }.collapse
 
       case (static1: StaticScalyType, static2: StaticScalyType) =>
-        doesUnify_static(static1, static2)
+        doesUnifyStatic(static1, static2)
 
 
       case _ if (variance == Variance.CO) =>
@@ -491,7 +535,7 @@ class TypeChecker(
   }
 
   @tailrec
-  private def doesUnify_static(t1: StaticScalyType, t2: StaticScalyType)(implicit ctx: TypeContext, variance: Variance): UR = {
+  private def doesUnifyStatic(t1: StaticScalyType, t2: StaticScalyType)(implicit ctx: TypeContext, variance: Variance): UR = {
     (t1, t2) match {
       case _ if variance == Variance.CONTRA => doesUnify(t2, t1)(ctx, Variance.CO)
       case (ScalyFunctionType(from1, to1), ScalyFunctionType(from2, to2)) =>
@@ -507,7 +551,7 @@ class TypeChecker(
         }
 
       case (ScalyFunctionType(None, rt), _) => doesUnify(rt, t2)
-      case (_, ScalyFunctionType(None, _)) => doesUnify_static(t2, t1)(ctx, variance.flip)
+      case (_, ScalyFunctionType(None, _)) => doesUnifyStatic(t2, t1)(ctx, variance.flip)
 
       case (ScalyValType(n1), ScalyValType(n2)) if (n1 equals n2) => Right(UnificationSuccess(t1, t2))
 

@@ -23,38 +23,12 @@ object Test {
 
   def test_pyc(): Unit = {
     import sys.process._
-    //    var bytes1 = Files.readAllBytes(Paths.get(COMPILED_OUTPUT_FILE))
-    //    val pyobj1 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes1))
-    //    println(pyobj1)
+//    s"bash test_files/compile.sh $Q$DUMP_PYTHON_FILE$Q $Q$DUMP_INPUT_FILE$Q".!
 
-    s"bash test_files/compile.sh $Q$DUMP_PYTHON_FILE$Q $Q$DUMP_INPUT_FILE$Q".!
-
-    var bytes2 = Files.readAllBytes(Paths.get(DUMP_INPUT_FILE))
+    var bytes2 = Files.readAllBytes(Paths.get(COMPILED_OUTPUT_FILE))
     val pyobj2 = PycFile.readFromBytes(new ImmutableByteArrayStream(bytes2))
     println(pyobj2)
 
-
-    //    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
-    //    println(
-    //      bytes.map((String.format("%02x", _)))
-    //        .grouped(16).map(_.mkString(" "))
-    //        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
-    //        .mkString("\n")
-    //    )
-
-
-    //    val out = pyobj.toBytes
-    //    bytes = out.bytes
-    ////    println(f" ".repeat(5) + Range(0, 16).map(x => f"${x}%x").mkString("  "))
-    ////    println(
-    ////      bytes.map((String.format("%02x", _)))
-    ////        .grouped(16).map(_.mkString(" "))
-    ////        .zipWithIndex.map { case (s, i) => f"${i}%04x $s" }
-    ////        .mkString("\n")
-    ////    )
-    //    println(PycFile.readFromBytes(out))
-    //
-    //    Files.write(Paths.get("test_files/sclass2.pyc"), out.bytes)
   }
 
   def printAST(stat: Stat, indent: Int): Unit = stat match {
@@ -93,16 +67,12 @@ object Test {
 
     val x = lines.parse[scala.meta.Source].get
 
-    //    println(x.structure)
-    //    println(x.stats.head.children.map(_.structure).mkString("\n"))
-    //    printAST(x.stats.head, 0)
     val ast = ASTBuilder.fromScalaMeta(x)
-    val tc = new TypeChecker(ast)
 
     //    for ((name, typ) <- tc.globalContext.types)
     //      println(f"$name : ${typ.members}")
 
-    val res = tc.typeCheck()
+    val res = TypeChecker.typeCheck(ast)
 
     res match {
       case Left(value) =>
@@ -116,36 +86,29 @@ object Test {
 
   }
 
-  def test_compile(): Unit = {
+  def test_compile(): Boolean = {
 
 
     val lines = Files.readAllLines(Paths.get(SCALA_INPUT_FILE)).asScala.mkString("\n")
     println(lines)
 
-    import scala.meta._
+    val pipeline = CompilationPipeline.standard
 
-    val x = lines.parse[scala.meta.Source].get
-    val ast = ASTBuilder.fromScalaMeta(x)
-    val tc = new TypeChecker(ast)
-    val compiler = ISTCompilationPipeline.standard("placeholder")
-
-    val res = tc.typeCheck()
-
-    res match {
-      case Left(value) =>
-        println("Unable to typecheck program")
-        printError(value)
-      case Right(ist) =>
-        println("Success!")
-        println(ist)
-
-        //        val ist = ISTBuilder.buildIST(ast)
-        val pyCodeObject = compiler.compile(ist)
-        println(pyCodeObject)
-        val f = PycFile(pyCodeObject)
-        Files.write(Paths.get("test_files/compiled.pyc"), f.toBytes.bytes)
-
+    pipeline.compile("placeholder", lines) match {
+      case Left(SyntaxError(e)) =>
+        println(s"Syntax error in file $SCALA_INPUT_FILE")
+        println(e)
+        false
+      case Left(e: TypeError) =>
+        println(s"Unable to typecheck $SCALA_INPUT_FILE")
+        printError(e)
+        false
+      case Right(pyo) =>
+        val f = PycFile(pyo)
+        Files.write(Paths.get(COMPILED_OUTPUT_FILE), f.toBytes.bytes)
+        true
     }
+
 
   }
 
@@ -167,9 +130,11 @@ object Test {
 
   def main(args: Array[String]): Unit = {
     //    test_tc()
-    test_pyc()
-    test_compile()
-    test_run()
+
+    if(test_compile()) {
+      test_pyc()
+      test_run()
+    }
   }
 
 }

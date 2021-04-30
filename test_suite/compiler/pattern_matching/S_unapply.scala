@@ -20,7 +20,7 @@ object Main {
     }
 
     (v1, v2) match {
-      case (x, Vector(a, b)) => print(x.toString() + " " + str(a + b))
+      case (x, Vector(a, b)) => print(x.toString + " " + str(a + b))
     }
 
     f match {

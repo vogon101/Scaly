@@ -26,20 +26,23 @@ abstract class TestSpec {
 
   def testAll(): Boolean = {
     Logger.log(s"Testing ${folder.getFileName}")
-    (successTests.map(run(expectation = true)) ++
+    val results = (successTests.map(run(expectation = true)) ++
       failTests.map(run(expectation = false)(_)) ++
-      directories.map(descend).map(_.testAll())).forall(b => b)
+      directories.map(descend).map(_.testAll()))
+    val count = results.count(x=>x)
+    val res = results.forall(x => x)
+    (if (res) Logger.success else Logger.error)(s"${folder.getFileName}: $count [/${results.length}]")
+    res
   }
 
   def run(expectation: Boolean)(file: Path): Boolean = {
     val lines = Files.readAllLines(file).asScala.mkString("\n")
-    Logger.log(s"Running test ${file.getFileName}")
+//    Logger.log(s"Running test ${file.getFileName}")
     import scala.meta._
 
     val x = lines.parse[scala.meta.Source].get
     val ast = ASTBuilder.fromScalaMeta(x)
-    val tc = new TypeChecker(ast)
-    val tcRes = tc.typeCheck()
+    val tcRes = TypeChecker.typeCheck(ast)
 
     val res = runTest(file.getFileName.toString, lines, tcRes)
     if (res._1 == expectation) {

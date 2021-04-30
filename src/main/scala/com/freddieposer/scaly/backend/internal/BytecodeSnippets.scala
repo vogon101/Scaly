@@ -8,7 +8,7 @@ import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes
 import com.freddieposer.scaly.backend.pyc.defs.PyOpcodes._
 import com.freddieposer.scaly.backend.pyc.{PyAscii, PyNone, PyTuple}
 import com.freddieposer.scaly.typechecker.context.TypeContext.Location
-import com.freddieposer.scaly.typechecker.types.SymbolSource
+import com.freddieposer.scaly.typechecker.types.{ScalyType, SymbolSource}
 import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.{ScalyNothingType, ScalyStringType}
 
 //TODO: Refactor this
@@ -71,5 +71,12 @@ object BytecodeSnippets {
   def ReturnNone(ctx: CompilationContext): BytecodeList = BytecodeList(
     (LOAD_CONST, ctx.const(PyNone)), (RETURN_VALUE, 0.toByte)
   )
+
+  def IsInstance(lhs: IST_Expression, typ: ScalyType): IST_Application =
+    IST_Application(
+      IST_Name("isinstance", Location(SymbolSource.GLOBAL)),
+      List(lhs, IST_Name(typ.globalName.get, Location(SymbolSource.GLOBAL))),
+      null
+    )
 
 }

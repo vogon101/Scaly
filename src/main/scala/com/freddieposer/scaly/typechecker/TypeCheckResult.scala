@@ -1,11 +1,12 @@
 package com.freddieposer.scaly.typechecker
 
 import com.freddieposer.scaly.AST.ScalyAST
+import com.freddieposer.scaly.CompilerError
 import com.freddieposer.scaly.typechecker.context.TypeContext
 
 sealed case class TypeError(message: String,
                             node: ScalyAST
-                           )(implicit val ctx: TypeContext)
+                           )(implicit val ctx: TypeContext) extends CompilerError
 
 class TypeErrorContext(val inner: TypeError, override val node: ScalyAST)
                       (implicit override val ctx: TypeContext) extends TypeError(inner.message, node) {

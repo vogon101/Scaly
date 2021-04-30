@@ -29,7 +29,7 @@ object ScalyValType {
     "Null" -> ScalyNullType
   )
 
-  def literalType(l: Literal): ScalyValType = l match {
+  def literalType(l: Literal): StaticScalyType= l match {
     case NullLiteral => ScalyNullType
     case UnitLiteral => ScalyUnitType
     case IntLiteral(_) => ScalyIntType
@@ -46,6 +46,7 @@ object ScalyValType {
     "toFloat" -> (O --> ScalyFloatType),
     "toDouble" -> (O --> ScalyDoubleType),
     "toChar" -> (O --> ScalyCharType),
+    "unary_-" -> (ScalyUnitType --> typ),
     "+" -> (typ --> typ),
     "-" -> (typ --> typ),
     "*" -> (typ --> typ),
@@ -57,7 +58,8 @@ object ScalyValType {
 
   object ScalyStringType extends ScalyValType("String") {
     override protected lazy val memberTypes: TypeMap = buildTypeMap(SymbolSource.MEMBER)(
-      "+" -> (ScalyStringType --> ScalyStringType)
+      "+" -> (ScalyStringType --> ScalyStringType),
+      "*" -> (ScalyIntType --> ScalyStringType)
     )
   }
 
@@ -87,7 +89,12 @@ object ScalyValType {
     ) ++ numericConverterTypes(ScalyCharType)
   }
 
-  object ScalyBooleanType extends ScalyValType("Boolean")
+  object ScalyBooleanType extends ScalyValType("Boolean") {
+    override protected val memberTypes: TypeMap = buildTypeMap(SymbolSource.MEMBER)(
+      "&&" -> (ScalyBooleanType --> ScalyBooleanType),
+      "||" -> (ScalyBooleanType --> ScalyBooleanType)
+    )
+  }
 
   object ScalyUnitType extends ScalyValType("Unit")
 
@@ -95,6 +102,10 @@ object ScalyValType {
 
   object ScalyNothingType extends ScalyValType("Nothing")
 
-  object ScalyNullType extends ScalyValType("Null")
+  object ScalyNullType extends StaticScalyType {
+    override val parent: Option[ScalyType] = None
+    override def constructor: Option[List[ClassParam]] = None
+    override protected def memberTypes: TypeMap = Map()
+  }
 
 }

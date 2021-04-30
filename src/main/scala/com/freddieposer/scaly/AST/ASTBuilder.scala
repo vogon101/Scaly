@@ -1,6 +1,6 @@
 package com.freddieposer.scaly.AST
 
-import scala.meta.Pat.{Extract, Tuple, Var}
+import scala.meta.Pat.{Extract, Tuple, Var, Wildcard}
 import scala.meta._
 
 object ASTBuilder {
@@ -99,7 +99,7 @@ object ASTBuilder {
       case Term.ApplyInfix(lhs, op, targs, args) =>
         Application(SelectExpr(buildExpr(lhs), op.value), args.map(buildExpr))
       case Term.ApplyUnary(Name(op), arg) =>
-        Application(SelectExpr(buildExpr(arg), f"unary_$op"), List(buildExpr(arg)))
+        Application(SelectExpr(buildExpr(arg), f"unary_$op"), Nil)
       case Term.Tuple(args) => TupleExpr(args.map(buildExpr))
       case Term.Block(stats) => Block(stats.map(buildStatement))
       case Term.Select(lhs, name) => SelectExpr(buildExpr(lhs), name.value)
@@ -133,10 +133,11 @@ object ASTBuilder {
 
   private def buildPattern(pat: Pat): Pattern = pat match {
     case l@Lit(_) => LiteralPattern(buildLiteral(l))
-    case Name(str) => ???
+    case Name(str) => NamePattern(str)
     case Var(name) => VariablePattern(name.value)
     case Tuple(pats) => TuplePattern(pats.map(buildPattern))
     case Extract(term, pats) => ExtractorPattern(term.toString(), pats.map(buildPattern))
+    case Wildcard() => WildcardPattern
   }
 
 }
