@@ -33,6 +33,9 @@ object Compiler {
           .valueName("<file>")
           .action((x, c) => c.copy(inputFile = Some(x))),
 
+        help("help")
+          .text("Prints the usage text"),
+
         cmd("run")
           .action((_, c) => c.copy(mode = COMPILE_AND_RUN))
           .text("Run the compiled program")
