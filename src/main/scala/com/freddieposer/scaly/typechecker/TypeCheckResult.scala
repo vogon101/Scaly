@@ -6,7 +6,18 @@ import com.freddieposer.scaly.typechecker.context.TypeContext
 
 sealed case class TypeError(message: String,
                             node: ScalyAST
-                           )(implicit val ctx: TypeContext) extends CompilerError
+                           )(implicit val ctx: TypeContext) extends CompilerError {
+
+  override def toString: String = this match {
+    case context: TypeErrorContext =>
+      s"Error at ${context.node}\n${context.inner}"
+    case failure: TypeErrorFromUnificationFailure =>
+      failure.toString
+    case _ =>
+      s"Type error at $node with $ctx"
+  }
+
+}
 
 class TypeErrorContext(val inner: TypeError, override val node: ScalyAST)
                       (implicit override val ctx: TypeContext) extends TypeError(inner.message, node) {
