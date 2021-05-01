@@ -3,6 +3,7 @@ package com.freddieposer.scaly.typechecker.types
 import com.freddieposer.scaly.AST.ClassParam
 import com.freddieposer.scaly.typechecker.context.TypeContext.{TypeMap, buildTypeMap}
 import com.freddieposer.scaly.typechecker.types.ScalyType.defaultMembers
+import com.freddieposer.scaly.typechecker.types.stdtypes.ScalyValType.ScalyNothingType
 import com.freddieposer.scaly.typechecker.types.stdtypes.{ScalyAny, ScalyObject, ScalyValType}
 
 case class ScalyFunctionType(from: Option[ScalyType], to: ScalyType) extends StaticScalyType {
@@ -23,6 +24,14 @@ object ScalyFunctionType {
       case (xs, acc) => ScalyFunctionType(Some(ScalyTupleType(xs)), acc)
     }
   }
+}
+
+class ScalyFunctionTypeWithTarg(f: Option[ScalyType], t: ScalyType) extends ScalyFunctionType(f, t)
+
+object ScalyFunctionTypeWithTarg {
+  def unapply(arg: ScalyFunctionTypeWithTarg): Option[(Option[ScalyType], ScalyType)] = Some(arg.from, arg.to)
+
+  def apply(f: Option[ScalyType], t: ScalyType): ScalyFunctionTypeWithTarg = new ScalyFunctionTypeWithTarg(f, t)
 }
 
 class ScalyTupleType private(val elems: List[ScalyType]) extends StaticScalyType {

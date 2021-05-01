@@ -182,6 +182,10 @@ case class IST_Application(lhs: IST_Expression, args: List[IST_Expression], typ:
   override lazy val maxStack: Int = List(lhs.maxStack, args.map(_.maxStack).sum, 1).max
 }
 
+case class IST_ApplicationWithType(lhs: IST_Expression, targ: List[ScalyType], typ: ScalyType) extends IST_Expression {
+  override lazy val maxStack: Int = List(lhs.maxStack + 2, targ.length * 2, 1).max
+}
+
 case class IST_New(name: String, args: List[IST_Expression], typ: ScalyType) extends IST_Expression {
   override lazy val maxStack: Int = List(1, args.map(_.maxStack).sum).max
 }

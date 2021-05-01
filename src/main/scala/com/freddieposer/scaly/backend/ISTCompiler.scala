@@ -247,6 +247,14 @@ class ISTCompiler(_filename: String) {
           args.flatMap(arg => compileExpression(arg, ctx)) -->
           (CALL_FUNCTION, args.length.toByte)
 
+      case IST_ApplicationWithType(lhs, targs, _) =>
+        compileExpression(lhs, ctx) -->
+          targs.map(targ => targ.globalName.map {
+              name => (LOAD_GLOBAL, ctx.name(name.toPy)).toBCL
+            }.getOrElse(throw new Error(s"Cannot use $targ as type argument"))
+          ).flat -->
+          (CALL_FUNCTION, 1.toByte)
+
       case literal: IST_Literal =>
         BytecodeList((LOAD_CONST, ctx.const(literal.py)))
 

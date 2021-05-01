@@ -10,11 +10,11 @@ sealed case class TypeError(message: String,
 
   override def toString: String = this match {
     case context: TypeErrorContext =>
-      s"Error at ${context.node}\n${context.inner}"
+      s"Error $message \nat ${context.node}\n${context.inner}"
     case failure: TypeErrorFromUnificationFailure =>
       failure.toString
     case _ =>
-      s"Type error at $node with $ctx"
+      s"Type error $message \nat $node\n with $ctx"
   }
 
 }
@@ -22,7 +22,7 @@ sealed case class TypeError(message: String,
 class TypeErrorContext(val inner: TypeError, override val node: ScalyAST)
                       (implicit override val ctx: TypeContext) extends TypeError(inner.message, node) {
 
-  override def toString: String = f"Error at $node with $ctx\n${inner.toString}"
+  override def toString: String = f"Error $message\nat $node\nwith $ctx\n${inner.toString}"
 
 }
 

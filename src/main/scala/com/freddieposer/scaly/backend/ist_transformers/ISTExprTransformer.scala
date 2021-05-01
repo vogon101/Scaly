@@ -57,6 +57,9 @@ trait ISTExprTransformer {
 
     case IST_Application(lhs, args, typ) =>
       IST_Application(transformExpr(lhs), args.map(transformExpr), typ)
+    case IST_ApplicationWithType(lhs, targ, typ) =>
+      IST_ApplicationWithType(transformExpr(lhs), targ, typ)
+
     case IST_New(name, args, typ) =>
       IST_New(name, args.map(transformExpr), typ)
     case IST_Select(lhs, rhs, typ) =>

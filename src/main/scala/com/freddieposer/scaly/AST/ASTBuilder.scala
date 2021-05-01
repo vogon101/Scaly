@@ -100,6 +100,8 @@ object ASTBuilder {
         Application(SelectExpr(buildExpr(lhs), op.value), args.map(buildExpr))
       case Term.ApplyUnary(Name(op), arg) =>
         Application(SelectExpr(buildExpr(arg), f"unary_$op"), Nil)
+      case Term.ApplyType(fun, targs) =>
+        ApplicationWithType(buildExpr(fun), targs.map(buildScalyType))
       case Term.Tuple(args) => TupleExpr(args.map(buildExpr))
       case Term.Block(stats) => Block(stats.map(buildStatement))
       case Term.Select(lhs, name) => SelectExpr(buildExpr(lhs), name.value)

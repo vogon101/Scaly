@@ -12,5 +12,8 @@ class ScalyObject(object):
         return self.__eq__(obj)
 
 
+    def isInstanceOf(self, cls):
+        return isinstance(self, cls)
+
 
     #TODO: isInstanceOf?

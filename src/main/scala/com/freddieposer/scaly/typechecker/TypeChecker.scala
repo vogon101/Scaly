@@ -294,6 +294,8 @@ object TypeChecker {
         typeCheck_Expr(lhs).flatMap { lhsExpr =>
           lhsExpr.typ.getMember(rhs)
             .map {
+              case l@Location(_: ScalyFunctionTypeWithTarg, _) =>
+                IST_Select(lhsExpr, rhs, l)
               case l@Location(ScalyFunctionType(None, to), _) =>
                 IST_Application(IST_Select(lhsExpr, rhs, l), Nil, to)
               case l => IST_Select(lhsExpr, rhs, l)
@@ -306,6 +308,8 @@ object TypeChecker {
         ctx.getVarType(name)
           .toRight(TypeError(s"Cannot find variable $name", expr))
           .map {
+            case l@Location(_: ScalyFunctionTypeWithTarg, _) =>
+              IST_Name(name, l)
             case l@Location(ScalyFunctionType(None, to), _) =>
               IST_Application(IST_Name(name, l), Nil, to)
             case l => IST_Name(name, l)
@@ -329,6 +333,10 @@ object TypeChecker {
             case x => Right(x)
           }
           lhsTyp.flatMap {
+
+            case ScalyFunctionTypeWithTarg(None, to) =>
+              Right(IST_Application(lhsExpr, Nil, ScalyFunctionTypeWithTarg(None, to)))
+
             case ScalyFunctionType(None, rType) =>
               actuals match {
                 case Nil => Right(IST_Application(lhsExpr, Nil, rType))
@@ -340,6 +348,7 @@ object TypeChecker {
             case ScalyFunctionType(Some(formalTypes), rType) =>
               canApply(formalTypes, actuals, expr)
                 .map(exprs => IST_Application(lhsExpr, exprs, rType))
+
             case obj =>
               obj.getMember("apply") match {
                 case Right(Location(_: ScalyFunctionType, _)) => typeCheck_Expr(Application(SelectExpr(lhs, "apply"), actuals))
@@ -347,6 +356,18 @@ object TypeChecker {
                 case e@Left(_) => Left(TypeError(s"Object $obj doesn't contain an apply member", expr))
               }
           }
+        }
+
+      case ApplicationWithType(lhs, targ :: Nil) =>
+        typeCheck_Expr(lhs).flatMap { lhsExpr =>
+          lhsExpr.typ match {
+            case ScalyFunctionTypeWithTarg(None, to) =>
+              targ.fromAST map { targType =>
+                  IST_ApplicationWithType(lhsExpr, targType :: Nil, to)
+              }
+            case x => Left(TypeError(s"Only functions with one type argument and no parameters are supported, got $x", expr))
+          }
+
         }
 
       case IfExpr(cond, tBranch, fBranch) =>

@@ -6,6 +6,8 @@ case class TupleExpr(elems: List[Expr]) extends Expr
 
 case class Application(lhs: Expr, args: List[Expr]) extends Expr
 
+case class ApplicationWithType(lhs: Expr, targs: List[AST_ScalyType]) extends Expr
+
 case class Block(statements: List[Statement]) extends Expr
 
 case class IDExpr(name: String) extends Expr

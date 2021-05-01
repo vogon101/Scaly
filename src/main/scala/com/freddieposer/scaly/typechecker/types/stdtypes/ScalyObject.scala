@@ -13,7 +13,8 @@ object ScalyObject extends StaticScalyType {
 
   override protected lazy val memberTypes: TypeMap = buildTypeMap(Map(
     "toString" -> (O --> ScalyStringType),
-    "equals" -> (ScalyObject --> ScalyBooleanType)
+    "equals" -> (ScalyObject --> ScalyBooleanType),
+    "isInstanceOf" -> (O -@-> ScalyBooleanType)
   ), SymbolSource.MEMBER)
 
   override def toString: String = "ScalyObject"
