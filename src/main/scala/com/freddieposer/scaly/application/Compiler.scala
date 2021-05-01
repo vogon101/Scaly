@@ -23,22 +23,21 @@ object Compiler {
         programName("scaly"),
         head("scaly", "0.1"),
 
-        opt[File]('i', "in")
-          .required()
-          .valueName("<file>")
+        arg[File]("<input file>")
           .action((x, c) => c.copy(inputFile = Some(x)))
-          .text("in is a required file property"),
+          .text("Location of source file (required)"),
 
         opt[File]('o', "out")
           .valueName("<file>")
-          .action((x, c) => c.copy(inputFile = Some(x))),
+          .action((x, c) => c.copy(outputFile = Some(x)))
+          .text("Output file - default is in file name with .pyc extension"),
 
         help("help")
           .text("Prints the usage text"),
 
         cmd("run")
           .action((_, c) => c.copy(mode = COMPILE_AND_RUN))
-          .text("Run the compiled program")
+          .text("Run the program after compilation, requires python")
 
       )
     }

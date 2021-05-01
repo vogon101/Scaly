@@ -4,7 +4,7 @@ Y: this
 Z: This: this
 One abc
 123
-Pattern One, Two  3
+Pattern One, Wild  3
 None
  */
 
@@ -46,8 +46,9 @@ object Main {
 
     val q = t match {
       case (0, x) => "Pattern zero " + str(x)
-      case (1, (20, x)) => "Pattern One, Twenty " + str(x)
-      case (1, (2, x)) => "Pattern One, Two  " + str(x)
+      case (_, (20, x)) => "Pattern One, Twenty " + str(x)
+      case (1, (3, x)) => "Pattern One, Three  " + str(x)
+      case (1, (_, x)) => "Pattern One, Wild  " + str(x)
     }
 
     print(p)
